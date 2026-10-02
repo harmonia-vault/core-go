@@ -208,6 +208,9 @@ func (w *Workflow) ApprovalInfo() (ApprovalInfo, error) {
 	if len(w.state.SelfRevocation) > 0 {
 		return ApprovalInfo{}, ErrSelfRevocationPending
 	}
+	if w.state.Recovery != nil {
+		return ApprovalInfo{}, ErrRecoveryRestricted
+	}
 	r := w.state.PendingApproval
 	if r == nil {
 		return ApprovalInfo{State: "none"}, nil
@@ -256,6 +259,9 @@ func (w *Workflow) ApprovePairing(ctx context.Context, input ApprovalInput) (App
 	}
 	if len(w.state.SelfRevocation) > 0 {
 		return ApprovalResult{}, ErrSelfRevocationPending
+	}
+	if w.state.Recovery != nil {
+		return ApprovalResult{}, ErrRecoveryRestricted
 	}
 	fingerprint, err := choicesHash(input.PairingID, input.Selections)
 	if err != nil {
@@ -363,6 +369,9 @@ func (w *Workflow) RetryApproval(ctx context.Context, id string) (ApprovalResult
 	if len(w.state.SelfRevocation) > 0 {
 		return ApprovalResult{}, ErrSelfRevocationPending
 	}
+	if w.state.Recovery != nil {
+		return ApprovalResult{}, ErrRecoveryRestricted
+	}
 	r := w.state.PendingApproval
 	if r == nil || r.PairingID != id {
 		return ApprovalResult{}, syncclient.ErrWriteConflict
@@ -449,6 +458,9 @@ func (w *Workflow) CancelApproval(id string) error {
 	}
 	if len(w.state.SelfRevocation) > 0 {
 		return ErrSelfRevocationPending
+	}
+	if w.state.Recovery != nil {
+		return ErrRecoveryRestricted
 	}
 	r := w.state.PendingApproval
 	if r == nil || r.PairingID != id {

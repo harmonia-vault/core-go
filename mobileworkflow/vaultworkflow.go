@@ -116,6 +116,7 @@ type protectedState struct {
 	InitialAuthorities []cryptox.SignedGrantWire     `json:"initialAuthorities,omitempty"`
 	PendingApproval    *approvalRecord               `json:"pendingApproval,omitempty"`
 	SelfRevocation     []byte                        `json:"selfRevocation,omitempty"`
+	Recovery           *recoveryRecord               `json:"recovery,omitempty"`
 }
 type memoryStore struct{ state localstate.State }
 
@@ -271,6 +272,14 @@ func New(config Config) (*Workflow, error) {
 			return nil, err
 		}
 	}
+	if err := workflow.validateRecoveryState(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
+	if err := workflow.observeRecoveryClock(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
 	if err := workflow.validateInitialAuthorities(); err != nil {
 		workflow.Close()
 		return nil, err
@@ -295,6 +304,7 @@ func (w *Workflow) Close() {
 	w.client = nil
 	w.login = nil
 	clear(w.state.SelfRevocation)
+	w.clearRecovery()
 	if w.http != nil {
 		w.http.CloseIdleConnections()
 		w.http = nil
@@ -325,6 +335,9 @@ func (w *Workflow) check() error {
 	}
 	if len(w.state.SelfRevocation) > 0 {
 		return ErrSelfRevocationPending
+	}
+	if w.state.Recovery != nil {
+		return ErrRecoveryRestricted
 	}
 	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 {
 		return ErrApprovalPending
@@ -657,8 +670,13 @@ func (w *Workflow) request(ctx context.Context, path, token string, body any, ou
 	if err != nil {
 		return err
 	}
-	endpoint.Path = strings.TrimRight(endpoint.Path, "/") + path
+	requestPath, err := url.ParseRequestURI(path)
+	if err != nil || requestPath.Scheme != "" || requestPath.Host != "" || requestPath.Fragment != "" || !strings.HasPrefix(requestPath.Path, "/") {
+		return errors.New("mobile HTTPS request path invalid")
+	}
+	endpoint.Path = strings.TrimRight(endpoint.Path, "/") + requestPath.Path
 	endpoint.RawPath = ""
+	endpoint.RawQuery = requestPath.RawQuery
 	method := "GET"
 	var reader io.Reader
 	var encoded []byte
@@ -805,6 +823,7 @@ func (w *Workflow) invalidateTrust() error {
 	w.state.InitialAuthorities = nil
 	w.state.PendingApproval = nil
 	clear(w.state.SelfRevocation)
+	w.clearRecovery()
 	w.state.SelfRevocation = nil
 	w.state.Grants = nil
 	w.state.Labels = map[string]labelState{}
@@ -825,6 +844,9 @@ func (w *Workflow) invalidateTrust() error {
 	return err
 }
 func (w *Workflow) refresh(ctx context.Context) error {
+	if w.state.Recovery != nil {
+		return ErrRecoveryRestricted
+	}
 	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 {
 		return ErrApprovalPending
 	}

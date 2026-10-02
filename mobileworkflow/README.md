@@ -11,7 +11,7 @@
 - 变量设置、删除：复用 `syncclient.Writer` 的持久加密请求日志和精确 `mutation-status` 查询；重试保持原 nonce、密文、签名与 id。服务器接受后经相同 pull 下发，不乐观改本地值。
 - 原生上下文重启恢复、离线读取已验证缓存。已知全设备撤销使旧会话失效，重新 boot 拒绝后，立即清本地信任、缓存和请求资料，持久化 `AccountClosed`，清该工作流进程中的私钥并关闭对象；关闭上下文不能靠登录自动恢复权限。
 
-批准新设备、恢复、恢复轮换、环境钥轮换、角色管理、多管理手机历史链、账号重置和真实手机系统后台同步尚未接入此高层。`ApproveDevice`/`Recover` 显式返回 `ErrUnsupported`。本切片只固定首根手机自己的管理公钥；不会把服务器未签名设备目录转换为可信管理公钥。
+首根手机批准使用独立 `ApprovePairing`/`RetryApproval` 的完整 v2 来源和受保护事务。受限恢复及完整新码轮换使用独立 `BeginRecovery`/`BeginRecoveryRotation`/`CompleteRecoveryRotation`，详见 [RECOVERY.md](RECOVERY.md)，当前 Go HTTPS 已验证，Android 恢复操作尚未接入。环境钥轮换、角色管理、多管理手机高层、账号重置、真实手机后台同步以及丢失全部设备后显式恢复新管理设备的闭环尚未完成。旧 `ApproveDevice`/`Recover` 简化接口仍返回 `ErrUnsupported`；不会把服务器未签名设备目录转换为可信管理公钥。
 
 ## 原生持久层合同
 
@@ -19,7 +19,7 @@
 
 内层上下文也严格绑定完整 HTTPS endpoint、设备 ID、独立两公钥、账号/代际、本地根及已见检查点。重复字段、额外字段、无效 UTF-8、跨 endpoint/设备/账号、合成夹具标记、未确认根的云缓存与非法签名请求会拒绝。`AccountClosed` 不通过直接改布尔值复活。
 
-`ExportProtectedState` 只给原生 AES 持久层：包含已验证的明文缓存、标签、授权封套、检查点和签名密文请求日志。待初始化阶段另包含短时随机登录 session，供丢失接受响应后查询；初始化确认持久后清除。上下文不保存私钥、密码、固定登录凭据、恢复种子/码。自撤销待决期间有唯一短时例外：原签包绑定的随机设备 session token 仅密封保存至原挑战到期，以支持原请求查询与精确重试；到期擦除，不换会话重签。严禁返回 Dart、日志或明文文件；`View` 才是可给界面的值视图。软件钥及运行时副本不保证始终硬件内或全部安全擦除。
+`ExportProtectedState` 只给原生 AES 持久层：包含已验证的明文缓存、标签、授权封套、检查点和签名密文请求日志。待初始化阶段另包含短时随机登录 session，供丢失接受响应后查询；初始化确认持久后清除。上下文不保存私钥、密码、固定登录凭据、恢复种子/码。自撤销待决期间有短时随机会话例外：原签包绑定的随机设备 session token 仅密封保存至原挑战到期，以支持原请求查询与精确重试；到期擦除，不换会话重签。受限恢复另保存仅用于原恢复流程的随机 token，最长至服务器 15 分钟截止，过期擦除；它不等于设备可信或管理授权。严禁返回 Dart、日志或明文文件；`View` 才是可给界面的值视图。软件钥及运行时副本不保证始终硬件内或全部安全擦除。
 
 本机 native API 的调用、加密保存、操作 id 生成和结果序列化须串行。每次系统认证后调用 `New`，操作结束调用 `Close`；取消认证不得调用业务。为 Go 合成测试注入的 `HTTPClient`/`Now` 不属于 Dart 命令格式，TLS 禁止 `InsecureSkipVerify`，拒绝 HTTP/带凭据/查询/fragment endpoint，重定向不传会话。
 
@@ -38,3 +38,7 @@
 `RevokeSelf(ctx, id)` 要求当前全部环境 Admin，真实服务端原子撤销自身设备、会话和授权。原签包和短时原 session 必须先经原生密封保存，再提交；待决期间普通缓存/CRUD 关闭，`SelfRevocationInfo` 仅返回 id、状态和到期时间，仍可退出。仅已知 200 完成回执报告 completed；已接受响应丢失后原 status 401、重新 boot 403，只报告授权失效及原请求结果未知，并清本机资料。到期原 bearer 擦除、禁止再 POST，不隐式创建新操作。细节见 [SELF-REVOCATION.md](SELF-REVOCATION.md)。
 
 本机 Go `go test -race ./mobileworkflow ./syncclient -count=1` 通过（2.206 秒 / 3.752 秒）。工作区真实 `go test -race ./acceptance -run 'TestMobile(SelfRevocation|Workflow)' -count=1 -v` 通过：原手机纵链 1 项与自撤销 5 子项，包执行 6.240 秒。Android 原生代理记录最终高层 suite 12/12 通过，184.013 秒，覆盖已知完成、丢失接受响应、密封上下文重建、待决缓存关闭和 alias/key/state 删除；此证据与 Go AES 替身分开记录。
+
+## 受限恢复切片
+
+独立 `RecoveryInfo`/`RecoveryView` 使用完整恢复码验证根并恢复已签历史数据；`BeginRecoveryRotation` 显示独立新完整码，`CompleteRecoveryRotation` 要求完整重输、原 ID 查询、原 nonce 签名、原子全封套替换与同 vault 验签/HPKE/AEAD确认，最后原生保存成功才确认。所有状态 `trustedDevice=false`。新环境/跨版本/非根来源缺 origin 时拒绝，不能据此宣称全设备丢失后的管理恢复已完成。Go 真实 race 3 主项/10 子项通过，10.850 秒；原生恢复操作未跑。完整合同、密封字段及限制见 [RECOVERY.md](RECOVERY.md)。
