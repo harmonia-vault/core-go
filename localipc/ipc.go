@@ -72,6 +72,8 @@ type Config struct {
 	Now            func() time.Time
 	Timeout        time.Duration
 	MaxConnections int
+	// Observe 默认关闭，只接收固定类别和耗时，不记录请求或原错误。
+	Observe func(Diagnostic)
 	// OnLogout 由后台 owner 停止旧同步并清除本地设备/会话资料；IPC 不持有 Vault。
 	OnLogout    func(context.Context) error
 	OnlineWrite func(context.Context, SharedWriteRequest) (SharedWriteResult, error)
@@ -104,7 +106,7 @@ type nativeListener struct {
 type Server struct {
 	config       Config
 	listener     nativeListener
-	operations   sync.Mutex
+	operations   operationGate
 	connections  sync.Mutex
 	open         map[net.Conn]bool
 	closing      bool
@@ -159,6 +161,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		select {
 		case slots <- struct{}{}:
 		default:
+			s.observe(Diagnostic{Stage: StageAdmission, Failure: FailureCapacity, Budget: s.config.Timeout, started: time.Now()})
 			_ = conn.Close()
 			continue
 		}
@@ -173,22 +176,35 @@ func (s *Server) Serve(ctx context.Context) error {
 		s.workers.Add(1)
 		s.connections.Unlock()
 		go func() {
+			diagnostic := Diagnostic{Stage: StageIdentity, Budget: s.config.Timeout, started: time.Now()}
 			defer s.workers.Done()
 			defer func() { <-slots; s.connections.Lock(); delete(s.open, conn); s.connections.Unlock(); _ = conn.Close() }()
-			_ = conn.SetDeadline(time.Now().Add(s.config.Timeout))
+			defer func() { s.observe(diagnostic) }()
+			deadline := time.Now().Add(s.config.Timeout)
+			_ = conn.SetDeadline(deadline)
 			if err := authorizeNative(conn, s.config.Endpoint, false); err != nil {
+				diagnostic.Failure = diagnosticFailure(err)
 				return
 			}
+			diagnostic.Stage = StageRequestRead
 			var request Request
 			if err := readFrame(conn, &request, maxRequestBytes); err != nil {
+				diagnostic.Failure = diagnosticFailure(err)
 				_ = writeFrame(conn, Response{Version: Version, Code: "invalid_request"}, maxResponseBytes)
 				return
 			}
 			if isSharedWrite(request.Command) {
-				_ = conn.SetDeadline(time.Now().Add(time.Minute))
+				diagnostic.Budget = time.Minute
+				deadline = time.Now().Add(time.Minute)
+				_ = conn.SetDeadline(deadline)
 			}
-			response := s.dispatch(ctx, request)
-			_ = writeFrame(conn, response, maxResponseBytes)
+			requestCtx, cancel := context.WithDeadline(ctx, deadline)
+			defer cancel()
+			response := s.dispatchObserved(requestCtx, request, &diagnostic)
+			diagnostic.ResponseOK = response.OK
+			if err := writeFrameObserved(conn, response, maxResponseBytes, &diagnostic); err != nil {
+				diagnostic.Failure = diagnosticFailure(err)
+			}
 		}()
 	}
 }
@@ -216,7 +232,9 @@ func (s *Server) Close() error {
 
 // Reconcile 与命令共用串行操作锁，供后台定时器与已验证撤销处理调用。
 func (s *Server) Reconcile(ctx context.Context, now time.Time) error {
-	s.operations.Lock()
+	if err := s.operations.Lock(ctx); err != nil {
+		return err
+	}
 	defer s.operations.Unlock()
 	return s.config.Engine.Reconcile(ctx, s.config.Provider, now)
 }
@@ -263,16 +281,42 @@ func validateRequest(r Request) error {
 	return nil
 }
 func (s *Server) dispatch(ctx context.Context, r Request) Response {
+	return s.dispatchObserved(ctx, r, nil)
+}
+func (s *Server) dispatchObserved(ctx context.Context, r Request, diagnostic *Diagnostic) Response {
 	response := Response{Version: Version}
 	if validateRequest(r) != nil {
 		response.Code = "invalid_command"
 		return response
 	}
-	s.operations.Lock()
+	queued := time.Now()
+	if diagnostic != nil {
+		event := *diagnostic
+		event.Stage = StageQueue
+		s.observe(event)
+	}
+	err := s.operations.Lock(ctx)
+	if diagnostic != nil {
+		diagnostic.QueueWait = time.Since(queued)
+	}
+	if err != nil {
+		response.Code = "request_canceled"
+		if errors.Is(err, context.DeadlineExceeded) {
+			response.Code = "request_expired"
+		}
+		if diagnostic != nil {
+			diagnostic.Failure = diagnosticFailure(err)
+		}
+		return response
+	}
 	defer s.operations.Unlock()
+	if diagnostic != nil {
+		diagnostic.ExecutionStarted = true
+		execution := time.Now()
+		defer func() { diagnostic.Execution = time.Since(execution) }()
+	}
 	now := s.config.Now()
 	engine := s.config.Engine
-	var err error
 	if isSharedWrite(r.Command) {
 		return s.dispatchShared(ctx, r, now)
 	}
@@ -353,7 +397,7 @@ func Call(ctx context.Context, endpoint Endpoint, request Request) (Response, er
 	}
 	rawConn, err := dialNative(ctx, endpoint)
 	if err != nil {
-		return Response{}, ErrUnavailable
+		return Response{}, callTransportError(ctx, transportError(PhaseDial, err))
 	}
 	conn := &nativeHandleConn{Conn: rawConn}
 	defer conn.Close()
@@ -372,11 +416,11 @@ func Call(ctx context.Context, endpoint Endpoint, request Request) (Response, er
 		return Response{}, ErrIdentity
 	}
 	if err = writeFrame(conn, request, maxRequestBytes); err != nil {
-		return Response{}, ErrUnavailable
+		return Response{}, callTransportError(ctx, err)
 	}
 	var response Response
 	if err = readFrame(conn, &response, maxResponseBytes); err != nil {
-		return Response{}, ErrProtocol
+		return Response{}, callTransportError(ctx, err)
 	}
 	if response.Version != Version {
 		return Response{}, ErrProtocol
@@ -384,22 +428,31 @@ func Call(ctx context.Context, endpoint Endpoint, request Request) (Response, er
 	return response, nil
 }
 func writeFrame(w io.Writer, value any, maximum uint32) error {
+	return writeFrameObserved(w, value, maximum, nil)
+}
+func writeFrameObserved(w io.Writer, value any, maximum uint32, diagnostic *Diagnostic) error {
 	data, err := json.Marshal(value)
 	if err != nil || len(data) == 0 || uint64(len(data)) > uint64(maximum) {
 		return ErrProtocol
 	}
 	var size [4]byte
 	binary.BigEndian.PutUint32(size[:], uint32(len(data)))
+	if diagnostic != nil {
+		diagnostic.Stage = StageResponseHeader
+	}
 	if _, err = io.Copy(w, bytes.NewReader(size[:])); err != nil {
-		return err
+		return transportError(PhaseWriteHeader, err)
+	}
+	if diagnostic != nil {
+		diagnostic.Stage = StageResponseBody
 	}
 	_, err = io.Copy(w, bytes.NewReader(data))
-	return err
+	return transportError(PhaseWriteBody, err)
 }
 func readFrame(r io.Reader, dst any, maximum uint32) error {
 	var size [4]byte
 	if _, err := io.ReadFull(r, size[:]); err != nil {
-		return ErrProtocol
+		return transportError(PhaseReadHeader, err)
 	}
 	length := binary.BigEndian.Uint32(size[:])
 	if length == 0 || length > maximum {
@@ -407,7 +460,7 @@ func readFrame(r io.Reader, dst any, maximum uint32) error {
 	}
 	data := make([]byte, length)
 	if _, err := io.ReadFull(r, data); err != nil {
-		return ErrProtocol
+		return transportError(PhaseReadBody, err)
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()

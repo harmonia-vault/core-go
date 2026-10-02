@@ -31,7 +31,11 @@ func temporaryEndpoint(t *testing.T) Endpoint {
 }
 func startServer(t *testing.T, endpoint Endpoint, engine *localstate.Engine, provider localstate.Provider) (*Server, context.CancelFunc, <-chan error) {
 	t.Helper()
-	server, err := Listen(Config{Endpoint: endpoint, Engine: engine, Provider: provider, Now: func() time.Time { return syntheticNow }, Timeout: time.Second, MaxConnections: 32})
+	return startObservedServer(t, endpoint, engine, provider, nil)
+}
+func startObservedServer(t *testing.T, endpoint Endpoint, engine *localstate.Engine, provider localstate.Provider, observe func(Diagnostic)) (*Server, context.CancelFunc, <-chan error) {
+	t.Helper()
+	server, err := Listen(Config{Endpoint: endpoint, Engine: engine, Provider: provider, Now: func() time.Time { return syntheticNow }, Timeout: time.Second, MaxConnections: 32, Observe: observe})
 	must(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -49,7 +53,35 @@ func TestNativeUnixConcurrentClientsDisconnectAndRestart(t *testing.T) {
 	must(t, engine.EnableSyntheticFixtures())
 	source, _, provider := fixture(t)
 	must(t, engine.AcceptSnapshot(source.State().Cloud, syntheticNow))
-	server, cancel, done := startServer(t, endpoint, engine, provider)
+	var timingMu sync.Mutex
+	var maxQueue, maxExecution, maxElapsed time.Duration
+	var terminal, timeouts, disconnects, otherFailures int
+	observe := func(d Diagnostic) {
+		if d.Stage == StageQueue {
+			return
+		}
+		timingMu.Lock()
+		defer timingMu.Unlock()
+		terminal++
+		switch d.Failure {
+		case FailureNone:
+		case FailureTimeout:
+			timeouts++
+		case FailureDisconnected:
+			disconnects++
+		default:
+			otherFailures++
+		}
+		maxQueue = max(maxQueue, d.QueueWait)
+		maxExecution = max(maxExecution, d.Execution)
+		maxElapsed = max(maxElapsed, d.Elapsed)
+	}
+	t.Cleanup(func() {
+		timingMu.Lock()
+		defer timingMu.Unlock()
+		t.Logf("连接终态=%d 超时=%d 断开=%d 其它失败=%d 最大排队毫秒=%d 最大执行毫秒=%d 最大总毫秒=%d 预算毫秒=1000 并发=20 容量=32", terminal, timeouts, disconnects, otherFailures, maxQueue.Milliseconds(), maxExecution.Milliseconds(), maxElapsed.Milliseconds())
+	})
+	server, cancel, done := startObservedServer(t, endpoint, engine, provider, observe)
 	response, err := Call(context.Background(), endpoint, Request{Command: "activate", EnvironmentID: "one"})
 	must(t, err)
 	if !response.OK {
