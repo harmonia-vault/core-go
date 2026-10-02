@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>Label</key><string>org.harmonia-vault.user.10001</string>
+<key>UserName</key><string>harmonia-test</string>
+<key>ProgramArguments</key><array>
+<string>/usr/local/bin/harmonia</string>
+<string>daemon</string>
+<string>--state</string>
+<string>/Library/Application Support/Harmonia/10001/state.json</string>
+<string>--local-user</string>
+<string>10001</string>
+<string>--platform-fragment</string>
+<string>/Library/Application Support/Harmonia/10001/environment.sh</string>
+<string>--interval</string>
+<string>2s</string>
+</array>
+<key>WorkingDirectory</key><string>/Library/Application Support/Harmonia/10001</string>
+<key>RunAtLoad</key><true/>
+<key>KeepAlive</key><true/>
+<key>ProcessType</key><string>Background</string>
+<key>Umask</key><integer>63</integer>
+</dict></plist>

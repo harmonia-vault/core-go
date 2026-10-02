@@ -1,0 +1,30 @@
+{
+  "schema": "harmonia/windows-service/v1",
+  "serviceName": "Harmonia-4c51f3baadf4",
+  "account": "NT SERVICE\\Harmonia-4c51f3baadf4",
+  "targetUserSID": "S-1-5-21-111-222-333-1001",
+  "executable": "C:\\Program Files\\Harmonia\\harmonia.exe",
+  "arguments": [
+    "daemon",
+    "--state",
+    "C:\\ProgramData\\Harmonia\\test-user\\state.json",
+    "--local-user",
+    "S-1-5-21-111-222-333-1001",
+    "--windows-service",
+    "Harmonia-4c51f3baadf4",
+    "--interval",
+    "2s"
+  ],
+  "stateDirectory": "C:\\ProgramData\\Harmonia\\test-user",
+  "startType": "automatic",
+  "requiredACL": [
+    "服务身份只能读写本实例状态目录；其他本地用户不得访问",
+    "只授予目标 HKEY_USERS\\S-1-5-21-111-222-333-1001\\Environment 所需查询/写入权限；禁止授予其他用户 hive",
+    "二进制和服务配置只能由管理员写入"
+  ],
+  "gates": [
+    "本实现不安装服务或授予 ACL",
+    "目标用户 hive 未加载时失败；开机无登录的 profile/hive 生命周期尚未实现和验收",
+    "Session 0 广播不能保证进入交互用户会话；现有进程环境不会被外部修改"
+  ]
+}

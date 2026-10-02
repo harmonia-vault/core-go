@@ -1,10 +1,10 @@
-# Harmonia development rules
+# Harmonia 开发约定
 
-Experimental security software: do not claim production readiness.
-Use synthetic secrets/accounts only in tests. Never scan or import the host's real environment.
-No CI/CD, releases, installers or live deployment are authorized for this milestone.
-Before public pushes, check tracked content for secrets and personal data.
-Pin installed tools in mise.toml and expose tasks through mise.
-Do not overwrite existing user files. Service and environment tests use isolated test directories or VMs.
-UI is authored by one scoped local Claude Opus 5.5 medium-effort invocation; no UI unit tests.
-Protocol, business logic and security testing remain with Codex.
+这是实验性安全软件，不能宣称生产可用。
+测试只用合成凭据和账号；不要扫描或导入宿主真实环境变量。
+本轮不配置 CI/CD，不发布 Release 或安装包，不部署真实线上服务。
+公开推送前检查跟踪源码中的秘密和个人数据。
+工具版本固定在 mise.toml，验证入口通过 mise task 暴露。
+本轮从零创建的 Harmonia 仓库内文件可以修改与删除；其它已有用户文件不能覆盖。系统服务与环境写入测试使用隔离目录、测试账号或 VM。
+UI 通过用户本机订阅的 Claude CLI，指定 Opus 5.5、medium 思考等级，根据额度动态控制调用次数；不能切到计费 API 或其它账号。不写 UI 单元测试。
+协议、业务机制、安全测试由 Codex 完成。

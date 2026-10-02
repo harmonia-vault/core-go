@@ -1,0 +1,42 @@
+{
+  "description": "仅用于公开互操作测试的合成钥匙、明文和种子，禁止用于真实凭据。",
+  "grant": {
+    "accountId": "account-test",
+    "accountGeneration": "1",
+    "issuerDeviceId": "device-admin",
+    "subjectDeviceId": "device-subject",
+    "subjectSigningPublicKey": "JUO5L_EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0",
+    "subjectReceivingPublicKey": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ",
+    "environmentId": "environment-test",
+    "keyVersion": "1",
+    "grantGeneration": "1",
+    "role": "rw",
+    "expiresAt": "0",
+    "idempotencyKey": "grant-test-1",
+    "envelope": "jTnkoQrOauMGPTXWLPGnIIMJoCi4aRC5HmBaHbmrq1eY5j5TCf-ZCpYrrvEEk-hT0VwdfI_Pke7hGJpj6rIE4StwrZ7VLpNt70IewUGQqK8",
+    "signature": "4gWz2TiZ_6_5ufEFNDuDUm6Id-Cto8nBrwf3Tl8T34mQC7vmsD0UX83NxOavwou3yUt-2_5ivHhd5P13DpyaCA"
+  },
+  "grantSigningHex": "5b226861726d6f6e69612f6772616e742f7631222c226163636f756e742d74657374222c2231222c226465766963652d61646d696e222c226465766963652d7375626a656374222c224a554f354c5f454a565246486174794461647474334a4d325a61455a654e326851453768426d7970565a30222c224e594279316a5a59674e4775366a4b61333545684f446852375347696a6a74313657585130733057596c51222c22656e7669726f6e6d656e742d74657374222c2231222c2231222c227277222c2230222c226772616e742d746573742d31222c226a546e6b6f51724f61754d47505458574c50476e49494d4a6f43693461524335486d426148626d7271316559356a355443662d5a43705972727645456b2d68543056776466495f506b653768474a706a3672494534537477725a37564c704e743730496577554751714b38225d",
+  "mutation": {
+    "accountId": "account-test",
+    "accountGeneration": "1",
+    "deviceId": "device-admin",
+    "environmentId": "environment-test",
+    "keyVersion": "1",
+    "grantGeneration": "1",
+    "operation": "put",
+    "idempotencyKey": "mutation-test-1",
+    "name": "TEST_VALUE",
+    "payload": "YGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3onl8QNgYOJOOt5XKOSsk32VcfqaO9iPz2-hF2vpUUh74LjTU",
+    "signature": "bxtIcJI9hvG-GlE_Scrx_FJ2X3VesY6d6gRsf8d7MJYQNpjcyw1sRPYThvwMLmKZhsa9NPwb7OOUWoTdezpXCA"
+  },
+  "mutationSigningHex": "5b226861726d6f6e69612f6d75746174696f6e2f7631222c226163636f756e742d74657374222c2231222c226465766963652d61646d696e222c22656e7669726f6e6d656e742d74657374222c2231222c2231222c22707574222c226d75746174696f6e2d746573742d31222c22544553545f56414c5545222c22594746695932526c5a6d646f615770726247317562334278636e4e3064585a336f6e6c38514e67594f4a4f4f7435584b4f53736b333256636671614f3969507a322d684632767055556837344c6a5455225d",
+  "recoveryReceivingPublicKey": "q3LUxCdSzLi28AIEWP889cGQyH2bgsCaEDl3rMYnk3g",
+  "recoverySigningPublicKey": "egYKl7v681a0XHbxkB-BXoGT-HYXJ4JET0ZPOMZCPwY",
+  "signingPublicKey": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+  "syntheticReceivingPrivateKeyHex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+  "syntheticRecoverySeedHex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+  "syntheticSigningSeedHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "syntheticValueKeyHex": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+  "syntheticValuePlaintext": "synthetic-value-only"
+}

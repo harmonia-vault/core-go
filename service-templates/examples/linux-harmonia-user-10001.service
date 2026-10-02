@@ -1,0 +1,30 @@
+[Unit]
+Description=Harmonia 本地用户环境同步
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=harmonia-test
+UMask=0077
+ExecStart="/usr/local/bin/harmonia" "daemon" "--state" "/var/lib/harmonia/10001/state.json" "--local-user" "10001" "--platform-fragment" "/var/lib/harmonia/10001/environment.sh" "--interval" "2s"
+Restart=on-failure
+RestartSec=3s
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths="/var/lib/harmonia/10001"
+WorkingDirectory=/var/lib/harmonia/10001
+
+[Install]
+WantedBy=multi-user.target

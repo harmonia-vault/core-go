@@ -1,0 +1,20 @@
+{
+  "description": "公开合成线协议尺寸边界向量；填充数据不是可解密AEAD密文，不能用于实际环境值。",
+  "mutationTemplate": {
+    "accountId": "account-test",
+    "accountGeneration": "1",
+    "deviceId": "device-admin",
+    "environmentId": "environment-test",
+    "keyVersion": "1",
+    "grantGeneration": "1",
+    "operation": "put",
+    "idempotencyKey": "maximum-packet-test",
+    "name": "TEST_MAXIMUM",
+    "payload": ""
+  },
+  "packetBytes": 65576,
+  "signature": "cM5E9Dk3s02S-jVxQjpYFilntegGBkMpTVkGyeLXLnlvCBe4S0H7GFJwXiGR6OMmrege_sHe-rJF5i5GbOTiCA",
+  "signingSha256": "bb23381e5d942293b16482fa305d08e3f9f9368d1466ffe2069290ab994fb971",
+  "syntheticPacketFillByte": 42,
+  "syntheticSigningSeedHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+}

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# mise description="验证密码学原语、签名及公开互操作向量"
+set -euo pipefail
+mise exec -- go test ./cryptox -count=1 -v

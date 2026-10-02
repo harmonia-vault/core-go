@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# mise description="运行全部合成 Go 测试"
+set -euo pipefail
+mise exec -- go test ./... -count=1
