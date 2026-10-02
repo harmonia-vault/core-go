@@ -137,5 +137,15 @@ func validCode(code []byte) bool {
 
 // EnrollmentContext 复制公开字段供 HTTP 批准对象使用，不导出短码或会话钥。
 func (c Context) EnrollmentContext() cryptox.EnrollmentContext {
-	return cryptox.EnrollmentContext{c.AccountID, c.AccountGeneration, c.Purpose, c.SessionID, c.ChallengeNonce, c.ExpiresAt, c.InitiatorDeviceID, c.InitiatorSigningPublicKey, c.InitiatorReceivingPublicKey, c.ApproverDeviceID, c.ApproverSigningPublicKey, c.ApproverReceivingPublicKey}
+	return cryptox.EnrollmentContext{
+		AccountID: c.AccountID, AccountGeneration: c.AccountGeneration,
+		Purpose: c.Purpose, SessionID: c.SessionID,
+		ChallengeNonce: c.ChallengeNonce, ExpiresAt: c.ExpiresAt,
+		InitiatorDeviceID:           c.InitiatorDeviceID,
+		InitiatorSigningPublicKey:   c.InitiatorSigningPublicKey,
+		InitiatorReceivingPublicKey: c.InitiatorReceivingPublicKey,
+		ApproverDeviceID:            c.ApproverDeviceID,
+		ApproverSigningPublicKey:    c.ApproverSigningPublicKey,
+		ApproverReceivingPublicKey:  c.ApproverReceivingPublicKey,
+	}
 }

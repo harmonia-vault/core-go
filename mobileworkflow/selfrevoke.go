@@ -2,7 +2,6 @@ package mobileworkflow
 
 import (
 	"context"
-	"crypto/ed25519"
 	"errors"
 	"strconv"
 
@@ -32,8 +31,7 @@ func (w *Workflow) selfRevocationClient() (*syncclient.Client, error) {
 	if err != nil || generation == 0 {
 		return nil, ErrNotTrusted
 	}
-	public := w.signing.Public().(ed25519.PublicKey)
-	verifier, err := syncclient.NewPinnedVerifier(syncclient.PinnedTrust{AccountID: w.state.AccountID, AccountGeneration: generation, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: public, ReceivingPrivateKey: w.receiving, Managers: map[string]ed25519.PublicKey{w.state.DeviceID: public}, Now: w.now})
+	verifier, err := w.originVerifier()
 	if err != nil {
 		return nil, err
 	}

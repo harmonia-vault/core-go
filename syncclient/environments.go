@@ -11,10 +11,11 @@ import (
 )
 
 type EnvironmentEvent struct {
-	Sequence      uint64                          `json:"sequence"`
-	Change        cryptox.SignedEnvironmentChange `json:"change"`
-	Authorization SignedGrant                     `json:"authorization"`
-	Subjects      []string                        `json:"subjects"`
+	Sequence      uint64                           `json:"sequence"`
+	Change        cryptox.SignedEnvironmentChange  `json:"change"`
+	Origin        *cryptox.SignedEnvironmentOrigin `json:"origin,omitempty"`
+	Authorization SignedGrant                      `json:"authorization"`
+	Subjects      []string                         `json:"subjects"`
 }
 
 func (v *PinnedVerifier) verifyEnvironmentEvents(ctx context.Context, pull Pull, previous localstate.CloudSnapshot, out *localstate.CloudSnapshot) error {
@@ -45,6 +46,16 @@ func (v *PinnedVerifier) verifyEnvironmentEvents(ctx context.Context, pull Pull,
 		public := ed25519.PublicKey(signer)
 		if err = cryptox.VerifyEnvironmentChange(event.Change, public); err != nil {
 			return err
+		}
+		if event.Origin != nil {
+			if v.issuerOriginProof == nil {
+				return errors.New("environment origin requires explicit capability")
+			}
+			if err = v.issuerOriginProof.VerifyEnvironmentOriginEvent(event.Change, *event.Origin, cryptox.SignedGrantWire{Grant: g, Signature: event.Authorization.Signature}); err != nil {
+				return err
+			}
+		} else if v.evidenceRoot != nil && (c.Operation == "create" || c.Operation == "rotate") {
+			return errors.New("environment change lacks signed origin evidence")
 		}
 		expected, err := strconv.ParseUint(c.ExpectedSequence, 10, 64)
 		if err != nil || expected >= 9007199254740991 || event.Sequence != expected+1 {

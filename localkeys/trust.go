@@ -14,6 +14,7 @@ import (
 const EnrollmentPairingProfile = "boringssl-spake2-edwards25519-draft02-v1"
 const maxEnrollmentCertificate = 64 << 10
 const maxEnrollmentCertificateV2 = (256 << 10) + 512
+const maxEnrollmentCertificateV3 = (1 << 20) + 512
 
 var identityPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
@@ -45,6 +46,10 @@ func (t TrustContext) validate() error {
 	switch t.CertificateVersion {
 	case "", "1":
 		if len(t.Managers) < 1 || len(t.Managers) > 64 || len(t.EnrollmentCertificate) > maxEnrollmentCertificate {
+			return ErrCorrupt
+		}
+	case "3":
+		if len(t.Managers) != 0 || len(t.EnrollmentCertificate) > maxEnrollmentCertificateV3 {
 			return ErrCorrupt
 		}
 	case "2":

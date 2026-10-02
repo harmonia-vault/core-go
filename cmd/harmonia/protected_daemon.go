@@ -30,9 +30,35 @@ type daemonOptions struct {
 
 // verifiedStoredContext 核验受保护的双签收据及精确公钥。证书期限是历史配对
 // 挑战期限，不当成当前授权；当前环境权限仍由每次服务器检查和签授权决定。
-func verifiedStoredContext(trust localkeys.TrustContext, keys localkeys.DeviceKeys) (*syncclient.PinnedVerifier, error) {
+func verifiedStoredContext(trust localkeys.TrustContext, keys localkeys.DeviceKeys, stored ...localstate.CloudSnapshot) (*syncclient.PinnedVerifier, error) {
+	v, e := verifiedStoredContextReceipt(trust, keys)
+	if e != nil {
+		return nil, e
+	}
+	for _, snapshot := range stored {
+		if e = v.ValidateStoredIssuerEvidence(snapshot); e != nil {
+			v.Close()
+			return nil, e
+		}
+	}
+	return v, nil
+}
+func verifiedStoredContextReceipt(trust localkeys.TrustContext, keys localkeys.DeviceKeys) (*syncclient.PinnedVerifier, error) {
 	if !trust.Accepted {
 		return nil, errors.New("待完成入网不能启动网络同步")
+	}
+	if trust.CertificateVersion == "3" {
+		if len(trust.Managers) != 0 {
+			return nil, errors.New("v3 不接受全局管理者名单")
+		}
+		receipt, e := syncclient.DecodeEnrollmentReceiptV3(trust.EnrollmentCertificate)
+		if e != nil {
+			return nil, e
+		}
+		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
+			return nil, errors.New("v3 受保护回执与本机身份不匹配")
+		}
+		return syncclient.NewPinnedVerifierV3(syncclient.IssuerOriginPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
 	}
 	if trust.CertificateVersion == "2" {
 		if len(trust.Managers) != 0 {
@@ -45,7 +71,7 @@ func verifiedStoredContext(trust localkeys.TrustContext, keys localkeys.DeviceKe
 		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
 			return nil, errors.New("v2 受保护回执与本机身份不匹配")
 		}
-		return syncclient.NewPinnedVerifierV2(syncclient.IssuerPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
+		return syncclient.NewPinnedVerifierV2WithOrigins(syncclient.IssuerPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
 	}
 	if trust.CertificateVersion != "" && trust.CertificateVersion != "1" {
 		return nil, errors.New("未知入网证书版本")
@@ -165,7 +191,7 @@ func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out
 		if err != nil {
 			return err
 		}
-		verifier, err = verifiedStoredContext(trust, keys)
+		verifier, err = verifiedStoredContext(trust, keys, engine.State().Cloud)
 		if err != nil {
 			return err
 		}

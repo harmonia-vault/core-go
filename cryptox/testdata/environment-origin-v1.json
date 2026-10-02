@@ -1,0 +1,683 @@
+{
+  "syntheticNow": 2030000000,
+  "syntheticSigningSeedsHex": {
+    "A": "0101010101010101010101010101010101010101010101010101010101010101",
+    "B": "0202020202020202020202020202020202020202020202020202020202020202",
+    "C": "0303030303030303030303030303030303030303030303030303030303030303",
+    "D": "0505050505050505050505050505050505050505050505050505050505050505"
+  },
+  "rotation": {
+    "change": {
+      "accountId": "account-chain",
+      "accountGeneration": "1",
+      "deviceId": "device-B",
+      "environmentId": "env-fixture",
+      "operation": "rotate",
+      "authorityEnvironmentId": "env-fixture",
+      "authorityKeyVersion": "1",
+      "authorityGrantGeneration": "1",
+      "previousKeyVersion": "1",
+      "keyVersion": "2",
+      "expectedSequence": "10",
+      "idempotencyKey": "rotate-origin",
+      "labelPayload": "",
+      "recoveryGeneration": "1",
+      "recoveryEnvelope": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "grants": [
+        {
+          "grant": {
+            "accountId": "account-chain",
+            "accountGeneration": "1",
+            "issuerDeviceId": "device-B",
+            "subjectDeviceId": "device-A",
+            "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+            "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+            "environmentId": "env-fixture",
+            "keyVersion": "2",
+            "grantGeneration": "2",
+            "role": "admin",
+            "expiresAt": "0",
+            "idempotencyKey": "rotate-A",
+            "envelope": "aXgvtzIEnY1bPHKFsB5Cf_yeMfD-OJzcen6BFyMUkUEa7hWTcDbVhp4D47UxTztSvuIN19B17Mo5dmkKOLHaRqK7bh6FI1y8UnSHFK_WgcY"
+          },
+          "signature": "qNYM3xmHSEmwY9ZGqRHQtcNZhPrh_AcKcDco0aGZZ8Jwo9Z1P3RFxByqt_9DgAMZjCooUFaPvpLQkTmsOwcOBw"
+        },
+        {
+          "grant": {
+            "accountId": "account-chain",
+            "accountGeneration": "1",
+            "issuerDeviceId": "device-B",
+            "subjectDeviceId": "device-B",
+            "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+            "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+            "environmentId": "env-fixture",
+            "keyVersion": "2",
+            "grantGeneration": "2",
+            "role": "admin",
+            "expiresAt": "2030000500",
+            "idempotencyKey": "rotate-B",
+            "envelope": "mfarrVBPUjnK_o28oc-szVqbHIQTsoDkomtssfGdKldfrAFGMZG590pPatszKdVOW5xOaoeunCXJKDQp3hbOT8SCHj25-cLEanI4kHRsNag"
+          },
+          "signature": "2rqfqTvfgFuTtfc9e3axJe9XP5pkUPVBDsdcawfsC7Md7Ley0Y8jEpsSniS3cmGF_leNLX718hwGxhY0dny4Dw"
+        },
+        {
+          "grant": {
+            "accountId": "account-chain",
+            "accountGeneration": "1",
+            "issuerDeviceId": "device-B",
+            "subjectDeviceId": "device-C",
+            "subjectSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+            "subjectReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+            "environmentId": "env-fixture",
+            "keyVersion": "2",
+            "grantGeneration": "2",
+            "role": "ro",
+            "expiresAt": "0",
+            "idempotencyKey": "rotate-C",
+            "envelope": "BwX6LindekpA2QUulCGsIvq1KcxSOC6WBms-T7QtFD2QodxNJjLn-AsJdS1YHxdGfjacE0SWV5EUodlJNI4JjAH2-_a_K_Oll3bm1hvmfgE"
+          },
+          "signature": "qZPZWy6dqXLV3K6VYD-g_Cb6DT-fr12Nw5HQ_0DuXl3rfxLE9s-jEGAAWhwzcC8Q6zf7gvxW9zJyTJXq-RztCQ"
+        }
+      ],
+      "mutations": []
+    },
+    "signature": "YRHTTvTT1VML_-hoKSc-qSXU4kZOdPHKlWJN0SD87cbTD3LmYqX36cq_dhVc6CEyyxw2XboylRUjyt9hzCyABA",
+    "origin": {
+      "origin": {
+        "accountId": "account-chain",
+        "accountGeneration": "1",
+        "actorDeviceId": "device-B",
+        "environmentId": "env-fixture",
+        "operation": "rotate",
+        "authorityEnvironmentId": "env-fixture",
+        "authorityKeyVersion": "1",
+        "authorityGrantGeneration": "1",
+        "previousKeyVersion": "1",
+        "keyVersion": "2",
+        "expectedSequence": "10",
+        "idempotencyKey": "rotate-origin",
+        "changeHash": "1b52ab202268fbbd897ce333f307e314a46fd6671c7b158b6a88fb469826e443",
+        "authorityHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a",
+        "before": [
+          {
+            "subjectDeviceId": "device-A",
+            "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+            "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+            "keyVersion": "1",
+            "grantGeneration": "1",
+            "role": "admin",
+            "expiresAt": "0",
+            "grantHash": "d7747be64dd5d8398e8a7b0f7216fb65845b48059b6c99fb22ca8a07d2e78586"
+          },
+          {
+            "subjectDeviceId": "device-B",
+            "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+            "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+            "keyVersion": "1",
+            "grantGeneration": "1",
+            "role": "admin",
+            "expiresAt": "2030000500",
+            "grantHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a"
+          },
+          {
+            "subjectDeviceId": "device-C",
+            "subjectSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+            "subjectReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+            "keyVersion": "1",
+            "grantGeneration": "1",
+            "role": "ro",
+            "expiresAt": "0",
+            "grantHash": "8bccd809505168dbbbb9f5c1099f63ce642124c02c61229eb277b8d5d6371a42"
+          }
+        ],
+        "after": [
+          {
+            "subjectDeviceId": "device-A",
+            "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+            "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+            "keyVersion": "2",
+            "grantGeneration": "2",
+            "role": "admin",
+            "expiresAt": "0",
+            "grantHash": "9b8629804b6c5970f4dec2744ed27909555140267bebdb398b7a2b0dddb4981a"
+          },
+          {
+            "subjectDeviceId": "device-B",
+            "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+            "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+            "keyVersion": "2",
+            "grantGeneration": "2",
+            "role": "admin",
+            "expiresAt": "2030000500",
+            "grantHash": "63a38dafa54fe8110d83d83aa436884a0bcde0a16d2c6b483757bc4b16605eb9"
+          },
+          {
+            "subjectDeviceId": "device-C",
+            "subjectSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+            "subjectReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+            "keyVersion": "2",
+            "grantGeneration": "2",
+            "role": "ro",
+            "expiresAt": "0",
+            "grantHash": "448dd8e7063a8149e512a42777da8ca00193ff9c5313ee62bfd30c40a20a6c7f"
+          }
+        ]
+      },
+      "signature": "8HhmIwXbniF0HOk_icalQS_ROovPupWopTQvKJ8xAC38yY1qnPQesTlLnzQny-L0tOM7uCxxOcFbrQyVFsYUBQ"
+    }
+  },
+  "creation": {
+    "change": {
+      "accountId": "account-chain",
+      "accountGeneration": "1",
+      "deviceId": "device-B",
+      "environmentId": "environment-Y",
+      "operation": "create",
+      "authorityEnvironmentId": "env-fixture",
+      "authorityKeyVersion": "1",
+      "authorityGrantGeneration": "1",
+      "previousKeyVersion": "0",
+      "keyVersion": "1",
+      "expectedSequence": "11",
+      "idempotencyKey": "create-Y",
+      "labelPayload": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "recoveryGeneration": "1",
+      "recoveryEnvelope": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "grants": [
+        {
+          "grant": {
+            "accountId": "account-chain",
+            "accountGeneration": "1",
+            "issuerDeviceId": "device-B",
+            "subjectDeviceId": "device-B",
+            "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+            "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+            "environmentId": "environment-Y",
+            "keyVersion": "1",
+            "grantGeneration": "1",
+            "role": "admin",
+            "expiresAt": "2030000500",
+            "idempotencyKey": "create-Y-grant",
+            "envelope": "mfarrVBPUjnK_o28oc-szVqbHIQTsoDkomtssfGdKldfrAFGMZG590pPatszKdVOW5xOaoeunCXJKDQp3hbOT8SCHj25-cLEanI4kHRsNag"
+          },
+          "signature": "1_xWyT2xw2m0k4QHcTUGD7mNOjSipbk_S7zTJMH9Mhn4Ry5jumqREY9ZiIKV5V6OIbTkIZ_2irAArjID7xQ2BQ"
+        }
+      ],
+      "mutations": []
+    },
+    "signature": "h-7MAxcYAMoVKdhUwEd5iE9SJBZM33y9Ev8TBx60hB879nKk5ktAnbQk2AugCB8GfPRg-ETwgdjGlyv4db1jDw",
+    "origin": {
+      "origin": {
+        "accountId": "account-chain",
+        "accountGeneration": "1",
+        "actorDeviceId": "device-B",
+        "environmentId": "environment-Y",
+        "operation": "create",
+        "authorityEnvironmentId": "env-fixture",
+        "authorityKeyVersion": "1",
+        "authorityGrantGeneration": "1",
+        "previousKeyVersion": "0",
+        "keyVersion": "1",
+        "expectedSequence": "11",
+        "idempotencyKey": "create-Y",
+        "changeHash": "b6714067e839968d7b2e3a73c8f1d102241b23cfd1a0529b99e6d427419a062d",
+        "authorityHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a",
+        "before": [],
+        "after": [
+          {
+            "subjectDeviceId": "device-B",
+            "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+            "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+            "keyVersion": "1",
+            "grantGeneration": "1",
+            "role": "admin",
+            "expiresAt": "2030000500",
+            "grantHash": "775313d8abf30cc1e26170bd2f81429e7ec514b88dd3d8180240681e405c596a"
+          }
+        ]
+      },
+      "signature": "rX4vHVD38fO0kYllKdpg95nynGFtjYHy8OiCr6QEQNiTxUoVJTEws2N4PNy4SJVG2gjzGjzSBYP1nQodTsDkBQ"
+    }
+  },
+  "approval": {
+    "certificateVersion": "3",
+    "context": {
+      "accountId": "account-chain",
+      "accountGeneration": "1",
+      "purpose": "enroll-device",
+      "sessionId": "pairing-C",
+      "challengeNonce": "FhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhY",
+      "expiresAt": "2030000090",
+      "initiatorDeviceId": "device-D",
+      "initiatorSigningPublicKey": "bnoc3Smwt4_ROvTFWY_v9O8qlxZuPKby5Pv8zYBQW_E",
+      "initiatorReceivingPublicKey": "foHpFuOvzbMe902NuSPyuhW4KhqmWU6iKNzfJ9e1T2w",
+      "approverDeviceId": "device-B",
+      "approverSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+      "approverReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM"
+    },
+    "pairingProfile": "boringssl-spake2-edwards25519-draft02-v1",
+    "transcriptHash": "2020202020202020202020202020202020202020202020202020202020202020",
+    "grants": [
+      {
+        "grant": {
+          "accountId": "account-chain",
+          "accountGeneration": "1",
+          "issuerDeviceId": "device-B",
+          "subjectDeviceId": "device-D",
+          "subjectSigningPublicKey": "bnoc3Smwt4_ROvTFWY_v9O8qlxZuPKby5Pv8zYBQW_E",
+          "subjectReceivingPublicKey": "foHpFuOvzbMe902NuSPyuhW4KhqmWU6iKNzfJ9e1T2w",
+          "environmentId": "env-fixture",
+          "keyVersion": "2",
+          "grantGeneration": "1",
+          "role": "ro",
+          "expiresAt": "2030000500",
+          "idempotencyKey": "enroll-D-v3",
+          "envelope": "BwX6LindekpA2QUulCGsIvq1KcxSOC6WBms-T7QtFD2QodxNJjLn-AsJdS1YHxdGfjacE0SWV5EUodlJNI4JjAH2-_a_K_Oll3bm1hvmfgE"
+        },
+        "signature": "uR0KmePt6SQQGPlCq7ipQfOKYu32-dS5yL0jt5OiMnfLYX1J_sAKUvK9g9iAMF0w98fGwTGlHgWGoIfIcK2bAQ"
+      }
+    ],
+    "issuerProof": {
+      "profile": "harmonia/issuer-proof/v2",
+      "accountId": "account-chain",
+      "accountGeneration": "1",
+      "trustRoot": {
+        "rootDeviceId": "device-A",
+        "rootSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+        "rootReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+        "recoveryGeneration": "1",
+        "recoverySigningPublicKey": "-ghAAaTP0lwiUkNgaqy2LlIJ6Q_6xfsmI2YvgqLgNLA",
+        "recoveryReceivingPublicKey": "M2VQi4_bzhdmQY_Ng4-_Bo0gMPVoKWwA20-nRQuqYmw",
+        "signature": "jZk5Ampu1UT81YMekjofwUuyRe4T0CPSiFq3BdZsdBQFGq0xVsDo6FUwGmSxrnLfqnnmn8m0EXj-Gq4oqt0PAw"
+      },
+      "path": [
+        {
+          "certificateVersion": "1",
+          "issuerProofHash": "",
+          "approval": {
+            "context": {
+              "accountId": "account-chain",
+              "accountGeneration": "1",
+              "purpose": "enroll-device",
+              "sessionId": "pairing-B",
+              "challengeNonce": "FRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRU",
+              "expiresAt": "2029999900",
+              "initiatorDeviceId": "device-B",
+              "initiatorSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+              "initiatorReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+              "approverDeviceId": "device-A",
+              "approverSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+              "approverReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg"
+            },
+            "pairingProfile": "boringssl-spake2-edwards25519-draft02-v1",
+            "transcriptHash": "1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
+            "grants": [
+              {
+                "grant": {
+                  "accountId": "account-chain",
+                  "accountGeneration": "1",
+                  "issuerDeviceId": "device-A",
+                  "subjectDeviceId": "device-B",
+                  "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+                  "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+                  "environmentId": "env-fixture",
+                  "keyVersion": "1",
+                  "grantGeneration": "1",
+                  "role": "admin",
+                  "expiresAt": "2030000500",
+                  "idempotencyKey": "B-admin",
+                  "envelope": "mfarrVBPUjnK_o28oc-szVqbHIQTsoDkomtssfGdKldfrAFGMZG590pPatszKdVOW5xOaoeunCXJKDQp3hbOT8SCHj25-cLEanI4kHRsNag"
+                },
+                "signature": "UQI-quAzDGst9_sk548WvAzg3-U1GtI4fZy2N5rzBU5KLTVneyBWOmvvwAji5h6WU5IGkZuKCovlvGotAjSRBg"
+              }
+            ],
+            "approverSignature": "JOz3kPEiyHHSDqYD-zCFiXS3xXg6BqMvTLCLd5-asnF6EI0V6BfArAQeVreQUDpwWZ6tijHkOZohiGQzhs8WBg",
+            "initiatorSignature": "P5C0JzIcTslmXfYE-J1ot8cTjtzCHraNCfh1QeLtqDC4A3pDdZZtc1BqudHJ3NFTL5Q_Cn5IId8PL6MacZMwDA"
+          }
+        }
+      ],
+      "authorities": [
+        {
+          "grant": {
+            "grant": {
+              "accountId": "account-chain",
+              "accountGeneration": "1",
+              "issuerDeviceId": "device-A",
+              "subjectDeviceId": "device-A",
+              "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+              "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+              "environmentId": "env-fixture",
+              "keyVersion": "1",
+              "grantGeneration": "1",
+              "role": "admin",
+              "expiresAt": "0",
+              "idempotencyKey": "root-admin",
+              "envelope": "aXgvtzIEnY1bPHKFsB5Cf_yeMfD-OJzcen6BFyMUkUEa7hWTcDbVhp4D47UxTztSvuIN19B17Mo5dmkKOLHaRqK7bh6FI1y8UnSHFK_WgcY"
+            },
+            "signature": "ifcqDJEukFISlOjiz4NH9ofB_boGOokKPz-wtI8E0qmKYXMPZ-fT39bCKwH17GqHsC5OA618HyhaGsQcX4RUCg"
+          },
+          "parentHash": "",
+          "originHash": "",
+          "previousGrantHash": ""
+        },
+        {
+          "grant": {
+            "grant": {
+              "accountId": "account-chain",
+              "accountGeneration": "1",
+              "issuerDeviceId": "device-A",
+              "subjectDeviceId": "device-B",
+              "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+              "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+              "environmentId": "env-fixture",
+              "keyVersion": "1",
+              "grantGeneration": "1",
+              "role": "admin",
+              "expiresAt": "2030000500",
+              "idempotencyKey": "B-admin",
+              "envelope": "mfarrVBPUjnK_o28oc-szVqbHIQTsoDkomtssfGdKldfrAFGMZG590pPatszKdVOW5xOaoeunCXJKDQp3hbOT8SCHj25-cLEanI4kHRsNag"
+            },
+            "signature": "UQI-quAzDGst9_sk548WvAzg3-U1GtI4fZy2N5rzBU5KLTVneyBWOmvvwAji5h6WU5IGkZuKCovlvGotAjSRBg"
+          },
+          "parentHash": "d7747be64dd5d8398e8a7b0f7216fb65845b48059b6c99fb22ca8a07d2e78586",
+          "originHash": "",
+          "previousGrantHash": ""
+        },
+        {
+          "grant": {
+            "grant": {
+              "accountId": "account-chain",
+              "accountGeneration": "1",
+              "issuerDeviceId": "device-B",
+              "subjectDeviceId": "device-A",
+              "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+              "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+              "environmentId": "env-fixture",
+              "keyVersion": "2",
+              "grantGeneration": "2",
+              "role": "admin",
+              "expiresAt": "0",
+              "idempotencyKey": "rotate-A",
+              "envelope": "aXgvtzIEnY1bPHKFsB5Cf_yeMfD-OJzcen6BFyMUkUEa7hWTcDbVhp4D47UxTztSvuIN19B17Mo5dmkKOLHaRqK7bh6FI1y8UnSHFK_WgcY"
+            },
+            "signature": "qNYM3xmHSEmwY9ZGqRHQtcNZhPrh_AcKcDco0aGZZ8Jwo9Z1P3RFxByqt_9DgAMZjCooUFaPvpLQkTmsOwcOBw"
+          },
+          "parentHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a",
+          "originHash": "1e8fb8b371cd4a112d4cf656e2f7027f15508092f7e77a3899989dee1c0605a9",
+          "previousGrantHash": "d7747be64dd5d8398e8a7b0f7216fb65845b48059b6c99fb22ca8a07d2e78586"
+        },
+        {
+          "grant": {
+            "grant": {
+              "accountId": "account-chain",
+              "accountGeneration": "1",
+              "issuerDeviceId": "device-B",
+              "subjectDeviceId": "device-B",
+              "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+              "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+              "environmentId": "env-fixture",
+              "keyVersion": "2",
+              "grantGeneration": "2",
+              "role": "admin",
+              "expiresAt": "2030000500",
+              "idempotencyKey": "rotate-B",
+              "envelope": "mfarrVBPUjnK_o28oc-szVqbHIQTsoDkomtssfGdKldfrAFGMZG590pPatszKdVOW5xOaoeunCXJKDQp3hbOT8SCHj25-cLEanI4kHRsNag"
+            },
+            "signature": "2rqfqTvfgFuTtfc9e3axJe9XP5pkUPVBDsdcawfsC7Md7Ley0Y8jEpsSniS3cmGF_leNLX718hwGxhY0dny4Dw"
+          },
+          "parentHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a",
+          "originHash": "1e8fb8b371cd4a112d4cf656e2f7027f15508092f7e77a3899989dee1c0605a9",
+          "previousGrantHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a"
+        },
+        {
+          "grant": {
+            "grant": {
+              "accountId": "account-chain",
+              "accountGeneration": "1",
+              "issuerDeviceId": "device-B",
+              "subjectDeviceId": "device-B",
+              "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+              "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+              "environmentId": "environment-Y",
+              "keyVersion": "1",
+              "grantGeneration": "1",
+              "role": "admin",
+              "expiresAt": "2030000500",
+              "idempotencyKey": "create-Y-grant",
+              "envelope": "mfarrVBPUjnK_o28oc-szVqbHIQTsoDkomtssfGdKldfrAFGMZG590pPatszKdVOW5xOaoeunCXJKDQp3hbOT8SCHj25-cLEanI4kHRsNag"
+            },
+            "signature": "1_xWyT2xw2m0k4QHcTUGD7mNOjSipbk_S7zTJMH9Mhn4Ry5jumqREY9ZiIKV5V6OIbTkIZ_2irAArjID7xQ2BQ"
+          },
+          "parentHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a",
+          "originHash": "7af7f060eb481ab313c44f8ce00e5f5979b90f55ecedc412960e3e3da6f12c82",
+          "previousGrantHash": ""
+        },
+        {
+          "grant": {
+            "grant": {
+              "accountId": "account-chain",
+              "accountGeneration": "1",
+              "issuerDeviceId": "device-A",
+              "subjectDeviceId": "device-C",
+              "subjectSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+              "subjectReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+              "environmentId": "env-fixture",
+              "keyVersion": "1",
+              "grantGeneration": "1",
+              "role": "ro",
+              "expiresAt": "0",
+              "idempotencyKey": "initial-C-ro",
+              "envelope": "BwX6LindekpA2QUulCGsIvq1KcxSOC6WBms-T7QtFD2QodxNJjLn-AsJdS1YHxdGfjacE0SWV5EUodlJNI4JjAH2-_a_K_Oll3bm1hvmfgE"
+            },
+            "signature": "sJ6Xis4YudBYYt8_ilvcUcavk-uXvaoCBbe6aHgDOJxRiR4evSXR-XNURzwv85L6sSQGGVNMVoRyE5_ETr0iBQ"
+          },
+          "parentHash": "d7747be64dd5d8398e8a7b0f7216fb65845b48059b6c99fb22ca8a07d2e78586",
+          "originHash": "",
+          "previousGrantHash": ""
+        },
+        {
+          "grant": {
+            "grant": {
+              "accountId": "account-chain",
+              "accountGeneration": "1",
+              "issuerDeviceId": "device-B",
+              "subjectDeviceId": "device-C",
+              "subjectSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+              "subjectReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+              "environmentId": "env-fixture",
+              "keyVersion": "2",
+              "grantGeneration": "2",
+              "role": "ro",
+              "expiresAt": "0",
+              "idempotencyKey": "rotate-C",
+              "envelope": "BwX6LindekpA2QUulCGsIvq1KcxSOC6WBms-T7QtFD2QodxNJjLn-AsJdS1YHxdGfjacE0SWV5EUodlJNI4JjAH2-_a_K_Oll3bm1hvmfgE"
+            },
+            "signature": "qZPZWy6dqXLV3K6VYD-g_Cb6DT-fr12Nw5HQ_0DuXl3rfxLE9s-jEGAAWhwzcC8Q6zf7gvxW9zJyTJXq-RztCQ"
+          },
+          "parentHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a",
+          "originHash": "1e8fb8b371cd4a112d4cf656e2f7027f15508092f7e77a3899989dee1c0605a9",
+          "previousGrantHash": "8bccd809505168dbbbb9f5c1099f63ce642124c02c61229eb277b8d5d6371a42"
+        }
+      ],
+      "targets": [
+        {
+          "environmentId": "env-fixture",
+          "authorityHash": "63a38dafa54fe8110d83d83aa436884a0bcde0a16d2c6b483757bc4b16605eb9"
+        }
+      ],
+      "origins": [
+        {
+          "origin": {
+            "accountId": "account-chain",
+            "accountGeneration": "1",
+            "actorDeviceId": "device-B",
+            "environmentId": "env-fixture",
+            "operation": "rotate",
+            "authorityEnvironmentId": "env-fixture",
+            "authorityKeyVersion": "1",
+            "authorityGrantGeneration": "1",
+            "previousKeyVersion": "1",
+            "keyVersion": "2",
+            "expectedSequence": "10",
+            "idempotencyKey": "rotate-origin",
+            "changeHash": "1b52ab202268fbbd897ce333f307e314a46fd6671c7b158b6a88fb469826e443",
+            "authorityHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a",
+            "before": [
+              {
+                "subjectDeviceId": "device-A",
+                "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+                "keyVersion": "1",
+                "grantGeneration": "1",
+                "role": "admin",
+                "expiresAt": "0",
+                "grantHash": "d7747be64dd5d8398e8a7b0f7216fb65845b48059b6c99fb22ca8a07d2e78586"
+              },
+              {
+                "subjectDeviceId": "device-B",
+                "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+                "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+                "keyVersion": "1",
+                "grantGeneration": "1",
+                "role": "admin",
+                "expiresAt": "2030000500",
+                "grantHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a"
+              },
+              {
+                "subjectDeviceId": "device-C",
+                "subjectSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+                "subjectReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+                "keyVersion": "1",
+                "grantGeneration": "1",
+                "role": "ro",
+                "expiresAt": "0",
+                "grantHash": "8bccd809505168dbbbb9f5c1099f63ce642124c02c61229eb277b8d5d6371a42"
+              }
+            ],
+            "after": [
+              {
+                "subjectDeviceId": "device-A",
+                "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+                "keyVersion": "2",
+                "grantGeneration": "2",
+                "role": "admin",
+                "expiresAt": "0",
+                "grantHash": "9b8629804b6c5970f4dec2744ed27909555140267bebdb398b7a2b0dddb4981a"
+              },
+              {
+                "subjectDeviceId": "device-B",
+                "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+                "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+                "keyVersion": "2",
+                "grantGeneration": "2",
+                "role": "admin",
+                "expiresAt": "2030000500",
+                "grantHash": "63a38dafa54fe8110d83d83aa436884a0bcde0a16d2c6b483757bc4b16605eb9"
+              },
+              {
+                "subjectDeviceId": "device-C",
+                "subjectSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+                "subjectReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+                "keyVersion": "2",
+                "grantGeneration": "2",
+                "role": "ro",
+                "expiresAt": "0",
+                "grantHash": "448dd8e7063a8149e512a42777da8ca00193ff9c5313ee62bfd30c40a20a6c7f"
+              }
+            ]
+          },
+          "signature": "8HhmIwXbniF0HOk_icalQS_ROovPupWopTQvKJ8xAC38yY1qnPQesTlLnzQny-L0tOM7uCxxOcFbrQyVFsYUBQ"
+        },
+        {
+          "origin": {
+            "accountId": "account-chain",
+            "accountGeneration": "1",
+            "actorDeviceId": "device-B",
+            "environmentId": "environment-Y",
+            "operation": "create",
+            "authorityEnvironmentId": "env-fixture",
+            "authorityKeyVersion": "1",
+            "authorityGrantGeneration": "1",
+            "previousKeyVersion": "0",
+            "keyVersion": "1",
+            "expectedSequence": "11",
+            "idempotencyKey": "create-Y",
+            "changeHash": "b6714067e839968d7b2e3a73c8f1d102241b23cfd1a0529b99e6d427419a062d",
+            "authorityHash": "256b0cb4345afb4b5c07d31a2e5373723c4d09c1e98f616c2fe9adcbf880e01a",
+            "before": [],
+            "after": [
+              {
+                "subjectDeviceId": "device-B",
+                "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+                "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+                "keyVersion": "1",
+                "grantGeneration": "1",
+                "role": "admin",
+                "expiresAt": "2030000500",
+                "grantHash": "775313d8abf30cc1e26170bd2f81429e7ec514b88dd3d8180240681e405c596a"
+              }
+            ]
+          },
+          "signature": "rX4vHVD38fO0kYllKdpg95nynGFtjYHy8OiCr6QEQNiTxUoVJTEws2N4PNy4SJVG2gjzGjzSBYP1nQodTsDkBQ"
+        }
+      ],
+      "identityPaths": [
+        [
+          {
+            "certificateVersion": "1",
+            "issuerProofHash": "",
+            "approval": {
+              "context": {
+                "accountId": "account-chain",
+                "accountGeneration": "1",
+                "purpose": "enroll-device",
+                "sessionId": "archive-C",
+                "challengeNonce": "FhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhY",
+                "expiresAt": "2030000090",
+                "initiatorDeviceId": "device-C",
+                "initiatorSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+                "initiatorReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+                "approverDeviceId": "device-A",
+                "approverSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                "approverReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg"
+              },
+              "pairingProfile": "boringssl-spake2-edwards25519-draft02-v1",
+              "transcriptHash": "2020202020202020202020202020202020202020202020202020202020202020",
+              "grants": [
+                {
+                  "grant": {
+                    "accountId": "account-chain",
+                    "accountGeneration": "1",
+                    "issuerDeviceId": "device-A",
+                    "subjectDeviceId": "device-C",
+                    "subjectSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
+                    "subjectReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
+                    "environmentId": "env-fixture",
+                    "keyVersion": "1",
+                    "grantGeneration": "1",
+                    "role": "ro",
+                    "expiresAt": "0",
+                    "idempotencyKey": "initial-C-ro",
+                    "envelope": "BwX6LindekpA2QUulCGsIvq1KcxSOC6WBms-T7QtFD2QodxNJjLn-AsJdS1YHxdGfjacE0SWV5EUodlJNI4JjAH2-_a_K_Oll3bm1hvmfgE"
+                  },
+                  "signature": "sJ6Xis4YudBYYt8_ilvcUcavk-uXvaoCBbe6aHgDOJxRiR4evSXR-XNURzwv85L6sSQGGVNMVoRyE5_ETr0iBQ"
+                }
+              ],
+              "approverSignature": "jMb74K6ei6hnN66wUg7G1k9yULbwtzztRtQJeu8LFw1tMKTg0DEDFkTgm2mImZIe739dxVnFqV0XgDgAfja9Aw",
+              "initiatorSignature": "TsQ4FlDuhT6kn-aohPaRyhK4LV5AcBLesI76XA3wUAEcZFC2HJAMlRJL8KDL4dqNK4pYNqH1OZHlVMZEH0x1Cw"
+            }
+          }
+        ]
+      ]
+    },
+    "approverSignature": "X87W8sAuOGv9kprz4AfqlboeUKnxdjWZmVFADXIbLaXBRTxaoqn338uICGxQXicJd_JpxnV2R1VoJ6-LhseIBg",
+    "initiatorSignature": "1D6m0xLGayO8kt7fUXOyZMcbKr1fASoy620q0qGXsOnWUs8wBnGYs9T9V1wUCXrBtXO27IWof4E1D8Tn-IYCCQ"
+  },
+  "rotationSigningHex": "5b226861726d6f6e69612f656e7669726f6e6d656e742d6f726967696e2f7631222c226163636f756e742d636861696e222c2231222c226465766963652d42222c22656e762d66697874757265222c22726f74617465222c22656e762d66697874757265222c2231222c2231222c2231222c2232222c223130222c22726f746174652d6f726967696e222c2231623532616232303232363866626264383937636533333366333037653331346134366664363637316337623135386236613838666234363938323665343433222c2232353662306362343334356166623462356330376433316132653533373337323363346430396331653938663631366332666539616463626638383065303161222c5b5b226465766963652d41222c22696f6a6a3358514a385a583955747374504c70646373706e436238646c4249623833534941625150623177222c2263374c597432717074545a67417976493964692d34364f75546a733666395361336f48334e486f30716d67222c2231222c2231222c2261646d696e222c2230222c2264373734376265363464643564383339386538613762306637323136666236353834356234383035396236633939666232326361386130376432653738353836225d2c5b226465766963652d42222c2267546c3344716839463139576f31526d7730782d7a4d754e69704730376a65695866595057345f4a733551222c226c384f7843303173457a7034366c334d48505a4348542d42726a657839696a4f464d70767a6e6377387a4d222c2231222c2231222c2261646d696e222c2232303330303030353030222c2232353662306362343334356166623462356330376433316132653533373337323363346430396331653938663631366332666539616463626638383065303161225d2c5b226465766963652d43222c2237556b6f78696a527773627136514d346b466d5659536c5a4a7a7063595f6b324e734647464b79484e3945222c2273776575686d447672745457706c396d51496c6f6b75704b48774231565678496e524d536f75466e664367222c2231222c2231222c22726f222c2230222c2238626363643830393530353136386462626262396635633130393966363363653634323132346330326336313232396562323737623864356436333731613432225d5d2c5b5b226465766963652d41222c22696f6a6a3358514a385a583955747374504c70646373706e436238646c4249623833534941625150623177222c2263374c597432717074545a67417976493964692d34364f75546a733666395361336f48334e486f30716d67222c2232222c2232222c2261646d696e222c2230222c2239623836323938303462366335393730663464656332373434656432373930393535353134303236376265626462333938623761326230646464623439383161225d2c5b226465766963652d42222c2267546c3344716839463139576f31526d7730782d7a4d754e69704730376a65695866595057345f4a733551222c226c384f7843303173457a7034366c334d48505a4348542d42726a657839696a4f464d70767a6e6377387a4d222c2232222c2232222c2261646d696e222c2232303330303030353030222c2236336133386461666135346665383131306438336438336161343336383834613062636465306131366432633662343833373537626334623136363035656239225d2c5b226465766963652d43222c2237556b6f78696a527773627136514d346b466d5659536c5a4a7a7063595f6b324e734647464b79484e3945222c2273776575686d447672745457706c396d51496c6f6b75704b48774231565678496e524d536f75466e664367222c2232222c2232222c22726f222c2230222c2234343864643865373036336138313439653531326134323737376461386361303031393366663963353331336565363262666433306334306132306136633766225d5d5d",
+  "rotationHash": "1e8fb8b371cd4a112d4cf656e2f7027f15508092f7e77a3899989dee1c0605a9",
+  "creationSigningHex": "5b226861726d6f6e69612f656e7669726f6e6d656e742d6f726967696e2f7631222c226163636f756e742d636861696e222c2231222c226465766963652d42222c22656e7669726f6e6d656e742d59222c22637265617465222c22656e762d66697874757265222c2231222c2231222c2230222c2231222c223131222c226372656174652d59222c2262363731343036376538333939363864376232653361373363386631643130323234316232336366643161303532396239396536643432373431396130363264222c2232353662306362343334356166623462356330376433316132653533373337323363346430396331653938663631366332666539616463626638383065303161222c5b5d2c5b5b226465766963652d42222c2267546c3344716839463139576f31526d7730782d7a4d754e69704730376a65695866595057345f4a733551222c226c384f7843303173457a7034366c334d48505a4348542d42726a657839696a4f464d70767a6e6377387a4d222c2231222c2231222c2261646d696e222c2232303330303030353030222c2237373533313364386162663330636331653236313730626432663831343239653765633531346238386464336438313830323430363831653430356335393661225d5d5d",
+  "proofCanonicalHex": "5b226861726d6f6e69612f6973737565722d70726f6f662f7632222c226163636f756e742d636861696e222c2231222c5b2257794a6f59584a746232357059533930636e567a64433179623239304c3359784969776959574e6a623356756443316a6147467062694973496a45694c434a6b5a585a705932557451534973496d6c76616d6f7a5746464b4f4670594f565630633352515448426b59334e77626b4e694f475273516b6c694f444e5453554669555642694d5863694c434a6a4e30785a64444a7863485255576d644265585a4a4f5752704c54513254335655616e4d325a6a6c5459544e7653444e4f534738776357316e496977694d5349734969316e61454642595652514d47783361565672546d646863586b795447784a536a5a52587a5a345a6e4e7453544a5a646d64785447644f544545694c434a4e4d6c5a5261545266596e706f5a4731525756394f5a7a517458304a764d47644e55465a7653316433515449774c5735535558567857573133496c30222c226a5a6b35416d70753155543831594d656b6a6f667755757952653454304350536946713342645a7364425146477130785673446f36465577476d5378726e4c66716e6e6d6e386d3045586a2d4771346f717430504177225d2c5b5b2231222c2257794a6f59584a74623235705953396b5a585a70593255745a5735796232787362575675644339324d534973496d4a76636d6c755a334e7a6243317a634746725a5449745a57523359584a6b637a49314e5445354c57527959575a304d444974646a45694c434a6859324e76645735304c574e6f59576c75496977694d534973496e426861584a70626d637451694973496b5a5356565a47556c5657526c4a56566b5a5356565a47556c5657526c4a56566b5a5356565a47556c5657526c4a56566b5a5356565a47556c55694c4349794d4449354f546b354f544177496977695a47563261574e6c4c5549694c434a6e5647777a5248466f4f5559784f5664764d564a74647a42344c58704e64553570634563774e32706c6156686d575642584e46394b637a5652496977696244685065454d774d584e46656e41304e6d777a54556851576b4e4956433143636d706c65446c70616b394754584232656d356a647a683654534973496d526c646d6c6a5a5331424969776961573971616a4e5955556f34576c67355658527a6446424d6347526a63334275513249345a477843535749344d314e4a51574a525547497864794973496d4d3354466c304d6e4677644652615a304635646b6b355a476b744e445a5064565271637a5a6d4f564e684d3239494d303549627a4278625763694c4349785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d496977694f57457a5a6a4a6c5a5455334e6d4d345957466d4d7a67334d54426c5a5445325a474a684f545a695a57466959574a6d5a5755314d4452684d5467794e6d49305a444d345a6a4d354d44686b4f574d345954497759534a64222c224a4f7a336b50456979484853447159442d7a4346695853337858673642714d76544c434c64352d61736e46364549305636426641724151655672655155447077575a3674696a486b4f5a6f686947517a687338574267222c22503543304a7a496354736c6d586659452d4a316f743863546a747a434872614e4366683151654c747144433441337044645a5a74633142717564484a334e46544c35515f436e3549496438504c364d61635a4d774441225d5d2c5b5b22656e762d66697874757265222c226465766963652d41222c2231222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5545694c434a6b5a585a705932557451534973496d6c76616d6f7a5746464b4f4670594f565630633352515448426b59334e77626b4e694f475273516b6c694f444e5453554669555642694d5863694c434a6a4e30785a64444a7863485255576d644265585a4a4f5752704c54513254335655616e4d325a6a6c5459544e7653444e4f534738776357316e496977695a5735324c575a7065485231636d55694c434978496977694d534973496d466b62576c75496977694d434973496e4a766233517459575274615734694c434a68574764326448704a5257355a4d574a51534574476330493151325a666557564e5a6b517454307036593256754e6b4a4765553156613156465954646f5631526a52474a57614841305244513356586855656e5254646e564a546a4535516a4533545738315a4731725330394d5347465363557333596d6732526b6b7865546856626c4e49526b74665632646a57534a64222c2269666371444a45756b4649536c4f6a697a344e48396f66425f626f474f6f6b4b507a2d777449384530716d4b59584d505a2d6654333962434b774831374771487343354f413631384879686147735163583452554367222c22222c22222c22225d2c5b22656e762d66697874757265222c226465766963652d41222c2232222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5549694c434a6b5a585a705932557451534973496d6c76616d6f7a5746464b4f4670594f565630633352515448426b59334e77626b4e694f475273516b6c694f444e5453554669555642694d5863694c434a6a4e30785a64444a7863485255576d644265585a4a4f5752704c54513254335655616e4d325a6a6c5459544e7653444e4f534738776357316e496977695a5735324c575a7065485231636d55694c434979496977694d694973496d466b62576c75496977694d434973496e4a76644746305a533142496977695956686e646e523653555675575446695545684c526e4e434e554e6d58336c6c54575a454c55394b656d4e6c626a5a43526e6c4e56577456525745336146645559305269566d68774e4551304e3156345648703055335a31535534784f5549784e3031764e5752746130745054456868556e464c4e324a6f4e6b5a4a4d586b345657355453455a4c5831646e59316b695851222c22714e594d33786d4853456d7759395a477152485174634e5a685072685f41634b6344636f3061475a5a384a776f395a315033524678427971745f394467414d5a6a436f6f5546615076704c516b546d734f77634f4277222c2232353662306362343334356166623462356330376433316132653533373337323363346430396331653938663631366332666539616463626638383065303161222c2231653866623862333731636434613131326434636636353665326637303237663135353038303932663765373761333839393938396465653163303630356139222c2264373734376265363464643564383339386538613762306637323136666236353834356234383035396236633939666232326361386130376432653738353836225d2c5b22656e762d66697874757265222c226465766963652d42222c2231222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5545694c434a6b5a585a705932557451694973496d645562444e4563576735526a453556323878556d31334d486774656b3131546d6c77527a4133616d567057475a5a554663305830707a4e5645694c434a734f453934517a4178633056366344513262444e4e53464261513068554c554a79616d56344f576c7154305a4e63485a36626d4e334f48704e496977695a5735324c575a7065485231636d55694c434978496977694d534973496d466b62576c75496977694d6a417a4d4441774d4455774d434973496b497459575274615734694c434a745a6d4679636c5a4355465671626b7466627a493462324d746333705763574a4953564655633239456132397464484e7a5a6b646b5332786b5a6e4a42526b644e576b63314f544277554746306333704c5a465a50567a5634543246765a5856755131684b5330525263444e6f596b39554f464e4453476f794e53316a54455668626b6b3061306853633035685a794a64222c225551492d7175417a44477374395f736b3534385776417a67332d553147744934665a79324e35727a4255354b4c54566e657942574f6d767677416a6935683657553549476b5a754b436f766c76476f74416a53524267222c2264373734376265363464643564383339386538613762306637323136666236353834356234383035396236633939666232326361386130376432653738353836222c22222c22225d2c5b22656e762d66697874757265222c226465766963652d42222c2232222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5549694c434a6b5a585a705932557451694973496d645562444e4563576735526a453556323878556d31334d486774656b3131546d6c77527a4133616d567057475a5a554663305830707a4e5645694c434a734f453934517a4178633056366344513262444e4e53464261513068554c554a79616d56344f576c7154305a4e63485a36626d4e334f48704e496977695a5735324c575a7065485231636d55694c434979496977694d694973496d466b62576c75496977694d6a417a4d4441774d4455774d434973496e4a76644746305a5331434969776962575a68636e4a57516c4256616d354c583238794f47396a4c584e36566e466953456c5256484e76524774766258527a63325a485a4574735a475a7951555a48545670484e546b776346426864484e3653325257543163316545396862325631626b4e59536b74455558417a61474a5056446854513068714d6a5574593078465957354a4e477449556e4e4f595763695851222c2232727166715476666746755474666339653361784a6539585035706b55505642447364636177667343374d64374c65793059386a457073536e695333636d47465f6c654e4c5837313868774778685930646e79344477222c2232353662306362343334356166623462356330376433316132653533373337323363346430396331653938663631366332666539616463626638383065303161222c2231653866623862333731636434613131326434636636353665326637303237663135353038303932663765373761333839393938396465653163303630356139222c2232353662306362343334356166623462356330376433316132653533373337323363346430396331653938663631366332666539616463626638383065303161225d2c5b22656e762d66697874757265222c226465766963652d43222c2231222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5545694c434a6b5a585a705932557451794973496a6456613239346157705364334e6963545a5254545272526d315757564e73576b703663474e5a58327379546e4e4752305a4c6555684f4f5555694c434a7a6432563161473145646e4a305646647762446c7455556c73623274316345744964304978566c5a345357355354564e7664555a755a6b4e6e496977695a5735324c575a7065485231636d55694c434978496977694d534973496e4a76496977694d434973496d6c7561585270595777745179317962794973496b4a3357445a4d6157356b5a57747751544a52565856735130647a53585a784d55746a65464e50517a5a58516d317a4c5651335558524752444a5262325234546b70715447347451584e4b5a464d78575568345a45646d616d466a5254425456315931525656765a47784b546b6b30536d70425344497458324666533139506247777a596d307861485a745a6d6446496c30222c22734a365869733459756442595974385f696c7663556361766b2d755876616f4342626536614867444f4a785269523465765358522d584e55527a777638354c367353514747564e4d566f527945355f45547230694251222c2264373734376265363464643564383339386538613762306637323136666236353834356234383035396236633939666232326361386130376432653738353836222c22222c22225d2c5b22656e762d66697874757265222c226465766963652d43222c2232222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5549694c434a6b5a585a705932557451794973496a6456613239346157705364334e6963545a5254545272526d315757564e73576b703663474e5a58327379546e4e4752305a4c6555684f4f5555694c434a7a6432563161473145646e4a305646647762446c7455556c73623274316345744964304978566c5a345357355354564e7664555a755a6b4e6e496977695a5735324c575a7065485231636d55694c434979496977694d694973496e4a76496977694d434973496e4a76644746305a53314449697769516e64594e6b7870626d526c613342424d6c46566457784452334e4a646e457853324e34553039444e6c644362584d745644645264455a454d6c46765a48684f536d704d626931426330706b557a465a5348686b52325a7159574e464d464e58566a56465657396b6245704f5354524b616b46494d6931665956394c5830397362444e696254466f646d316d5a3055695851222c22715a505a5779366471584c56334b365659442d675f43623644542d667231324e773548515f304475586c337266784c4539732d6a454741415768777a63433851367a663767767857397a4a79544a58712d527a744351222c2232353662306362343334356166623462356330376433316132653533373337323363346430396331653938663631366332666539616463626638383065303161222c2231653866623862333731636434613131326434636636353665326637303237663135353038303932663765373761333839393938396465653163303630356139222c2238626363643830393530353136386462626262396635633130393966363363653634323132346330326336313232396562323737623864356436333731613432225d2c5b22656e7669726f6e6d656e742d59222c226465766963652d42222c2231222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5549694c434a6b5a585a705932557451694973496d645562444e4563576735526a453556323878556d31334d486774656b3131546d6c77527a4133616d567057475a5a554663305830707a4e5645694c434a734f453934517a4178633056366344513262444e4e53464261513068554c554a79616d56344f576c7154305a4e63485a36626d4e334f48704e496977695a57353261584a76626d316c626e517457534973496a45694c4349784969776959575274615734694c4349794d444d774d4441774e5441774969776959334a6c5958526c4c566b745a334a68626e51694c434a745a6d4679636c5a4355465671626b7466627a493462324d746333705763574a4953564655633239456132397464484e7a5a6b646b5332786b5a6e4a42526b644e576b63314f544277554746306333704c5a465a50567a5634543246765a5856755131684b5330525263444e6f596b39554f464e4453476f794e53316a54455668626b6b3061306853633035685a794a64222c22315f78577954327877326d306b3451486354554744376d4e4f6a536970626b5f53377a544a4d48394d686e345279356a756d71524559395a69494b563556364f4962546b495a5f3269724141726a4944377851324251222c2232353662306362343334356166623462356330376433316132653533373337323363346430396331653938663631366332666539616463626638383065303161222c2237616637663036306562343831616233313363343466386365303065356635393739623930663535656365646334313239363065336533646136663132633832222c22225d5d2c5b5b22656e762d66697874757265222c2236336133386461666135346665383131306438336438336161343336383834613062636465306131366432633662343833373537626334623136363035656239225d5d2c5b5b2231653866623862333731636434613131326434636636353665326637303237663135353038303932663765373761333839393938396465653163303630356139222c2257794a6f59584a74623235705953396c626e5a70636d39756257567564433176636d6c6e61573476646a45694c434a6859324e76645735304c574e6f59576c75496977694d534973496d526c646d6c6a5a533143496977695a5735324c575a7065485231636d55694c434a7962335268644755694c434a6c626e59745a6d6c34644856795a534973496a45694c434978496977694d534973496a49694c4349784d434973496e4a76644746305a533176636d6c6e615734694c434978596a5579595749794d4449794e6a686d596d4a6b4f446b335932557a4d7a4e6d4d7a41335a544d784e4745304e6d5a6b4e6a59334d574d33596a45314f474932595467345a6d49304e6a6b344d6a5a6c4e44517a496977694d6a5532596a426a596a517a4e4456685a6d4930596a566a4d44646b4d7a46684d6d55314d7a637a4e7a497a597a526b4d446c6a4d5755354f4759324d545a6a4d6d5a6c4f57466b59324a6d4f4467775a54417859534973573173695a47563261574e6c4c5545694c434a70623270714d316852536a686157446c5664484e30554578775a474e7a63473544596a686b62454a4a596a677a55306c42596c4651596a463349697769597a644d57585179635842305646706e51586c3253546c6b615330304e6b39315647707a4e6d59355532457a6230677a546b68764d4846745a794973496a45694c4349784969776959575274615734694c434977496977695a4463334e4464695a5459305a4751315a44677a4f54686c4f474533596a426d4e7a49784e6d5a694e6a55344e4456694e4467774e546c694e6d4d354f575a694d6a4a6a595468684d44646b4d6d55334f4455344e694a644c4673695a47563261574e6c4c5549694c434a6e5647777a5248466f4f5559784f5664764d564a74647a42344c58704e64553570634563774e32706c6156686d575642584e46394b637a5652496977696244685065454d774d584e46656e41304e6d777a54556851576b4e4956433143636d706c65446c70616b394754584232656d356a647a683654534973496a45694c4349784969776959575274615734694c4349794d444d774d4441774e544177496977694d6a5532596a426a596a517a4e4456685a6d4930596a566a4d44646b4d7a46684d6d55314d7a637a4e7a497a597a526b4d446c6a4d5755354f4759324d545a6a4d6d5a6c4f57466b59324a6d4f4467775a54417859534a644c4673695a47563261574e6c4c554d694c4349335657747665476c71556e647a596e45325555303061305a74566c6c546246704b656e426a575639724d6b357a526b644753336c49546a6c46496977696333646c6457687452485a7964465258634777356256464a624739726458424c534864434d565a5765456c75556b315462335647626d5a445a794973496a45694c43497849697769636d38694c434977496977694f474a6a593251344d446b314d4455784e6a686b596d4a69596a6c6d4e574d784d446b355a6a597a593255324e4449784d6a526a4d444a6a4e6a45794d6a6c6c596a49334e3249345a44566b4e6a4d334d5745304d694a645853786257794a6b5a585a705932557451534973496d6c76616d6f7a5746464b4f4670594f565630633352515448426b59334e77626b4e694f475273516b6c694f444e5453554669555642694d5863694c434a6a4e30785a64444a7863485255576d644265585a4a4f5752704c54513254335655616e4d325a6a6c5459544e7653444e4f534738776357316e496977694d694973496a49694c434a685a47317062694973496a41694c434935596a67324d6a6b344d4452694e6d4d314f5463775a6a526b5a574d794e7a51305a5751794e7a6b774f5455314e5445304d4449324e324a6c596d52694d7a6b34596a64684d6d49775a47526b596a51354f444668496c307357794a6b5a585a705932557451694973496d645562444e4563576735526a453556323878556d31334d486774656b3131546d6c77527a4133616d567057475a5a554663305830707a4e5645694c434a734f453934517a4178633056366344513262444e4e53464261513068554c554a79616d56344f576c7154305a4e63485a36626d4e334f48704e496977694d694973496a49694c434a685a47317062694973496a49774d7a41774d4441314d4441694c4349324d32457a4f4752685a6d45314e475a6c4f4445784d4751344d3251344d3246684e444d324f446730595442695932526c4d4745784e6d5179597a5a694e44677a4e7a5533596d4d30596a45324e6a41315a574935496c307357794a6b5a585a705932557451794973496a6456613239346157705364334e6963545a5254545272526d315757564e73576b703663474e5a58327379546e4e4752305a4c6555684f4f5555694c434a7a6432563161473145646e4a305646647762446c7455556c73623274316345744964304978566c5a345357355354564e7664555a755a6b4e6e496977694d694973496a49694c434a7962794973496a41694c4349304e44686b5a44686c4e7a41324d3245344d5451355a5455784d6d45304d6a63334e3252684f474e684d4441784f544e6d5a6a6c6a4e544d784d32566c4e6a4a695a6d517a4d474d304d4745794d474532597a646d496c31645851222c223848686d497758626e694630484f6b5f6963616c51535f524f6f76507570576f705451764b4a387841433338795931716e50516573546c4c6e7a516e792d4c30744f4d37754378784f63466272517956467359554251225d2c5b2237616637663036306562343831616233313363343466386365303065356635393739623930663535656365646334313239363065336533646136663132633832222c2257794a6f59584a74623235705953396c626e5a70636d39756257567564433176636d6c6e61573476646a45694c434a6859324e76645735304c574e6f59576c75496977694d534973496d526c646d6c6a5a533143496977695a57353261584a76626d316c626e517457534973496d4e795a5746305a534973496d56756469316d6158683064584a6c496977694d534973496a45694c434977496977694d534973496a45784969776959334a6c5958526c4c566b694c434a694e6a63784e4441324e3255344d7a6b354e6a686b4e3249795a544e684e7a4e6a4f4759785a4445774d6a49304d5749794d324e6d5a4446684d4455794f5749354f5755325a4451794e7a51784f5745774e6a4a6b496977694d6a5532596a426a596a517a4e4456685a6d4930596a566a4d44646b4d7a46684d6d55314d7a637a4e7a497a597a526b4d446c6a4d5755354f4759324d545a6a4d6d5a6c4f57466b59324a6d4f4467775a5441785953497357313073573173695a47563261574e6c4c5549694c434a6e5647777a5248466f4f5559784f5664764d564a74647a42344c58704e64553570634563774e32706c6156686d575642584e46394b637a5652496977696244685065454d774d584e46656e41304e6d777a54556851576b4e4956433143636d706c65446c70616b394754584232656d356a647a683654534973496a45694c4349784969776959575274615734694c4349794d444d774d4441774e544177496977694e7a63314d7a457a5a446868596d597a4d474e6a4d5755794e6a45334d474a6b4d6d59344d5451794f5755335a574d314d5452694f44686b5a444e6b4f4445344d4449304d4459344d5755304d44566a4e546b3259534a64585630222c22725834764856443338664f306b596c6c4b64706739356e796e4746746a594879384f694372365145514e695478556f564a54457773324e34504e7934534a564732676a7a476a7a53425950316e516f645473446b4251225d5d2c5b5b5b2231222c2257794a6f59584a74623235705953396b5a585a70593255745a5735796232787362575675644339324d534973496d4a76636d6c755a334e7a6243317a634746725a5449745a57523359584a6b637a49314e5445354c57527959575a304d444974646a45694c434a6859324e76645735304c574e6f59576c75496977694d534973496d467959326870646d557451794973496b5a6f5756644761466c58526d685a56305a6f5756644761466c58526d685a56305a6f5756644761466c58526d685a56305a6f5756644761466b694c4349794d444d774d4441774d446b77496977695a47563261574e6c4c554d694c4349335657747665476c71556e647a596e45325555303061305a74566c6c546246704b656e426a575639724d6b357a526b644753336c49546a6c46496977696333646c6457687452485a7964465258634777356256464a624739726458424c534864434d565a5765456c75556b315462335647626d5a445a794973496d526c646d6c6a5a5331424969776961573971616a4e5955556f34576c67355658527a6446424d6347526a63334275513249345a477843535749344d314e4a51574a525547497864794973496d4d3354466c304d6e4677644652615a304635646b6b355a476b744e445a5064565271637a5a6d4f564e684d3239494d303549627a4278625763694c4349794d4449774d6a41794d4449774d6a41794d4449774d6a41794d4449774d6a41794d4449774d6a41794d4449774d6a41794d4449774d6a41794d4449774d6a41794d4449774d6a41794d4449774d6a41794d444977496977694d475a695954686b4d3255344e4749784d7a646b4e5463304e44466a5a5464685a475a6c5a6a6b35597a686a4d446c6d4d7a677a4e446c6d4e7a59354d54517a5a44633059324e6d5a446b7959544a694f4468684f534a64222c226a4d6237344b36656936686e4e36367755673747316b3979554c6277747a7a745274514a6575384c467731744d4b546730444544466b54676d326d496d5a49653733396478566e467156305867446741666a61394177222c2254735134466c44756854366b6e2d616f6850615279684b344c56354163424c657349373658413377554145635a464332484a414d6c524a4c384b444c3464714e4b3470594e7148314f5a486c564d5a45483078314377225d5d5d5d",
+  "proofHash": "a1afe388f00bc34ccceadc2b9300be2851a7cd7ee88535368dc0e2076d1511d6",
+  "certificateSigningHex": "5b226861726d6f6e69612f6465766963652d656e726f6c6c6d656e742f7633222c22626f72696e6773736c2d7370616b65322d6564776172647332353531392d647261667430322d7631222c226163636f756e742d636861696e222c2231222c2270616972696e672d43222c2246685957466859574668595746685957466859574668595746685957466859574668595746685957466859222c2232303330303030303930222c226465766963652d44222c22626e6f6333536d7774345f524f76544657595f76394f38716c785a75504b6279355076387a594251575f45222c22666f487046754f767a624d653930324e75535079756857344b68716d575536694b4e7a664a396531543277222c226465766963652d42222c2267546c3344716839463139576f31526d7730782d7a4d754e69704730376a65695866595057345f4a733551222c226c384f7843303173457a7034366c334d48505a4348542d42726a657839696a4f464d70767a6e6377387a4d222c2232303230323032303230323032303230323032303230323032303230323032303230323032303230323032303230323032303230323032303230323032303230222c2233613262393533643633633361623233643935376434326334636238383532303930316564356262333765346438666238323463313937666361633038306331222c2261316166653338386630306263333463636365616463326239333030626532383531613763643765653838353335333638646330653230373664313531316436225d"
+}

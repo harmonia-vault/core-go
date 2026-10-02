@@ -211,6 +211,12 @@ func (w *Workflow) ApprovalInfo() (ApprovalInfo, error) {
 	if w.state.Recovery != nil {
 		return ApprovalInfo{}, ErrRecoveryRestricted
 	}
+	if w.enrollmentPending() {
+		return ApprovalInfo{}, ErrMobileEnrollmentPending
+	}
+	if w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+		return ApprovalInfo{}, ErrApprovalPending
+	}
 	r := w.state.PendingApproval
 	if r == nil {
 		return ApprovalInfo{State: "none"}, nil
@@ -262,6 +268,12 @@ func (w *Workflow) ApprovePairing(ctx context.Context, input ApprovalInput) (App
 	}
 	if w.state.Recovery != nil {
 		return ApprovalResult{}, ErrRecoveryRestricted
+	}
+	if w.enrollmentPending() {
+		return ApprovalResult{}, ErrMobileEnrollmentPending
+	}
+	if w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+		return ApprovalResult{}, ErrApprovalPending
 	}
 	fingerprint, err := choicesHash(input.PairingID, input.Selections)
 	if err != nil {
@@ -372,6 +384,12 @@ func (w *Workflow) RetryApproval(ctx context.Context, id string) (ApprovalResult
 	if w.state.Recovery != nil {
 		return ApprovalResult{}, ErrRecoveryRestricted
 	}
+	if w.enrollmentPending() {
+		return ApprovalResult{}, ErrMobileEnrollmentPending
+	}
+	if w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+		return ApprovalResult{}, ErrApprovalPending
+	}
 	r := w.state.PendingApproval
 	if r == nil || r.PairingID != id {
 		return ApprovalResult{}, syncclient.ErrWriteConflict
@@ -461,6 +479,12 @@ func (w *Workflow) CancelApproval(id string) error {
 	}
 	if w.state.Recovery != nil {
 		return ErrRecoveryRestricted
+	}
+	if w.enrollmentPending() {
+		return ErrMobileEnrollmentPending
+	}
+	if w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+		return ErrApprovalPending
 	}
 	r := w.state.PendingApproval
 	if r == nil || r.PairingID != id {

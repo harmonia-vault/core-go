@@ -76,3 +76,7 @@ AndroidX `NativeWorkflowIntegrationTest` 的 `syntheticCA` runner 参数为夹�
 最终 Go 普通/native-tag race 通过（1.446/1.393 秒），Flutter业务静态分析无问题（5.8 秒），固定 AAR 与 Kotlin main/test APK 构建通过。清合成 PIN 后再跑未配置凭据门槛 4/4（0.028 秒）。所有测试 alias/文件在 finally 删除，两个 nativefixture 包已卸载，原 preview 包仍存在；同 AVD 数据未 wipe/reset，模拟器继续运行，loopback HTTPS/临时 SQLite 夹具已停止。最终原始记录为 mobile ignored `build/native/workflow-full-runtime.txt`、`workflow-final-no-credential.txt`、`workflow-native-build-final.log` 与 `workflow-android-build-final.log`。
 
 完整仪器测试 runner 类为 `NativeBridgeIntegrationTest,NativeCredentialIntegrationTest,NativeWorkflowStorageTest,NativeWorkflowIntegrationTest`（同 `org.harmoniavault.harmonia_mobile.nativebridge` 前缀），测试包 `org.harmoniavault.harmonia_mobile.nativefixture.test/androidx.test.runner.AndroidJUnitRunner`。需在显式隔离 AVD 建立临时合成 PIN，通过系统提示，取消测试点主动取消；结束后清 PIN/测试包。禁止将此步骤用于真实用户手机、真实锁屏或账号。
+
+## 首根手机批准 compiled CLI 的原生 v2 切片
+
+2026-10-02 UTC，独立 executeApproval 短码字节入口与 retryApproval/approvalInfo/cancelApproval 已接通。系统强认证后使用本机来源重建签包，两次真实密封完成才POST，unknown只查原id，approved与双签complete分开。正常AAR focused跨端1/1(59.074秒)与可复现入口1/1(58.733秒)通过，各21提示含1取消；known/accepted502、两保存失败门槛及compiledCLI持钥boot/Pull/隔离导出/rw写入均实际验证。上述通过使用当时默认v2的c4dec971编译基线；新CLI默认3后当前controller明确certificate-version2。origin-aware复测55.248/54.702秒失败后，服务器补历史mutation授权及写入者双签身份来源闭包；新正常AAR/当前CLI（1801392+dirty）仅一次fresh focused1/1 PASS59.634秒、21提示含1取消/四controller0，known/accepted502、两保存前置失败和同id确认均实际通过。以记录的实际产物哈希为界，不将后续Go改动算作该运行证据。详见 [APPROVAL_NATIVE.md](APPROVAL_NATIVE.md)。整体false；新Genesis恢复、cert3/非根/新环境来源和UI未算此证据。

@@ -93,6 +93,7 @@ type pendingInitialization struct {
 	Name      string                         `json:"name"`
 }
 type environmentRecord struct {
+	OriginV2  *environmentOriginJournal       `json:"originV2,omitempty"`
 	InputHash string                          `json:"inputHash"`
 	Signed    cryptox.SignedEnvironmentChange `json:"signed"`
 	Sequence  uint64                          `json:"sequence,omitempty"`
@@ -117,6 +118,8 @@ type protectedState struct {
 	PendingApproval    *approvalRecord               `json:"pendingApproval,omitempty"`
 	SelfRevocation     []byte                        `json:"selfRevocation,omitempty"`
 	Recovery           *recoveryRecord               `json:"recovery,omitempty"`
+	EnrollmentV3       *mobileEnrollmentRecord       `json:"enrollmentV3,omitempty"`
+	PendingApprovalV3  *approvalRecordV3             `json:"pendingApprovalV3,omitempty"`
 }
 type memoryStore struct{ state localstate.State }
 
@@ -139,6 +142,7 @@ type Workflow struct {
 	store      *memoryStore
 	engine     *localstate.Engine
 	client     *syncclient.Client
+	verifier   *syncclient.PinnedVerifier
 	login      *syncclient.LoginResult
 	closed     bool
 	saveNative func([]byte) error
@@ -230,14 +234,23 @@ func New(config Config) (*Workflow, error) {
 				return nil, errors.New("protected environment fingerprint invalid")
 			}
 			expected, _ := strconv.ParseUint(record.Signed.Change.ExpectedSequence, 10, 64)
-			if record.Sequence > 9007199254740991 || record.Sequence != 0 && record.Sequence != expected+1 || record.Applied && record.Sequence == 0 {
+			acceptedTail := expected + 1
+			if record.Signed.Change.Operation == "rotate" {
+				acceptedTail += uint64(len(record.Signed.Change.Mutations))
+			}
+			if record.Sequence > 9007199254740991 || record.Sequence != 0 && record.Sequence != acceptedTail || record.Applied && record.Sequence == 0 {
 				return nil, errors.New("protected environment acceptance invalid")
+			}
+			if record.Applied {
+				if err := syncclient.VerifyEnvironmentChangeCheckpoint(state.Cloud.Cloud, record.Signed, record.Sequence); err != nil {
+					return nil, errors.New("protected applied environment lacks its exact transaction checkpoints")
+				}
 			}
 		}
 		if state.Root != nil {
 			root := state.Root
 			pub, e := cryptox.DecodeBase64(root.RecoverySigningPublicKey, 32, 32)
-			if e != nil || root.RootDeviceID != state.DeviceID || root.RootSigningPublicKey != state.SigningPublicKey || root.RootReceivingPublicKey != state.ReceivingPublicKey || cryptox.VerifyTrustRoot(state.AccountID, state.AccountGeneration, *root, pub) != nil {
+			if e != nil || (state.EnrollmentV3 == nil && (root.RootDeviceID != state.DeviceID || root.RootSigningPublicKey != state.SigningPublicKey || root.RootReceivingPublicKey != state.ReceivingPublicKey)) || cryptox.VerifyTrustRoot(state.AccountID, state.AccountGeneration, *root, pub) != nil {
 				return nil, errors.New("protected root binding invalid")
 			}
 		}
@@ -280,6 +293,28 @@ func New(config Config) (*Workflow, error) {
 		workflow.Close()
 		return nil, err
 	}
+	if err := workflow.validateMobileEnrollment(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
+	if err := workflow.observeEnrollmentClock(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
+	if err := workflow.validateOriginCache(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
+	for _, record := range state.EnvironmentWrites {
+		if err := workflow.validateEnvironmentOriginRecord(record); err != nil {
+			workflow.Close()
+			return nil, err
+		}
+	}
+	if err := workflow.validateApprovalV3(state.PendingApprovalV3); err != nil {
+		workflow.Close()
+		return nil, err
+	}
 	if err := workflow.validateInitialAuthorities(); err != nil {
 		workflow.Close()
 		return nil, err
@@ -301,8 +336,15 @@ func (w *Workflow) Close() {
 	clear(w.receiving)
 	w.signing = nil
 	w.receiving = nil
+	if w.verifier != nil {
+		w.verifier.Close()
+		w.verifier = nil
+	}
 	w.client = nil
 	w.login = nil
+	if r := w.state.EnrollmentV3; r != nil && r.Login != nil {
+		r.Login.Token = ""
+	}
 	clear(w.state.SelfRevocation)
 	w.clearRecovery()
 	if w.http != nil {
@@ -338,6 +380,12 @@ func (w *Workflow) check() error {
 	}
 	if w.state.Recovery != nil {
 		return ErrRecoveryRestricted
+	}
+	if w.enrollmentPending() {
+		return ErrMobileEnrollmentPending
+	}
+	if w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+		return ErrApprovalPending
 	}
 	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 {
 		return ErrApprovalPending
@@ -801,14 +849,19 @@ func (w *Workflow) boot(ctx context.Context) error {
 	if err != nil || generation == 0 {
 		return ErrNotTrusted
 	}
-	verifier, err := syncclient.NewPinnedVerifier(syncclient.PinnedTrust{AccountID: w.state.AccountID, AccountGeneration: generation, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.signing.Public().(ed25519.PublicKey), ReceivingPrivateKey: w.receiving, Managers: map[string]ed25519.PublicKey{w.state.DeviceID: w.signing.Public().(ed25519.PublicKey)}, Now: w.now})
+	verifier, err := w.originVerifier()
 	if err != nil {
 		return err
 	}
 	candidate, err := syncclient.NewForBoot(syncclient.Config{Endpoint: w.state.Endpoint, HTTPClient: w.http, AccountID: w.state.AccountID, AccountGeneration: generation, DeviceID: w.state.DeviceID, Engine: w.engine, Verifier: verifier, Now: w.now})
 	if err != nil {
+		verifier.Close()
 		return err
 	}
+	if w.verifier != nil {
+		w.verifier.Close()
+	}
+	w.verifier = verifier
 	w.client, err = candidate.BootDevice(ctx, w.signing)
 	if errors.Is(err, syncclient.ErrTrustInvalidated) {
 		return errors.Join(err, w.invalidateTrust())
@@ -822,6 +875,11 @@ func (w *Workflow) invalidateTrust() error {
 	w.state.Pending = nil
 	w.state.InitialAuthorities = nil
 	w.state.PendingApproval = nil
+	w.state.PendingApprovalV3 = nil
+	if r := w.state.EnrollmentV3; r != nil && r.Login != nil {
+		r.Login.Token = ""
+	}
+	w.state.EnrollmentV3 = nil
 	clear(w.state.SelfRevocation)
 	w.clearRecovery()
 	w.state.SelfRevocation = nil
@@ -838,6 +896,10 @@ func (w *Workflow) invalidateTrust() error {
 	clear(w.receiving)
 	w.signing = nil
 	w.receiving = nil
+	if w.verifier != nil {
+		w.verifier.Close()
+		w.verifier = nil
+	}
 	w.client = nil
 	w.login = nil
 	w.closed = true
@@ -846,6 +908,12 @@ func (w *Workflow) invalidateTrust() error {
 func (w *Workflow) refresh(ctx context.Context) error {
 	if w.state.Recovery != nil {
 		return ErrRecoveryRestricted
+	}
+	if w.enrollmentPending() {
+		return ErrMobileEnrollmentPending
+	}
+	if w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+		return ErrApprovalPending
 	}
 	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 {
 		return ErrApprovalPending
@@ -887,13 +955,14 @@ func (w *Workflow) refreshForApproval(ctx context.Context) error {
 	for _, record := range w.state.EnvironmentWrites {
 		c := record.Signed.Change
 		seen, ok := w.engine.State().Cloud.EnvironmentCheckpoints[c.DeviceID+"/"+c.IdempotencyKey]
-		expected, _ := strconv.ParseUint(c.ExpectedSequence, 10, 64)
-		encoded, _ := c.SigningBytes()
-		hash := sha256.Sum256(encoded)
-		if !ok || seen.Sequence != expected+1 || seen.Fingerprint != hex.EncodeToString(hash[:]) {
+		if !ok {
 			continue
 		}
-		record.Sequence = seen.Sequence
+		tail := seen.Sequence + uint64(len(c.Mutations))
+		if err := syncclient.VerifyEnvironmentChangeCheckpoint(w.engine.State().Cloud, record.Signed, tail); err != nil {
+			continue
+		}
+		record.Sequence = tail
 		record.Applied = true
 		if err := w.rememberLabel(c, seen.Sequence); err != nil {
 			return err
@@ -990,6 +1059,9 @@ func (w *Workflow) View() (View, error) {
 	}
 	if w.state.Root == nil {
 		return View{}, ErrNotTrusted
+	}
+	if err := w.validateOriginCache(); err != nil {
+		return View{}, err
 	}
 	if _, err := w.engine.Effective(w.now()); err != nil {
 		return View{}, err
@@ -1088,6 +1160,12 @@ func (w *Workflow) DeleteVariable(ctx context.Context, env, name, id string) (Vi
 	return w.mutate(ctx, env, name, "", id, "delete")
 }
 func (w *Workflow) submitRecord(ctx context.Context, record *environmentRecord) error {
+	if record.OriginV2 != nil {
+		return w.submitEnvironmentOrigin(ctx, record)
+	}
+	if record.Signed.Change.Operation == "create" || record.Signed.Change.Operation == "rotate" {
+		return ErrLegacyEnvironmentOrigin
+	}
 	status, err := w.client.EnvironmentStatus(ctx, record.Signed.Change.IdempotencyKey)
 	if err != nil {
 		return err
@@ -1162,6 +1240,13 @@ func (w *Workflow) environmentOperation(ctx context.Context, operation, env, nam
 			return localstate.ErrUnauthorized
 		}
 	}
+	var control syncclient.EnvironmentControlView
+	if operation == "create" {
+		control, err = w.environmentControl(ctx, authority.EnvironmentID)
+		if err != nil {
+			return err
+		}
+	}
 	change := w.baseChange(env, operation, id, authority)
 	if operation != "delete" {
 		var key []byte
@@ -1199,6 +1284,12 @@ func (w *Workflow) environmentOperation(ctx context.Context, operation, env, nam
 		return err
 	}
 	record := &environmentRecord{InputHash: fingerprint, Signed: signed}
+	if operation == "create" {
+		record.OriginV2, err = w.prepareEnvironmentOrigin(ctx, signed, control)
+		if err != nil {
+			return err
+		}
+	}
 	w.state.EnvironmentWrites[id] = record
 	if err = w.persist(); err != nil {
 		return err

@@ -53,6 +53,9 @@ func newIssuerPinnedVerifier(t IssuerPinnedTrust, p *cryptox.VerifiedIssuerProof
 
 // IssuerBindings 返回历史逐环境来源副本，不提供当前管理权限或恢复授权锚。
 func (v *PinnedVerifier) IssuerBindings() []cryptox.IssuerBinding {
+	if v.issuerOriginProof != nil {
+		return v.issuerOriginProof.IssuerBindings()
+	}
 	if v.issuerProof == nil {
 		return nil
 	}

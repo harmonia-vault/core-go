@@ -31,9 +31,15 @@ type PinnedTrust struct {
 	Now                    func() time.Time
 }
 type PinnedVerifier struct {
-	trust              PinnedTrust
-	receivingPublicKey string
-	issuerProof        *cryptox.VerifiedIssuerProof
+	trust                 PinnedTrust
+	receivingPublicKey    string
+	issuerProof           *cryptox.VerifiedIssuerProof
+	issuerOriginProof     *cryptox.VerifiedIssuerProofV2
+	evidenceRoot          *cryptox.PinnedIssuerRoot
+	initialEvidence       *cryptox.IssuerProofV2
+	requireEvidence       bool
+	genesisAuthorities    []cryptox.SignedGrantWire
+	requireStoredEvidence bool
 }
 
 func NewPinnedVerifier(trust PinnedTrust) (*PinnedVerifier, error) {
@@ -79,6 +85,9 @@ func (v *PinnedVerifier) verifyGrant(signed SignedGrant) error {
 	if grant.AccountID != v.trust.AccountID || grant.AccountGeneration != strconv.FormatUint(v.trust.AccountGeneration, 10) {
 		return errors.New("grant account/generation mismatch")
 	}
+	if v.issuerOriginProof != nil {
+		return v.issuerOriginProof.VerifyHistoricalGrant(cryptox.SignedGrantWire{Grant: grant, Signature: signed.Signature})
+	}
 	if v.issuerProof != nil {
 		return v.issuerProof.VerifyHistoricalGrant(cryptox.SignedGrantWire{Grant: grant, Signature: signed.Signature})
 	}
@@ -88,7 +97,7 @@ func (v *PinnedVerifier) verifyGrant(signed SignedGrant) error {
 	}
 	return cryptox.VerifyGrant(cryptox.SignedGrant{Grant: grant, Signature: signed.Signature}, key)
 }
-func (v *PinnedVerifier) VerifyPull(ctx context.Context, pull Pull, previous localstate.CloudSnapshot) (localstate.CloudSnapshot, error) {
+func (v *PinnedVerifier) verifyPullValues(ctx context.Context, pull Pull, previous localstate.CloudSnapshot) (localstate.CloudSnapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return localstate.CloudSnapshot{}, err
 	}
@@ -257,6 +266,24 @@ func (v *PinnedVerifier) VerifyPull(ctx context.Context, pull Pull, previous loc
 			return localstate.CloudSnapshot{}, cryptox.ErrInvalidWire
 		}
 		out.Environments[m.EnvironmentID] = environment
+	}
+	// A returned current-version rotation declares the exact signed batch.
+	// Reject a missing inner event before committing its data checkpoint; a
+	// retry may fetch full history, but never promote a partial transaction.
+	for _, event := range pull.EnvironmentEvents {
+		c := event.Change.Change
+		environment, readable := out.Environments[c.EnvironmentID]
+		if len(c.Mutations) == 0 || !readable || strconv.FormatUint(environment.KeyVersion, 10) != c.KeyVersion {
+			continue
+		}
+		expected, err := strconv.ParseUint(c.ExpectedSequence, 10, 64)
+		if err != nil || expected >= 9007199254740991 || uint64(len(c.Mutations)) > 9007199254740991-expected-1 {
+			return localstate.CloudSnapshot{}, cryptox.ErrInvalidWire
+		}
+		tail := expected + 1 + uint64(len(c.Mutations))
+		if err := VerifyEnvironmentChangeCheckpoint(out, event.Change, tail); err != nil {
+			return localstate.CloudSnapshot{}, ErrFullPullRequired
+		}
 	}
 	return out, nil
 }

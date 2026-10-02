@@ -39,6 +39,7 @@ type selfFixture struct {
 	public          ed25519.PublicKey
 	receivingPublic []byte
 	grant           cryptox.SignedGrant
+	evidence        *cryptox.IssuerProofV2
 	server          *httptest.Server
 	tokens          map[string]bool
 	boots           map[string]cryptox.DeviceBootProof
@@ -84,6 +85,12 @@ func newSelfFixture(t *testing.T) *selfFixture {
 	mutation := selfMust(cryptox.SignMutation(cryptox.Mutation{AccountID: f.account, AccountGeneration: "1", DeviceID: f.device, EnvironmentID: "env", KeyVersion: "1", GrantGeneration: "1", Operation: "put", IdempotencyKey: "unit-value", Name: "UNIT_SYNTHETIC", Payload: cryptox.EncodeBase64(payload)}, f.config.SigningKey))
 	grant := syncclient.SignedGrant{Grant: f.grant.Grant, Signature: f.grant.Signature}
 	state.Cloud.Cloud = selfMust(verifier.VerifyPull(context.Background(), syncclient.Pull{Full: true, AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{grant}, Events: []syncclient.Event{{Sequence: 1, Mutation: syncclient.SignedMutation{Mutation: mutation.Mutation, Signature: mutation.Signature}, Authorization: &grant}}}, localstate.CloudSnapshot{}))
+	state.InitialAuthorities = []cryptox.SignedGrantWire{cryptox.GrantToWire(f.grant)}
+	h := selfMust(cryptox.IssuerAuthorityHash(cryptox.GrantToWire(f.grant)))
+	f.evidence = &cryptox.IssuerProofV2{Profile: cryptox.IssuerProofV2Profile, AccountID: f.account, AccountGeneration: "1", TrustRoot: root, Path: []cryptox.IssuerEnrollment{}, IdentityPaths: [][]cryptox.IssuerEnrollment{}, Origins: []cryptox.SignedEnvironmentOrigin{}, Authorities: []cryptox.IssuerAuthorityV2{{Grant: cryptox.GrantToWire(f.grant)}}, Targets: []cryptox.IssuerTarget{{EnvironmentID: "env", AuthorityHash: h}}}
+	originVerifier := selfMust(syncclient.NewRootPinnedVerifierWithOrigins(syncclient.OriginRootPinnedTrust{Trust: syncclient.PinnedTrust{AccountID: f.account, AccountGeneration: 1, DeviceID: f.device, DeviceSigningPublicKey: f.public, ReceivingPrivateKey: f.config.ReceivingPrivateKey, Now: f.config.Now}, Root: root, InitialAuthorities: state.InitialAuthorities}))
+	state.Cloud.Cloud = selfMust(originVerifier.VerifyPull(context.Background(), syncclient.Pull{Full: true, IssuerEvidence: f.evidence, AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{grant}, Events: []syncclient.Event{{Sequence: 1, Mutation: syncclient.SignedMutation{Mutation: mutation.Mutation, Signature: mutation.Signature}, Authorization: &grant}}}, localstate.CloudSnapshot{}))
+	originVerifier.Close()
 	f.config.ProtectedState = selfMust(json.Marshal(state))
 	f.config.SaveProtectedState = func(blob []byte) error {
 		var state protectedState
@@ -151,7 +158,7 @@ func (f *selfFixture) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	switch {
 	case strings.HasSuffix(path, "/pull"):
-		write(syncclient.Pull{AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{{Grant: f.grant.Grant, Signature: f.grant.Signature}}, Events: []syncclient.Event{}})
+		write(syncclient.Pull{IssuerEvidence: f.evidence, AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{{Grant: f.grant.Grant, Signature: f.grant.Signature}}, Events: []syncclient.Event{}})
 	case strings.HasSuffix(path, "/device-revocations"):
 		f.prepares++
 		var body map[string]string

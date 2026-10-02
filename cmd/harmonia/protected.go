@@ -33,8 +33,8 @@ type commandRuntime struct {
 	environment importEnvironment
 }
 type protectedOptions struct {
-	command, directory, server, email, approver, userID, serviceSID string
-	passwordStdin                                                   bool
+	command, directory, server, email, approver, userID, serviceSID, certificateVersion string
+	passwordStdin                                                                       bool
 }
 
 func protectedStore(o protectedOptions) (*localkeys.StateStore, error) {
@@ -201,7 +201,19 @@ func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandR
 	config := syncclient.EnrollmentConfig{Endpoint: session.Endpoint, HTTPClient: r.httpClient, AccountID: session.AccountID, AccountGeneration: session.AccountGeneration, DeviceID: keys.DeviceID, LoginToken: session.Token, SigningKey: signing, ReceivingPrivateKey: keys.ReceivingPrivate, Engine: engine, Now: r.now}
 	var enrollment *syncclient.Enrollment
 	trust, trustErr := vault.LoadTrustContext()
-	if errors.Is(trustErr, os.ErrNotExist) || trustErr == nil && trust.CertificateVersion == "2" {
+	if o.certificateVersion != "" && o.certificateVersion != "2" && o.certificateVersion != "3" {
+		return errors.New("certificate-version 必须为2或3")
+	}
+	if trustErr == nil && o.certificateVersion != "" && o.certificateVersion != trust.CertificateVersion {
+		return errors.New("已保存的入网收据不能更换证书版本")
+	}
+	if errors.Is(trustErr, os.ErrNotExist) && o.certificateVersion == "2" {
+		return protectedPairV2(ctx, o, r, out, vault, engine, session, keys, config, trust, false)
+	}
+	if errors.Is(trustErr, os.ErrNotExist) || trustErr == nil && trust.CertificateVersion == "3" {
+		return protectedPairV3(ctx, o, r, out, vault, engine, session, keys, config, trust, trustErr == nil)
+	}
+	if trustErr == nil && trust.CertificateVersion == "2" {
 		return protectedPairV2(ctx, o, r, out, vault, engine, session, keys, config, trust, trustErr == nil)
 	}
 	if trustErr == nil {

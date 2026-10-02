@@ -38,6 +38,7 @@ func TestApprovalInitialAuthorityCannotComeFromCurrentDirectory(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer w.Close()
+	w.state.InitialAuthorities = nil // Explicitly remove native synthetic genesis; current grant cannot refill it.
 	if _, e = w.initialAuthority("env"); e == nil {
 		t.Fatal("current self grant guessed initial evidence")
 	}

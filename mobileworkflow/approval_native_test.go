@@ -328,6 +328,16 @@ func TestNativeApprovalRefusesWrongCodeContextAndAuthority(t *testing.T) {
 				f.base.grant = mustApproval(cryptox.SignGrant(g, f.base.config.SigningKey))
 			}
 			w, err := New(f.base.config)
+			if bad == "missing-initial" {
+				if err == nil {
+					w.Close()
+					t.Fatal("cached origin ledger reopened without protected genesis")
+				}
+				if len(f.posts) != 0 {
+					t.Fatal("unproved genesis uploaded approval")
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}

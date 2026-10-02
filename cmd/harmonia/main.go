@@ -44,6 +44,7 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	serverAddress := flags.String("server", "", "用户明确指定的自托管 HTTPS 地址")
 	email := flags.String("email", "", "邮箱登录账号")
 	approver := flags.String("approver", "", "既有可信管理手机的设备 ID")
+	certificateVersion := flags.String("certificate-version", "", "首次 pair 默认3；旧手机须明确2；待完成收据不能换版本")
 	importStdin := flags.Bool("import-stdin", false, "从标准输入读取候选JSON，只导入select选中项")
 	currentEnv := flags.Bool("current-env", false, "显式列出本进程变量名；import须select后才取值")
 	valueStdin := flags.Bool("value-stdin", false, "明确从标准输入读取完整UTF8值，不使用argv")
@@ -101,7 +102,7 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 			return errors.New("受保护目录不能混用明文 fixture/state/provider-file 输入")
 		}
 		if command == "login" || command == "pair" {
-			return protectedAccountCommand(ctx, protectedOptions{command: command, directory: *localDirectory, server: *serverAddress, email: *email, approver: *approver, userID: *localUser, serviceSID: *ipcServiceSID, passwordStdin: *passwordStdin}, runtimeOptions, out, errOut)
+			return protectedAccountCommand(ctx, protectedOptions{command: command, directory: *localDirectory, server: *serverAddress, email: *email, approver: *approver, certificateVersion: *certificateVersion, userID: *localUser, serviceSID: *ipcServiceSID, passwordStdin: *passwordStdin}, runtimeOptions, out, errOut)
 		}
 		if command == "daemon" {
 			return protectedDaemon(ctx, daemonOptions{directory: *localDirectory, userID: *localUser, serviceSID: *ipcServiceSID, ipcDirectory: *ipcDirectory, fragment: *fragment, windowsService: *windowsService, interval: *interval, syncInterval: *syncInterval, once: *once}, runtimeOptions, out, errOut)

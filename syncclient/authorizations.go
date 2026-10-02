@@ -11,7 +11,7 @@ import (
 	"github.com/harmonia-vault/core-go/localstate"
 )
 
-func (v *PinnedVerifier) VerifyAuthorizationRefresh(ctx context.Context, pull Pull, previous localstate.CloudSnapshot) (localstate.CloudSnapshot, error) {
+func (v *PinnedVerifier) verifyAuthorizationValues(ctx context.Context, pull Pull, previous localstate.CloudSnapshot) (localstate.CloudSnapshot, error) {
 	if previous.AccountID != "" && (previous.AccountID != v.trust.AccountID || previous.AccountGeneration != v.trust.AccountGeneration) {
 		return localstate.CloudSnapshot{}, errors.New("authorization context belongs to another account generation")
 	}
@@ -102,6 +102,7 @@ func (c *Client) RefreshAuthorizations(ctx context.Context) (Pull, error) {
 	query := endpoint.Query()
 	query.Set("after", strconv.FormatUint(after, 10))
 	query.Set("scope", "authorizations")
+	c.addEvidenceCapability(query)
 	endpoint.RawQuery = query.Encode()
 	var pull Pull
 	if err := c.request(ctx, "GET", endpoint, nil, &pull); err != nil {

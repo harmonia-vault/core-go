@@ -1,4 +1,4 @@
-# 手机首管理设备业务切片
+# 手机受保护业务切片
 
 实验性 Go 业务包，只供成功完成系统设备认证的原生持钥层调用。已通过原生桥接入 Android 受保护首机初始化、变量 CRUD、上下文恢复、退出与自撤销；每次业务操作要求系统认证。整体 `realVaultReady=false` 仍保留，尚未完整的能力继续拒绝。此包不是生产可用声明。
 
@@ -11,7 +11,7 @@
 - 变量设置、删除：复用 `syncclient.Writer` 的持久加密请求日志和精确 `mutation-status` 查询；重试保持原 nonce、密文、签名与 id。服务器接受后经相同 pull 下发，不乐观改本地值。
 - 原生上下文重启恢复、离线读取已验证缓存。已知全设备撤销使旧会话失效，重新 boot 拒绝后，立即清本地信任、缓存和请求资料，持久化 `AccountClosed`，清该工作流进程中的私钥并关闭对象；关闭上下文不能靠登录自动恢复权限。
 
-首根手机批准使用独立 `ApprovePairing`/`RetryApproval` 的完整 v2 来源和受保护事务。受限恢复及完整新码轮换使用独立 `BeginRecovery`/`BeginRecoveryRotation`/`CompleteRecoveryRotation`，详见 [RECOVERY.md](RECOVERY.md)，当前 Go HTTPS 已验证，Android 恢复操作尚未接入。环境钥轮换、角色管理、多管理手机高层、账号重置、真实手机后台同步以及丢失全部设备后显式恢复新管理设备的闭环尚未完成。旧 `ApproveDevice`/`Recover` 简化接口仍返回 `ErrUnsupported`；不会把服务器未签名设备目录转换为可信管理公钥。
+首根手机批准使用独立 `ApprovePairing`/`RetryApproval` 的完整 v2 来源和受保护事务。受限恢复及完整新码轮换使用独立 `BeginRecovery`/`BeginRecoveryRotation`/`CompleteRecoveryRotation`，详见 [RECOVERY.md](RECOVERY.md)，当前 Go HTTPS 已验证，Android 恢复操作尚未接入。独立 Go `EnrollDevice/ApprovePairingV3` 与 origin 双签环境新建/轮换已完成真实 HTTPS 切片，见 [MANAGER-ORIGINS.md](MANAGER-ORIGINS.md)；这些新 API 尚未接入 Android。角色管理、账号重置、真实手机后台同步以及丢失全部设备后显式恢复新管理设备的闭环尚未完成。旧 `ApproveDevice`/`Recover` 简化接口仍返回 `ErrUnsupported`；不会把服务器未签名设备目录转换为可信管理公钥。
 
 ## 原生持久层合同
 

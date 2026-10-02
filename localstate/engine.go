@@ -48,6 +48,8 @@ type MutationCheckpoint struct {
 }
 
 type CloudSnapshot struct {
+	// IssuerEvidence 由上层固定根全量复验，与本快照同一受保护事务持久化。
+	IssuerEvidence         json.RawMessage               `json:"issuerEvidence,omitempty"`
 	AccountID              string                        `json:"accountId"`
 	AccountGeneration      uint64                        `json:"accountGeneration"`
 	Sequence               uint64                        `json:"sequence"`
@@ -218,6 +220,9 @@ func validateValue(name, value string) error {
 	return nil
 }
 func validateCloud(s CloudSnapshot) error {
+	if len(s.IssuerEvidence) > 1<<20 || (len(s.IssuerEvidence) > 0 && !json.Valid(s.IssuerEvidence)) {
+		return errors.New("invalid protected issuer evidence encoding")
+	}
 	if s.AccountID == "" || s.AccountGeneration == 0 {
 		return errors.New("account and positive generation required")
 	}
@@ -310,10 +315,21 @@ func (e *Engine) acceptSnapshot(in CloudSnapshot, now time.Time, epoch *uint64, 
 				if check.Cloud.AuthorizationSequence == 0 {
 					check.Cloud.AuthorizationSequence = check.Cloud.Sequence
 				}
+				// 明确能力升级后，已验证账本可以附到精确相同的旧缓存。
+				// 仅允许从无账本到有账本；所有数据、授权、指纹和检查点
+				// 必须仍相同。已有账本同序号替换仍按原回放规则拒绝。
+				firstEvidence := len(old.IssuerEvidence) == 0 && len(check.Cloud.IssuerEvidence) > 0
+				evidence := check.Cloud.IssuerEvidence
+				if firstEvidence {
+					check.Cloud.IssuerEvidence = nil
+				}
 				a, _ := json.Marshal(old)
 				b, _ := json.Marshal(check.Cloud)
 				if string(a) != string(b) {
 					return ErrReplay
+				}
+				if firstEvidence {
+					s.Cloud.IssuerEvidence = append(json.RawMessage(nil), evidence...)
 				}
 				return nil
 			}

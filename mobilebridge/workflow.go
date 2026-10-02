@@ -67,7 +67,8 @@ type VaultWorkflow struct {
 func WorkflowProfile() (string, error) {
 	return encode(map[string]any{"version": 1, "realVaultReady": false, "experimental": true,
 		"profile": "first-root-admin-v1", "systemAuthenticationPerOperation": true,
-		"operations":  []string{"register", "verifyEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "logout"},
+		"approvalProfile": "first-root-issuer-proof-v1", "approvalRequiresInitialAuthorities": true,
+		"operations":  []string{"register", "verifyEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "approvePairing", "retryApproval", "approvalInfo", "cancelApproval", "logout"},
 		"unsupported": []string{"approveDevice", "recover", "rotateRecovery", "rotateEnvironmentKey", "roles", "accountReset"}})
 }
 
@@ -271,8 +272,9 @@ type workflowCommand struct {
 var operationFields = map[string][]string{
 	"register": {"email", "password"}, "verifyEmail": {"accountId", "accountGeneration", "challengeId", "token"},
 	"beginInitialization": {"email", "password", "name", "id"}, "completeInitialization": {"recoveryCode"},
-	"revokeSelf":          {"id"},
-	"selfRevocationInfo":  {},
+	"revokeSelf":         {"id"},
+	"selfRevocationInfo": {},
+	"approvePairing":     {"pairingId", "selections"}, "retryApproval": {"pairingId"}, "approvalInfo": {}, "cancelApproval": {"pairingId"},
 	"queryInitialization": {}, "pull": {}, "view": {}, "logout": {},
 	"setVariable": {"environmentId", "name", "value", "id"}, "deleteVariable": {"environmentId", "name", "id"},
 	"createEnvironment": {"name", "id"}, "renameEnvironment": {"environmentId", "name", "id"}, "deleteEnvironment": {"environmentId", "id"},
@@ -345,9 +347,35 @@ func parseWorkflowCommand(raw string) (workflowCommand, error) {
 
 // Execute 只返回已验签业务视图或本次新恢复码；随机会话/保护状态/私钥没有导出路径。
 func (v *VaultWorkflow) Execute(raw string) (string, error) {
+	return v.execute(raw, nil, false)
+}
+
+// ExecuteApproval 的短码独立字节参数只在一次成功系统认证后的调用内存活。
+// command 不允许包含短码、root、证书或服务器签包。调用结束清理可控缓冲。
+func (v *VaultWorkflow) ExecuteApproval(raw string, shortCode []byte) (string, error) {
+	defer clear(shortCode)
+	return v.execute(raw, shortCode, true)
+}
+
+func (v *VaultWorkflow) execute(raw string, shortCode []byte, approval bool) (string, error) {
 	c, err := parseWorkflowCommand(raw)
 	if err != nil {
 		return "", err
+	}
+	if approval != (c.operation == "approvePairing") {
+		return "", errInput
+	}
+	var choices []mobileworkflow.ApprovalSelection
+	if approval {
+		choices, err = parseApprovalSelections(c.fields["selections"])
+		if err != nil || len(shortCode) != 8 {
+			return "", errInput
+		}
+		for _, b := range shortCode {
+			if b < '0' || b > '9' {
+				return "", errInput
+			}
+		}
 	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -357,7 +385,11 @@ func (v *VaultWorkflow) Execute(raw string) (string, error) {
 	if v.workflow == nil || len(v.key) != 32 {
 		return "", errClosed
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	duration := 30 * time.Second
+	if approval {
+		duration = 120 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), duration)
 	v.cancelMu.Lock()
 	v.cancel = cancel
 	v.cancelMu.Unlock()
@@ -395,6 +427,14 @@ func (v *VaultWorkflow) Execute(raw string) (string, error) {
 		data, err = v.workflow.RenameEnvironment(ctx, f["environmentId"], f["name"], f["id"])
 	case "deleteEnvironment":
 		data, err = v.workflow.DeleteEnvironment(ctx, f["environmentId"], f["id"])
+	case "approvePairing":
+		data, err = v.workflow.ApprovePairing(ctx, mobileworkflow.ApprovalInput{PairingID: f["pairingId"], ShortCode: shortCode, Selections: choices})
+	case "retryApproval":
+		data, err = v.workflow.RetryApproval(ctx, f["pairingId"])
+	case "approvalInfo":
+		data, err = v.workflow.ApprovalInfo()
+	case "cancelApproval":
+		err = v.workflow.CancelApproval(f["pairingId"])
 	case "selfRevocationInfo":
 		data, err = v.workflow.SelfRevocationInfo()
 	case "revokeSelf":
@@ -412,7 +452,7 @@ func (v *VaultWorkflow) Execute(raw string) (string, error) {
 	if code != "" {
 		out["recoveryCode"] = code
 	}
-	if c.operation == "revokeSelf" && data != nil {
+	if (c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval") && data != nil {
 		out["data"] = data
 	}
 	if err == nil {
@@ -425,9 +465,11 @@ func (v *VaultWorkflow) Execute(raw string) (string, error) {
 		case errors.Is(err, syncclient.ErrTrustInvalidated):
 			status = "TRUST_INVALIDATED"
 			v.deleteDevice = true
-		case errors.Is(err, mobileworkflow.ErrPending), errors.Is(err, syncclient.ErrAcceptedNotApplied), errors.Is(err, syncclient.ErrWritePending), errors.Is(err, mobileworkflow.ErrSelfRevocationPending):
+		case errors.Is(err, mobileworkflow.ErrPending), errors.Is(err, syncclient.ErrAcceptedNotApplied), errors.Is(err, syncclient.ErrWritePending), errors.Is(err, mobileworkflow.ErrSelfRevocationPending), errors.Is(err, mobileworkflow.ErrApprovalPending):
 			status = "PENDING"
 			out["retrySameId"] = true
+		case errors.Is(err, mobileworkflow.ErrApprovalEvidence):
+			status = "APPROVAL_EVIDENCE_REQUIRED"
 		case errors.Is(err, mobileworkflow.ErrNotTrusted):
 			status = "NOT_TRUSTED"
 		case errors.Is(err, syncclient.ErrSelfRevocationExpired):
@@ -439,7 +481,7 @@ func (v *VaultWorkflow) Execute(raw string) (string, error) {
 		case errors.Is(err, syncclient.ErrWriteConflict):
 			status = "ID_CONFLICT"
 		}
-		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" {
+		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" {
 			out["retrySameId"] = true
 		}
 		out["code"] = status

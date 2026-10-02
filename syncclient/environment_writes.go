@@ -38,18 +38,8 @@ func (c *Client) ConfirmEnvironmentChange(ctx context.Context, signed cryptox.Si
 	if _, err := c.Pull(ctx); err != nil {
 		return result, errors.Join(ErrAcceptedNotApplied, err)
 	}
-	checkpoint := c.config.Engine.State().Cloud
-	wire, err := signed.Change.SigningBytes()
-	if err != nil {
+	if err := VerifyEnvironmentChangeCheckpoint(c.config.Engine.State().Cloud, signed, accepted.Sequence); err != nil {
 		return result, err
-	}
-	expected, err := strconv.ParseUint(signed.Change.ExpectedSequence, 10, 64)
-	if err != nil {
-		return result, err
-	}
-	seen, ok := checkpoint.EnvironmentCheckpoints[signed.Change.DeviceID+"/"+signed.Change.IdempotencyKey]
-	if accepted.Sequence != expected+1 || checkpoint.Sequence < accepted.Sequence || !ok || seen.Sequence != accepted.Sequence || seen.Fingerprint != digest(wire) {
-		return result, ErrAcceptedNotApplied
 	}
 	result.Applied = true
 	return result, nil
