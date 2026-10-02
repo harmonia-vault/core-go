@@ -1,0 +1,10 @@
+[tools]
+go = "1.26.4"
+
+[tasks.test-issuer-proof]
+description = "验证逐环境签发者证明、PAKE 锚边界与篡改拒绝"
+run = "go test . -run 'IssuerProof|EnrollmentV2' -count=1 -v"
+
+[tasks.generate-issuer-vector]
+description = "在显式路径生成公开合成 A→B→C 互操作向量"
+run = "go run ./tools/issuer-vector"

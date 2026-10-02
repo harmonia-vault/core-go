@@ -200,6 +200,9 @@ func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandR
 	config := syncclient.EnrollmentConfig{Endpoint: session.Endpoint, HTTPClient: r.httpClient, AccountID: session.AccountID, AccountGeneration: session.AccountGeneration, DeviceID: keys.DeviceID, LoginToken: session.Token, SigningKey: signing, ReceivingPrivateKey: keys.ReceivingPrivate, Engine: engine, Now: r.now}
 	var enrollment *syncclient.Enrollment
 	trust, trustErr := vault.LoadTrustContext()
+	if errors.Is(trustErr, os.ErrNotExist) || trustErr == nil && trust.CertificateVersion == "2" {
+		return protectedPairV2(ctx, o, r, out, vault, engine, session, keys, config, trust, trustErr == nil)
+	}
 	if trustErr == nil {
 		if trust.Accepted {
 			return errors.New("本机已经完成受保护入网；不重复生成短码")

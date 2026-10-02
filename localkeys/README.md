@@ -17,7 +17,7 @@ engine, err := localstate.New(store)
 
 `StateStore` 实现 `Load/Save/Close`，只打开加密文件，不导入或迁移现有明文 fixture。`Synthetic` 状态会被拒绝。`Vault()` 给后台可信控制器使用，不能通过 IPC 暴露。固定 slot 为 `state-v1`、`device-v1`、`session-v1`、`trust-v1`、`provider-v1` 、`windows-originals-v1` 与 `writes-v1`，不接受任意文件名或路径。保存的设备材料是独立 Ed25519 seed 与 X25519 private key，公钥必须与私钥匹配；保存这些材料本身不会授予设备权限。登录 session 只记录 HTTPS 地址、账号 generation、token 与到期元数据，不保存密码派生凭据。
 
-`SaveTrustContext/LoadTrustContext` 记录 HTTPS endpoint、账号 generation、设备双公钥、管理设备公钥、配对 profile 和入网回执。两端公钥必须与同 Vault 的独立 DeviceKeys 匹配；session 若存在，其 endpoint/账号/generation 也必须匹配。`Accepted=false` 的回执可在结果未知时重启后查询状态，再显式升级为完成；此布尔值不是配对或签名验证，控制器仍必须验证证书、PAKE 和授权。存储层不自动信任 `EnrollmentCertificate`，只检查结构与大小。已有绑定不能静默更换账号 generation/设备/幂等 key，已完成状态不能倒退。带云数据的 StateStore 必须匹配同目录已完成的绑定，防止不同账号目录/缓存混用。
+`SaveTrustContext/LoadTrustContext` 记录 HTTPS endpoint、账号 generation、设备双公钥、明确证书版本、配对 profile 和入网回执。v1 保留单管理者公钥；v2 的 `Managers` 必须为空，完整逐环境证明放在双签回执内，后台从该受保护回执重新验链。两端公钥必须与同 Vault 的独立 DeviceKeys 匹配；session 若存在，其 endpoint/账号/generation 也必须匹配。`Accepted=false` 的回执可在结果未知时重启后查询状态，再显式升级为完成；此布尔值不是配对或签名验证，控制器仍必须验证证书、PAKE 和授权。存储层不自动信任 `EnrollmentCertificate`，只检查结构与大小。已有绑定不能静默更换账号 generation/设备/幂等 key、证书版本、管理来源集合或完整回执；仅允许原回执的 `Accepted` 从 false 变为 true。带云数据的 StateStore 必须匹配同目录已完成的绑定，防止不同账号目录/缓存混用。
 
 `platform.NewSecurePOSIXProvider` 将暂停、修订号、来源目标和 release 元数据放入 `provider-v1`；Windows 的安全 constructor 将原值及注册表类型放入 `windows-originals-v1`。shell 消费的唯一 `environment.sh` 必须为本地明文，沿用私密目录句柄、0600 文件、ACL/所有权与原子写检查；不能写任意文件或覆盖非工具文件，不读取/迁移旧明文 fixture 元数据。
 

@@ -34,6 +34,22 @@ func verifiedStoredContext(trust localkeys.TrustContext, keys localkeys.DeviceKe
 	if !trust.Accepted {
 		return nil, errors.New("待完成入网不能启动网络同步")
 	}
+	if trust.CertificateVersion == "2" {
+		if len(trust.Managers) != 0 {
+			return nil, errors.New("v2 不接受全局管理者名单")
+		}
+		receipt, err := syncclient.DecodeEnrollmentReceiptV2(trust.EnrollmentCertificate)
+		if err != nil {
+			return nil, err
+		}
+		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
+			return nil, errors.New("v2 受保护回执与本机身份不匹配")
+		}
+		return syncclient.NewPinnedVerifierV2(syncclient.IssuerPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
+	}
+	if trust.CertificateVersion != "" && trust.CertificateVersion != "1" {
+		return nil, errors.New("未知入网证书版本")
+	}
 	receipt, err := decodeReceipt(trust.EnrollmentCertificate)
 	if err != nil {
 		return nil, err
@@ -179,7 +195,7 @@ func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out
 	go func() { done <- server.Serve(daemonCtx) }()
 	defer func() { cancel(); _ = server.Close(); <-done }()
 	if err = server.Reconcile(daemonCtx, time.Now()); err != nil {
-		return err
+		return daemonLoopError(daemonCtx, err)
 	}
 	ticker := time.NewTicker(o.interval)
 	defer ticker.Stop()
@@ -193,10 +209,10 @@ func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out
 			return nil
 		case err := <-done:
 			done <- err
-			return err
+			return daemonLoopError(daemonCtx, err)
 		case now := <-ticker.C:
 			if err = server.Reconcile(daemonCtx, now); err != nil {
-				return err
+				return daemonLoopError(daemonCtx, err)
 			}
 		case syncErr := <-notices:
 			if errors.Is(syncErr, syncclient.ErrTrustInvalidated) {
@@ -219,8 +235,17 @@ func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out
 			}
 			// 普通网络错误保持离线配置；本地期限独立由ticker检查，不日志值/请求。
 			if err = server.Reconcile(daemonCtx, time.Now()); err != nil {
-				return err
+				return daemonLoopError(daemonCtx, err)
 			}
 		}
 	}
+}
+
+// select可能在取消到达前选中ticker/通知；provider随后返回精确的context.Canceled。
+// 仅这一正常结束结果归零，不能因上下文同时取消吞掉真实持久化/provider错误。
+func daemonLoopError(ctx context.Context, err error) error {
+	if ctx.Err() != nil && err == context.Canceled {
+		return nil
+	}
+	return err
 }

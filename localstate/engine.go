@@ -20,6 +20,7 @@ var (
 	ErrReplay       = errors.New("cloud checkpoint moved backwards or changed at the same sequence")
 	ErrAccount      = errors.New("account changed: logout and restore managed values first")
 	ErrLocalSession = errors.New("local account session changed")
+	ErrDataPaused   = errors.New("ordinary cloud data is paused")
 	ErrUnauthorized = errors.New("environment is unavailable or its grant has expired")
 	namePattern     = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
 )
@@ -262,20 +263,29 @@ func expire(s *State, now time.Time) bool {
 // AcceptSnapshot 只接受已经完整验证权限的明文快照。
 // 更高账号代际使旧环境与 override 全部失效；相同检查点必须内容一致。
 func (e *Engine) AcceptSnapshot(in CloudSnapshot, now time.Time) error {
-	return e.acceptSnapshot(in, now, nil)
+	return e.acceptSnapshot(in, now, nil, false)
 }
 
 // AcceptSnapshotAtEpoch 防止退出账号后的在途旧响应重新填充本地权威缓存。
 func (e *Engine) AcceptSnapshotAtEpoch(in CloudSnapshot, now time.Time, epoch uint64) error {
-	return e.acceptSnapshot(in, now, &epoch)
+	return e.acceptSnapshot(in, now, &epoch, false)
 }
-func (e *Engine) acceptSnapshot(in CloudSnapshot, now time.Time, epoch *uint64) error {
+
+// AcceptDataSnapshotAtEpoch 在同一状态事务检查暂停和账号epoch，避免已经在途的
+// 普通响应在用户暂停后填入新数据。授权投影继续由独立接口处理。
+func (e *Engine) AcceptDataSnapshotAtEpoch(in CloudSnapshot, now time.Time, epoch uint64) error {
+	return e.acceptSnapshot(in, now, &epoch, true)
+}
+func (e *Engine) acceptSnapshot(in CloudSnapshot, now time.Time, epoch *uint64, requireUnpaused bool) error {
 	if err := validateCloud(in); err != nil {
 		return err
 	}
 	return e.transaction(func(s *State) error {
 		if epoch != nil && s.SessionEpoch != *epoch {
 			return ErrLocalSession
+		}
+		if requireUnpaused && s.Paused {
+			return ErrDataPaused
 		}
 		old := s.Cloud
 		if old.AccountID != "" && old.AccountID != in.AccountID {

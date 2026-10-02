@@ -1,0 +1,14 @@
+[tools]
+go = "1.26.4"
+
+[tasks.test-issuer]
+description = "验证逐环境签发者、精确回执和 v1 入网拒绝边界"
+run = "go test . -run 'Issuer|DefaultEnrollment' -count=1 -v"
+
+[tasks.test-native-enrollment]
+description = "用固定 BoringSSL 验证真实 v1/v2 配对与未知结果恢复"
+run = "go test -tags harmonia_boringssl . -run NativeEnrollment -count=1 -v"
+
+[tasks.test-native-enrollment-race]
+description = "检查真实 v1/v2 配对控制器的 Go 并发状态"
+run = "go test -race -tags harmonia_boringssl . -run NativeEnrollment -count=1"

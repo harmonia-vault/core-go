@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/harmonia-vault/core-go/localipc"
@@ -19,23 +20,34 @@ func (j protectedWriteJournal) Load() ([]byte, error)  { return j.vault.Load("wr
 func (j protectedWriteJournal) Save(data []byte) error { return j.vault.Save("writes-v1", data) }
 
 type syncWorker struct {
-	ctx     context.Context
-	cancel  context.CancelFunc
-	done    chan struct{}
-	notices chan error
-	once    sync.Once
-	network sync.Mutex
-	config  syncclient.Config
-	signing ed25519.PrivateKey
-	bound   *syncclient.Client
-	writer  *syncclient.Writer
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	done                chan struct{}
+	notificationDone    chan struct{}
+	wake                chan struct{}
+	notificationRefresh atomic.Bool
+	notices             chan error
+	once                sync.Once
+	network             sync.Mutex
+	config              syncclient.Config
+	signing             ed25519.PrivateKey
+	bound               *syncclient.Client
+	writer              *syncclient.Writer
 }
 
 func (w *syncWorker) stop() {
 	if w == nil {
 		return
 	}
-	w.once.Do(func() { w.cancel(); <-w.done; w.network.Lock(); w.network.Unlock() })
+	w.once.Do(func() {
+		w.cancel()
+		<-w.done
+		if w.notificationDone != nil {
+			<-w.notificationDone
+		}
+		w.network.Lock()
+		w.network.Unlock()
+	})
 }
 func (w *syncWorker) closeWriter() { w.network.Lock(); defer w.network.Unlock(); w.writer.Close() }
 func (w *syncWorker) cancelWrites(epoch uint64) error {
@@ -126,10 +138,15 @@ func startSyncWorker(parent context.Context, engine *localstate.Engine, trust lo
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(parent)
-	worker := &syncWorker{ctx: ctx, cancel: cancel, done: make(chan struct{}), notices: make(chan error, 1), writer: writer, signing: signing, config: syncclient.Config{Endpoint: trust.Endpoint, HTTPClient: r.httpClient, AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: trust.DeviceID, Engine: engine, Verifier: verifier, Now: r.now}}
+	worker := &syncWorker{ctx: ctx, cancel: cancel, done: make(chan struct{}), notificationDone: make(chan struct{}), wake: make(chan struct{}, 1), notices: make(chan error, 1), writer: writer, signing: signing, config: syncclient.Config{Endpoint: trust.Endpoint, HTTPClient: r.httpClient, AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: trust.DeviceID, Engine: engine, Verifier: verifier, Now: r.now}}
 	go func() {
 		defer close(worker.done)
 		for {
+			if worker.notificationRefresh.Swap(false) {
+				worker.network.Lock()
+				worker.bound = nil
+				worker.network.Unlock()
+			}
 			err := worker.execute(ctx, func(operationCtx context.Context, client *syncclient.Client) error {
 				if engine.State().Paused {
 					_, err := client.RefreshAuthorizations(operationCtx)
@@ -145,6 +162,9 @@ func startSyncWorker(parent context.Context, engine *localstate.Engine, trust lo
 				return err
 			})
 			worker.report(err)
+			if errors.Is(err, syncclient.ErrPaused) {
+				worker.wakeSync()
+			}
 			// 成功也唤醒本地收敛；通知不承载任何变量数据。
 			if err == nil {
 				select {
@@ -158,8 +178,11 @@ func startSyncWorker(parent context.Context, engine *localstate.Engine, trust lo
 				timer.Stop()
 				return
 			case <-timer.C:
+			case <-worker.wake:
+				timer.Stop()
 			}
 		}
 	}()
+	go worker.runNotifications()
 	return worker, nil
 }

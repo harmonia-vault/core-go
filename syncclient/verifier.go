@@ -33,6 +33,7 @@ type PinnedTrust struct {
 type PinnedVerifier struct {
 	trust              PinnedTrust
 	receivingPublicKey string
+	issuerProof        *cryptox.VerifiedIssuerProof
 }
 
 func NewPinnedVerifier(trust PinnedTrust) (*PinnedVerifier, error) {
@@ -77,6 +78,9 @@ func (v *PinnedVerifier) verifyGrant(signed SignedGrant) error {
 	grant := signed.Grant
 	if grant.AccountID != v.trust.AccountID || grant.AccountGeneration != strconv.FormatUint(v.trust.AccountGeneration, 10) {
 		return errors.New("grant account/generation mismatch")
+	}
+	if v.issuerProof != nil {
+		return v.issuerProof.VerifyHistoricalGrant(cryptox.SignedGrantWire{Grant: grant, Signature: signed.Signature})
 	}
 	key, ok := v.trust.Managers[grant.IssuerDeviceID]
 	if !ok {

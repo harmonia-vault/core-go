@@ -224,8 +224,14 @@ func (c *Client) pullWithHistory(ctx context.Context, previous localstate.CloudS
 		}
 		last = event.Sequence
 	}
+	if c.config.Engine.State().Paused {
+		return Pull{}, c.acceptLateAuthorizationProjection(ctx, result, previous)
+	}
 	verified, err := c.config.Verifier.VerifyPull(ctx, result, previous)
 	if err != nil {
+		if c.config.Engine.State().Paused {
+			return Pull{}, c.acceptLateAuthorizationProjection(ctx, result, previous)
+		}
 		if errors.Is(err, ErrFullPullRequired) && !full {
 			return c.pullWithHistory(ctx, previous, true)
 		}
@@ -234,7 +240,10 @@ func (c *Client) pullWithHistory(ctx context.Context, previous localstate.CloudS
 	if verified.AccountID != result.AccountID || verified.AccountGeneration != c.config.AccountGeneration || verified.Sequence != result.Sequence {
 		return Pull{}, errors.New("verifier returned an unbound checkpoint")
 	}
-	if err = c.config.Engine.AcceptSnapshotAtEpoch(verified, c.config.Now(), c.epoch); err != nil {
+	if err = c.config.Engine.AcceptDataSnapshotAtEpoch(verified, c.config.Now(), c.epoch); err != nil {
+		if errors.Is(err, localstate.ErrDataPaused) {
+			return Pull{}, c.acceptLateAuthorizationProjection(ctx, result, previous)
+		}
 		return Pull{}, err
 	}
 	return result, nil

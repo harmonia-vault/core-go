@@ -13,6 +13,7 @@ import (
 
 const EnrollmentPairingProfile = "boringssl-spake2-edwards25519-draft02-v1"
 const maxEnrollmentCertificate = 64 << 10
+const maxEnrollmentCertificateV2 = (256 << 10) + 512
 
 var identityPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
@@ -26,6 +27,7 @@ type TrustContext struct {
 	SigningPublic         []byte            `json:"signingPublic"`
 	ReceivingPublic       []byte            `json:"receivingPublic"`
 	Managers              map[string][]byte `json:"managers"`
+	CertificateVersion    string            `json:"certificateVersion,omitempty"`
 	PairingProfile        string            `json:"pairingProfile"`
 	EnrollmentCertificate json.RawMessage   `json:"enrollmentCertificate"`
 	EnrollmentKey         string            `json:"enrollmentKey"`
@@ -37,7 +39,19 @@ func validEndpoint(endpoint string) bool {
 	return err == nil && u.Scheme == "https" && u.Hostname() != "" && u.User == nil && u.RawQuery == "" && !u.ForceQuery && u.Fragment == "" && !strings.ContainsAny(endpoint, "\x00\r\n")
 }
 func (t TrustContext) validate() error {
-	if !validEndpoint(t.Endpoint) || !identityPattern.MatchString(t.AccountID) || t.AccountGeneration == 0 || !identityPattern.MatchString(t.DeviceID) || !identityPattern.MatchString(t.EnrollmentKey) || len(t.SigningPublic) != ed25519.PublicKeySize || len(t.ReceivingPublic) != 32 || t.PairingProfile != EnrollmentPairingProfile || len(t.Managers) < 1 || len(t.Managers) > 64 || len(t.EnrollmentCertificate) == 0 || len(t.EnrollmentCertificate) > maxEnrollmentCertificate || !json.Valid(t.EnrollmentCertificate) {
+	if !validEndpoint(t.Endpoint) || !identityPattern.MatchString(t.AccountID) || t.AccountGeneration == 0 || !identityPattern.MatchString(t.DeviceID) || !identityPattern.MatchString(t.EnrollmentKey) || len(t.SigningPublic) != ed25519.PublicKeySize || len(t.ReceivingPublic) != 32 || t.PairingProfile != EnrollmentPairingProfile || len(t.EnrollmentCertificate) == 0 || !json.Valid(t.EnrollmentCertificate) {
+		return ErrCorrupt
+	}
+	switch t.CertificateVersion {
+	case "", "1":
+		if len(t.Managers) < 1 || len(t.Managers) > 64 || len(t.EnrollmentCertificate) > maxEnrollmentCertificate {
+			return ErrCorrupt
+		}
+	case "2":
+		if len(t.Managers) != 0 || len(t.EnrollmentCertificate) > maxEnrollmentCertificateV2 {
+			return ErrCorrupt
+		}
+	default:
 		return ErrCorrupt
 	}
 	var object map[string]json.RawMessage
@@ -50,6 +64,29 @@ func (t TrustContext) validate() error {
 		}
 	}
 	return nil
+}
+func trustVersion(t TrustContext) string {
+	if t.CertificateVersion == "" {
+		return "1"
+	}
+	return t.CertificateVersion
+}
+
+// 回执和信任集合冻结；仅 Accepted 可以由 false 变为 true，不能替换 proof。
+func sameTrustEvidence(a, b TrustContext) bool {
+	if trustVersion(a) != trustVersion(b) || a.PairingProfile != b.PairingProfile || len(a.Managers) != len(b.Managers) {
+		return false
+	}
+	for id, key := range a.Managers {
+		if !bytes.Equal(key, b.Managers[id]) {
+			return false
+		}
+	}
+	var x, y bytes.Buffer
+	if json.Compact(&x, a.EnrollmentCertificate) != nil || json.Compact(&y, b.EnrollmentCertificate) != nil {
+		return false
+	}
+	return bytes.Equal(x.Bytes(), y.Bytes())
 }
 func sameTrustIdentity(a, b TrustContext) bool {
 	return a.Endpoint == b.Endpoint && a.AccountID == b.AccountID && a.AccountGeneration == b.AccountGeneration && a.DeviceID == b.DeviceID && a.EnrollmentKey == b.EnrollmentKey && bytes.Equal(a.SigningPublic, b.SigningPublic) && bytes.Equal(a.ReceivingPublic, b.ReceivingPublic)
@@ -123,7 +160,7 @@ func (v *Vault) SaveTrustContext(trust TrustContext) error {
 		return err
 	}
 	previous, err := v.loadTrustRecordLocked()
-	if err == nil && (!sameTrustIdentity(previous, trust) || previous.Accepted && !trust.Accepted) {
+	if err == nil && (!sameTrustIdentity(previous, trust) || !sameTrustEvidence(previous, trust) || previous.Accepted && !trust.Accepted) {
 		return ErrIdentity
 	}
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
