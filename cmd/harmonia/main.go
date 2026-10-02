@@ -45,6 +45,7 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	email := flags.String("email", "", "邮箱登录账号")
 	approver := flags.String("approver", "", "既有可信管理手机的设备 ID")
 	importStdin := flags.Bool("import-stdin", false, "从标准输入读取候选JSON，只导入select选中项")
+	currentEnv := flags.Bool("current-env", false, "显式列出本进程变量名；import须select后才取值")
 	valueStdin := flags.Bool("value-stdin", false, "明确从标准输入读取完整UTF8值，不使用argv")
 	requestID := flags.String("request-id", "", "本机共享写幂等ID；可用于write-retry")
 	caFile := flags.String("ca-file", "", "用户明确指定的自托管PEM CA；保留标准HTTPS验证")
@@ -70,6 +71,23 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
+	valueArgument := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "value" {
+			valueArgument = true
+		}
+	})
+	if *currentEnv {
+		if command != "import-preview" && command != "import" {
+			return errors.New("--current-env仅用于显式import-preview或import")
+		}
+		if *importStdin || *valueStdin || *from != "" || *input != "" || *name != "" || valueArgument {
+			return errors.New("--current-env不能混用stdin、候选文件或argv值输入")
+		}
+		if command == "import-preview" {
+			return previewProcessImport(importSource(runtimeOptions), *selected, out)
+		}
+	}
 	if *caFile != "" && runtimeOptions.httpClient == nil {
 		client, err := clientWithCA(*caFile)
 		if err != nil {
@@ -77,12 +95,6 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 		}
 		runtimeOptions.httpClient = client
 	}
-	valueArgument := false
-	flags.Visit(func(f *flag.Flag) {
-		if f.Name == "value" {
-			valueArgument = true
-		}
-	})
 	protectedIPC := false
 	if *localDirectory != "" {
 		if *fixture || *statePath != "" || *providerPath != "" || *input != "" {
@@ -151,7 +163,11 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 			if valueArgument {
 				return errors.New("共享变量值不能通过--value参数传入；请明确--value-stdin")
 			}
-			request, err = sharedCLIRequest(command, *environment, *name, *requestID, *valueStdin, *importStdin, *from, *selected, runtimeOptions.input)
+			if *currentEnv {
+				request, err = processImportRequest(importSource(runtimeOptions), *environment, *requestID, *selected)
+			} else {
+				request, err = sharedCLIRequest(command, *environment, *name, *requestID, *valueStdin, *importStdin, *from, *selected, runtimeOptions.input)
+			}
 			if err != nil {
 				return err
 			}

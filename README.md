@@ -40,7 +40,7 @@ mise exec -- go run ./cmd/harmonia logout --fixture \
   --state test-state/state.json --provider-file test-state/environment.json
 ```
 
-`status` 仅输出元数据；`export` 明确输出可 source 的有效变量；`exec -- <程序>` 将有效值传给新建子进程；它们不能外部修改已存在进程。`import-preview --from <候选JSON> --select A,B` 只选择明确勾选的项，不扫描宿主环境，也不提交云端。共享写入 `put/delete/import` 只能经受保护后台在线提交；`login/pair` 只能使用下述受保护目录，不能使用 fixture。
+`status` 仅输出元数据；`export` 明确输出可 source 的有效变量；`exec -- <程序>` 将有效值传给新建子进程；它们不能外部修改已存在进程。`import-preview --from <候选JSON> --select A,B` 只选择明确勾选的项，不提交云端；`import-preview --current-env` 显式扫描当前 CLI 进程环境，仅输出名字。共享写入 `put/delete/import` 只能经受保护后台在线提交；`login/pair` 只能使用下述受保护目录，不能使用 fixture。
 
 `--platform-fragment <绝对路径>` 可在隔离目录验证真实 shell fragment，`shell-hook --shell bash --platform-fragment <绝对路径>` 仅生成供审查的 hook 文本。请勿把演示接到真实凭据或宿主 shell。
 
@@ -99,7 +99,7 @@ mise exec -- go run ./cmd/harmonia logout --local-directory "$LOCAL_DIR"
 
 ## 显式共享写入
 
-共享 `put/delete/import` 与本机 override 是独立命令。受保护的值只从标准输入进入，拒绝 `--value` 参数；空值和换行按输入原样保留。每值最多 64 KiB，导入一次最多 16 个选中变量、选中值合计 64 KiB。候选 JSON 标准输入最多 1 MiB；未选中的项不会进入 IPC 或云端。当前尚未实现本机会话环境扫描，候选须由用户主动准备；daemon 不采集宿主 env。
+共享 `put/delete/import` 与本机 override 是独立命令。受保护的值从明确标准输入或 `import --current-env --select` 的选中进程变量进入，拒绝 `--value` 参数；空值和换行按输入原样保留。每值最多 64 KiB，导入一次最多 16 个选中变量、选中值合计 64 KiB。候选 JSON 标准输入最多 1 MiB；未选中的项不会进入 IPC 或云端。显式进程扫描只输出名称，选中后才取值；daemon 不采集宿主 env，详见 [扫描与选中导入](IMPORT-SCAN.md)。
 
 ```sh
 # value.txt、candidates.json 只含私有合成测试数据，不把值放到argv。

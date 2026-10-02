@@ -26,10 +26,11 @@ import (
 )
 
 type commandRuntime struct {
-	input      io.Reader
-	httpClient *http.Client
-	now        func() time.Time
-	provider   localstate.Provider
+	input       io.Reader
+	httpClient  *http.Client
+	now         func() time.Time
+	provider    localstate.Provider
+	environment importEnvironment
 }
 type protectedOptions struct {
 	command, directory, server, email, approver, userID, serviceSID string
