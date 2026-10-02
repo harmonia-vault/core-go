@@ -6,12 +6,10 @@
 <key>ProgramArguments</key><array>
 <string>/usr/local/bin/harmonia</string>
 <string>daemon</string>
-<string>--state</string>
-<string>/Library/Application Support/Harmonia/10001/state.json</string>
+<string>--local-directory</string>
+<string>/Library/Application Support/Harmonia/10001</string>
 <string>--local-user</string>
 <string>10001</string>
-<string>--platform-fragment</string>
-<string>/Library/Application Support/Harmonia/10001/environment.sh</string>
 <string>--interval</string>
 <string>2s</string>
 </array>

@@ -37,6 +37,7 @@ type ServiceConfig struct {
 	BinaryPath     string
 	StateDirectory string
 	Interval       string
+	CAFile         string
 }
 type ServiceTemplate struct {
 	Name    string
@@ -55,6 +56,9 @@ func validateUnix(c ServiceConfig) error {
 	if path.Clean(c.BinaryPath) != c.BinaryPath || path.Clean(c.StateDirectory) != c.StateDirectory {
 		return fmt.Errorf("state path must be canonical")
 	}
+	if c.CAFile != "" && (!path.IsAbs(c.CAFile) || path.Clean(c.CAFile) != c.CAFile || !cleanValue(c.CAFile)) {
+		return fmt.Errorf("CA file must be an explicit canonical absolute path")
+	}
 	return nil
 }
 func interval(c ServiceConfig) string {
@@ -70,7 +74,11 @@ func validateInterval(c ServiceConfig) error {
 	return nil
 }
 func unixArgs(c ServiceConfig) []string {
-	return []string{c.BinaryPath, "daemon", "--state", path.Join(c.StateDirectory, "state.json"), "--local-user", c.UserID, "--platform-fragment", path.Join(c.StateDirectory, "environment.sh"), "--interval", interval(c)}
+	args := []string{c.BinaryPath, "daemon", "--local-directory", c.StateDirectory, "--local-user", c.UserID, "--interval", interval(c)}
+	if c.CAFile != "" {
+		args = append(args, "--ca-file", c.CAFile)
+	}
+	return args
 }
 func xmlText(v string) string {
 	var b strings.Builder
@@ -145,7 +153,14 @@ func WindowsService(c ServiceConfig) (ServiceTemplate, error) {
 	sum := sha256.Sum256([]byte(c.UserID))
 	name := "Harmonia-" + hex.EncodeToString(sum[:6])
 	account := `NT SERVICE\` + name
-	manifest := WindowsServiceManifest{Schema: "harmonia/windows-service/v1", ServiceName: name, Account: account, TargetUserSID: c.UserID, Executable: c.BinaryPath, Arguments: []string{"daemon", "--state", strings.TrimRight(c.StateDirectory, `\`) + `\state.json`, "--local-user", c.UserID, "--windows-service", name, "--interval", interval(c)}, StateDirectory: c.StateDirectory, StartType: "automatic", RequiredACL: []string{"服务身份只能读写本实例状态目录；其他本地用户不得访问", `只授予目标 HKEY_USERS\` + c.UserID + `\Environment 所需查询/写入权限；禁止授予其他用户 hive`, "二进制和服务配置只能由管理员写入"}, Gates: []string{"本实现不安装服务或授予 ACL", "目标用户 hive 未加载时失败；开机无登录的 profile/hive 生命周期尚未实现和验收", "Session 0 广播不能保证进入交互用户会话；现有进程环境不会被外部修改"}}
+	if c.CAFile != "" && !windowsAbsolute(c.CAFile) {
+		return ServiceTemplate{}, fmt.Errorf("explicit absolute Windows CA file required")
+	}
+	arguments := []string{"daemon", "--local-directory", c.StateDirectory, "--local-user", c.UserID, "--windows-service", name, "--interval", interval(c)}
+	if c.CAFile != "" {
+		arguments = append(arguments, "--ca-file", c.CAFile)
+	}
+	manifest := WindowsServiceManifest{Schema: "harmonia/windows-service/v1", ServiceName: name, Account: account, TargetUserSID: c.UserID, Executable: c.BinaryPath, Arguments: arguments, StateDirectory: c.StateDirectory, StartType: "automatic", RequiredACL: []string{"服务身份只能读写本实例状态目录；其他本地用户不得访问", `只授予目标 HKEY_USERS\` + c.UserID + `\Environment 所需查询/写入权限；禁止授予其他用户 hive`, "二进制和服务配置只能由管理员写入"}, Gates: []string{"正式 Windows daemon 仍关闭；DPAPI/SID/SCM/hive 原生验收完成前不可安装或启动为可信服务", "本实现不安装服务或授予 ACL", "目标用户 hive 未加载时失败；开机无登录的 profile/hive 生命周期尚未实现和验收", "Session 0 广播不能保证进入交互用户会话；现有进程环境不会被外部修改"}}
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return ServiceTemplate{}, err

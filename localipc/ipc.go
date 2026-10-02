@@ -40,12 +40,14 @@ type Endpoint struct {
 	ServiceSID string
 }
 type Request struct {
-	Version       int     `json:"version"`
-	Command       string  `json:"command"`
-	EnvironmentID string  `json:"environmentId,omitempty"`
-	Name          string  `json:"name,omitempty"`
-	Value         *string `json:"value,omitempty"`
-	Priority      *int    `json:"priority,omitempty"`
+	Version       int               `json:"version"`
+	Command       string            `json:"command"`
+	EnvironmentID string            `json:"environmentId,omitempty"`
+	Name          string            `json:"name,omitempty"`
+	Value         *string           `json:"value,omitempty"`
+	Priority      *int              `json:"priority,omitempty"`
+	RequestID     string            `json:"requestId,omitempty"`
+	Selected      map[string]string `json:"selected,omitempty"`
 }
 type Status struct {
 	Paused            bool                    `json:"paused"`
@@ -56,11 +58,12 @@ type Status struct {
 	TrackedOriginals  int                     `json:"trackedOriginals"`
 }
 type Response struct {
-	Version int               `json:"version"`
-	OK      bool              `json:"ok"`
-	Code    string            `json:"code,omitempty"`
-	Status  *Status           `json:"status,omitempty"`
-	Values  map[string]string `json:"values,omitempty"`
+	Version int                `json:"version"`
+	OK      bool               `json:"ok"`
+	Code    string             `json:"code,omitempty"`
+	Status  *Status            `json:"status,omitempty"`
+	Values  map[string]string  `json:"values,omitempty"`
+	Write   *SharedWriteResult `json:"write,omitempty"`
 }
 type Config struct {
 	Endpoint       Endpoint
@@ -70,7 +73,8 @@ type Config struct {
 	Timeout        time.Duration
 	MaxConnections int
 	// OnLogout 由后台 owner 停止旧同步并清除本地设备/会话资料；IPC 不持有 Vault。
-	OnLogout func(context.Context) error
+	OnLogout    func(context.Context) error
+	OnlineWrite func(context.Context, SharedWriteRequest) (SharedWriteResult, error)
 }
 
 // nativeHandleConn 串行化原生句柄身份查询与 Close，避免查询过程中句柄被释放。
@@ -180,6 +184,9 @@ func (s *Server) Serve(ctx context.Context) error {
 				_ = writeFrame(conn, Response{Version: Version, Code: "invalid_request"}, maxResponseBytes)
 				return
 			}
+			if isSharedWrite(request.Command) {
+				_ = conn.SetDeadline(time.Now().Add(time.Minute))
+			}
 			response := s.dispatch(ctx, request)
 			_ = writeFrame(conn, response, maxResponseBytes)
 		}()
@@ -214,6 +221,12 @@ func (s *Server) Reconcile(ctx context.Context, now time.Time) error {
 	return s.config.Engine.Reconcile(ctx, s.config.Provider, now)
 }
 func validateRequest(r Request) error {
+	if isSharedWrite(r.Command) {
+		return validateSharedRequest(r)
+	}
+	if r.RequestID != "" || len(r.Selected) != 0 {
+		return ErrProtocol
+	}
 	if r.Version != Version {
 		return ErrProtocol
 	}
@@ -260,6 +273,9 @@ func (s *Server) dispatch(ctx context.Context, r Request) Response {
 	now := s.config.Now()
 	engine := s.config.Engine
 	var err error
+	if isSharedWrite(r.Command) {
+		return s.dispatchShared(ctx, r, now)
+	}
 	switch r.Command {
 	case "activate":
 		priority := 0
@@ -343,7 +359,11 @@ func Call(ctx context.Context, endpoint Endpoint, request Request) (Response, er
 	defer conn.Close()
 	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
 	defer stop()
-	deadline := time.Now().Add(5 * time.Second)
+	timeout := 5 * time.Second
+	if isSharedWrite(request.Command) {
+		timeout = time.Minute
+	}
+	deadline := time.Now().Add(timeout)
 	if end, ok := ctx.Deadline(); ok && end.Before(deadline) {
 		deadline = end
 	}

@@ -1,6 +1,6 @@
 # 服务可用的本地加密状态
 
-`localkeys` 是独立的机器保护与状态存储基础。它不读取系统 Keychain，不读取真实环境，不进行登录、配对或设备授权，不把登录成功当可信设备。正常 daemon 的信任/同步门槛仍保留。
+`localkeys` 是独立的机器保护与状态存储基础。它不读取系统 Keychain，不读取真实环境，不进行登录、配对或设备授权，不把登录成功当可信设备。正式 POSIX daemon 由可信入网控制器验证双签回执与授权后，才能使用该目录中的设备钥进行持钥 boot 和同步；无已完成 context 时只提供恢复/IPC，不联网。Windows 正式 daemon 仍关闭。
 
 ## 接口与状态所有权
 
@@ -15,7 +15,7 @@ engine, err := localstate.New(store)
 
 目录必须明确、绝对且不经过任何符号链接，父目录预先存在。macOS 的 `/var` 和 `/tmp` 是系统链接，测试显式使用规范化后的临时路径，服务建议使用 `/Library/Application Support/Harmonia/<UID>`。Unix 只接受当前真实/有效 UID 一致的非 root 用户；不会为了读取另一个用户的钥匙自动提权。
 
-`StateStore` 实现 `Load/Save/Close`，只打开加密文件，不导入或迁移现有明文 fixture。`Synthetic` 状态会被拒绝。`Vault()` 给后台可信控制器使用，不能通过 IPC 暴露。固定 slot 为 `state-v1`、`device-v1`、`session-v1`、`trust-v1`、`provider-v1` 与 `windows-originals-v1`，不接受任意文件名或路径。保存的设备材料是独立 Ed25519 seed 与 X25519 private key，公钥必须与私钥匹配；保存这些材料本身不会授予设备权限。登录 session 只记录 HTTPS 地址、账号 generation、token 与到期元数据，不保存密码派生凭据。
+`StateStore` 实现 `Load/Save/Close`，只打开加密文件，不导入或迁移现有明文 fixture。`Synthetic` 状态会被拒绝。`Vault()` 给后台可信控制器使用，不能通过 IPC 暴露。固定 slot 为 `state-v1`、`device-v1`、`session-v1`、`trust-v1`、`provider-v1` 、`windows-originals-v1` 与 `writes-v1`，不接受任意文件名或路径。保存的设备材料是独立 Ed25519 seed 与 X25519 private key，公钥必须与私钥匹配；保存这些材料本身不会授予设备权限。登录 session 只记录 HTTPS 地址、账号 generation、token 与到期元数据，不保存密码派生凭据。
 
 `SaveTrustContext/LoadTrustContext` 记录 HTTPS endpoint、账号 generation、设备双公钥、管理设备公钥、配对 profile 和入网回执。两端公钥必须与同 Vault 的独立 DeviceKeys 匹配；session 若存在，其 endpoint/账号/generation 也必须匹配。`Accepted=false` 的回执可在结果未知时重启后查询状态，再显式升级为完成；此布尔值不是配对或签名验证，控制器仍必须验证证书、PAKE 和授权。存储层不自动信任 `EnrollmentCertificate`，只检查结构与大小。已有绑定不能静默更换账号 generation/设备/幂等 key，已完成状态不能倒退。带云数据的 StateStore 必须匹配同目录已完成的绑定，防止不同账号目录/缓存混用。
 

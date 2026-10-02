@@ -1,0 +1,34 @@
+// 只供隔离来宾启动验收：本地HTTPS+权威SQLite，空vault经正式双签/原生SPAKE入网。
+import { readFileSync, appendFileSync } from "node:fs";
+import { createServer as httpsServer } from "node:https";
+import { request } from "node:http";
+import { nodeStore } from "../src/node-store.js";
+import { nodeServer } from "../src/node-runtime.js";
+import { VaultService } from "../src/service.js";
+import { fixtureAccount, email } from "../test/fixtures.js";
+const dir = "/var/lib/harmonia-test-server";
+const { store, sql } = nodeStore(`${dir}/accounts.sqlite`);
+if (!store.byEmail(email)) {
+ const a = await fixtureAccount();
+ a.sessions=[]; a.devices={}; a.environments={}; a.grants={}; a.grantHistory=[]; a.events=[]; a.sequence=0;
+ a.recoveryGeneration="0"; a.recoverySigningPublicKey=null; delete a.recoveryReceivingPublicKey; delete a.trustRoot;
+ store.create(a);
+}
+// 本次测试不会发送邮件或连接公网；没有生产信任捷径和测试HTTP路由。
+const service = new VaultService(store, {allowRegistration:false, requireEmailVerification:true});
+const {server:backend, closeNotifications} = nodeServer(service);
+backend.listen(0, "127.0.0.1", () => {
+ const address = backend.address(); if (!address || typeof address === "string") throw new Error("test_bind_invalid");
+ const server=httpsServer({key:readFileSync(`${dir}/server.key`),cert:readFileSync(`${dir}/server.pem`),minVersion:"TLSv1.2"}, (incoming,outgoing) => {
+  const path = new URL(incoming.url ?? "/", "https://127.0.0.1").pathname;
+  const req=request({hostname:"127.0.0.1",port:address.port,path:incoming.url,method:incoming.method,headers:incoming.headers},res=>{
+   appendFileSync(`${dir}/requests.jsonl`,JSON.stringify({at:Date.now(),method:incoming.method,path,status:res.statusCode})+"\n",{mode:0o600});
+   outgoing.writeHead(res.statusCode ?? 500,res.headers); res.pipe(outgoing);
+  });
+  req.on("error",()=>{if(!outgoing.headersSent)outgoing.writeHead(503);outgoing.end();});incoming.pipe(req);
+ });
+ // 仅轮询，WebSocket无关启动授权，不代理通知upgrade。
+ server.listen(37654,"127.0.0.1",()=>{console.log("synthetic_https_sqlite_ready");});
+ const stop=()=>{closeNotifications();server.close(()=>backend.close(()=>{sql.close();process.exit(0);}));};
+ process.on("SIGTERM",stop);process.on("SIGINT",stop);
+});

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 )
 
 // ErrTrustInvalidated 表示当前账号/设备来源已经停止；后台控制器随后清除
@@ -23,8 +22,6 @@ func (e *RequestError) Error() string {
 	return fmt.Sprintf("server rejected request (HTTP %d, %s)", e.Status, e.Code)
 }
 
-var faultCode = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
-
 func parseRequestError(response *http.Response) *RequestError {
 	fault := &RequestError{Status: response.StatusCode, Code: "request_rejected"}
 	// 错误体只读取固定小上限；未知字段、额外 JSON、任意文本不进入日志/错误。
@@ -37,7 +34,7 @@ func parseRequestError(response *http.Response) *RequestError {
 		decoder.DisallowUnknownFields()
 		if decoder.Decode(&wire) == nil {
 			var extra any
-			if decoder.Decode(&extra) == io.EOF && faultCode.MatchString(wire.Error) {
+			if decoder.Decode(&extra) == io.EOF && knownFaultCodes[wire.Error] {
 				fault.Code = wire.Error
 			}
 		}

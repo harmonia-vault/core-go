@@ -1,0 +1,256 @@
+package acceptance
+
+import (
+ "bytes"
+ "context"
+ "crypto/ed25519"
+ "crypto/tls"
+ "crypto/x509"
+ "encoding/json"
+ "net/http"
+ "os"
+ "path/filepath"
+ "reflect"
+ "strconv"
+ "testing"
+ "time"
+ "github.com/harmonia-vault/core-go/cryptox"
+ "github.com/harmonia-vault/core-go/localkeys"
+ "github.com/harmonia-vault/core-go/localstate"
+ "github.com/harmonia-vault/core-go/pairing"
+ "github.com/harmonia-vault/core-go/syncclient"
+
+)
+
+// 真实原生 SPAKE2、真实 TS/SQLite，所有钥匙、账户和配置均为独立合成测试。
+// 仅复制到 workspace/acceptance 后以精确 test.run 执行；不作为包的默认测试。
+func TestOrbStackBootPreparation(t *testing.T) {
+	if !pairing.NativeAvailable() {
+		t.Skip("未启用固定 BoringSSL 原生实现；须运行 mise run acceptance-native")
+	}
+	ctx := context.Background()
+	var f fixture
+	input, err := os.ReadFile("/var/lib/harmonia/30001/bootstrap.json")
+	if err != nil || json.Unmarshal(input, &f) != nil { t.Fatal("合成引导输入无效") }
+	ca, err := os.ReadFile("/usr/local/share/harmonia-boot-test/ca.pem")
+	if err != nil { t.Fatal(err) }
+	roots, err := x509.SystemCertPool()
+	if err != nil { t.Fatal(err) }
+	if !roots.AppendCertsFromPEM(ca) { t.Fatal("合成CA无效") }
+	httpClient := &http.Client{Timeout: 15*time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}}}
+	endpoint := f.Endpoint
+	base := "/v1/accounts/" + f.AccountID
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	var login struct {
+		Token     string `json:"token"`
+		ExpiresAt int64  `json:"expiresAt"`
+	}
+	if got := callJSON(t, httpClient, endpoint, "/v1/login", "", "", "", map[string]string{"email": f.Email, "credential": f.Credential}, &login); got != 200 {
+		t.Fatalf("登录HTTP %d", got)
+	}
+	manager, err := localkeys.GenerateDeviceKeys("first-phone")
+	must(err)
+	managerPrivate := ed25519.NewKeyFromSeed(manager.SigningSeed)
+	defer clear(managerPrivate)
+	recoverySeed, err := cryptox.GenerateRecoverySeed()
+	must(err)
+	defer clear(recoverySeed)
+	recovery, err := cryptox.DeriveRecoveryKeys(recoverySeed, f.AccountID, "1", "1")
+	must(err)
+	envKey, err := cryptox.GenerateEnvironmentKey()
+	must(err)
+	defer clear(envKey)
+	root, err := cryptox.SignTrustRoot(f.AccountID, "1", cryptox.TrustRoot{RootDeviceID: manager.DeviceID, RootSigningPublicKey: cryptox.EncodeBase64(manager.SigningPublic), RootReceivingPublicKey: cryptox.EncodeBase64(manager.ReceivingPublic), RecoveryGeneration: "1", RecoverySigningPublicKey: cryptox.EncodeBase64(recovery.SigningPublic), RecoveryReceivingPublicKey: cryptox.EncodeBase64(recovery.ReceivingPublic)}, recovery.SigningPrivate)
+	must(err)
+	deviceEnvelope, err := cryptox.WrapEnvironmentKey(envKey, cryptox.EnvelopeContext{AccountID: f.AccountID, AccountGeneration: "1", EnvironmentID: "dev", KeyVersion: "1", RecipientType: "device", RecipientID: manager.DeviceID, RecipientGeneration: "1", RecipientPublicKey: root.RootReceivingPublicKey})
+	must(err)
+	recoveryEnvelope, err := cryptox.WrapEnvironmentKey(envKey, cryptox.EnvelopeContext{AccountID: f.AccountID, AccountGeneration: "1", EnvironmentID: "dev", KeyVersion: "1", RecipientType: "recovery", RecipientID: f.AccountID, RecipientGeneration: "1", RecipientPublicKey: root.RecoveryReceivingPublicKey})
+	must(err)
+	grant := cryptox.Grant{AccountID: f.AccountID, AccountGeneration: "1", IssuerDeviceID: manager.DeviceID, SubjectDeviceID: manager.DeviceID, SubjectSigningPublicKey: root.RootSigningPublicKey, SubjectReceivingPublicKey: root.RootReceivingPublicKey, EnvironmentID: "dev", KeyVersion: "1", GrantGeneration: "1", Role: "admin", ExpiresAt: "0", IdempotencyKey: "first-self-admin", Envelope: cryptox.EncodeBase64(deviceEnvelope)}
+	signedSelf, err := cryptox.SignGrant(grant, managerPrivate)
+	must(err)
+	proposal := cryptox.InitializationProposal{IdempotencyKey: "first-vault-e2e", Device: cryptox.InitializationDevice{ID: manager.DeviceID, SigningPublicKey: root.RootSigningPublicKey, ReceivingPublicKey: root.RootReceivingPublicKey}, RecoveryGeneration: "1", RecoverySigningPublicKey: root.RecoverySigningPublicKey, RecoveryReceivingPublicKey: root.RecoveryReceivingPublicKey, TrustRootSignature: root.Signature, Environments: []cryptox.InitializationEnvironment{{EnvironmentID: "dev", KeyVersion: "1", RecoveryEnvelope: cryptox.EncodeBase64(recoveryEnvelope), Grant: cryptox.GrantToWire(signedSelf)}}}
+	proposalHash, err := proposal.Hash(f.AccountID, "1")
+	must(err)
+	var initial struct {
+		State          string   `json:"state"`
+		ChallengeID    string   `json:"challengeId"`
+		Nonce          string   `json:"nonce"`
+		ExpiresAt      int64    `json:"expiresAt"`
+		ProposalHash   string   `json:"proposalHash"`
+		SigningPayload []string `json:"signingPayload"`
+		Sequence       uint64   `json:"sequence"`
+	}
+	if got := callJSON(t, httpClient, endpoint, base+"/vault-initializations", login.Token, "", "1", proposal, &initial); got != 200 {
+		t.Fatalf("初始化提案HTTP %d", got)
+	}
+	proof, err := cryptox.NewInitializationProof(f.AccountID, "1", login.Token, initial.ChallengeID, initial.Nonce, strconv.FormatInt(initial.ExpiresAt, 10), proposalHash)
+	must(err)
+	proofBytes, err := proof.SigningBytes()
+	must(err)
+	var expected []string
+	must(json.Unmarshal(proofBytes, &expected))
+	if initial.ProposalHash != proposalHash || !reflect.DeepEqual(initial.SigningPayload, expected) || initial.ExpiresAt <= time.Now().Unix() || initial.ExpiresAt > time.Now().Unix()+125 {
+		t.Fatal("初始化挑战未绑定本地提案和会话")
+	}
+	deviceSig, err := cryptox.SignInitializationProof(proof, managerPrivate)
+	must(err)
+	recoverySig, err := cryptox.SignInitializationProof(proof, recovery.SigningPrivate)
+	must(err)
+	finish := map[string]string{"challengeId": initial.ChallengeID, "deviceSignature": deviceSig, "recoverySignature": recoverySig}
+	if got := callJSON(t, httpClient, endpoint, base+"/vault-initializations/first-vault-e2e/complete", login.Token, "", "1", finish, &initial); got != 200 {
+		t.Fatalf("双签首次初始化HTTP %d", got)
+	}
+	if initial.State != "complete" || initial.Sequence != 1 {
+		t.Fatal("首次初始化未原子完成")
+	}
+	// 首次管理手机也用持钥 boot 取得绑定会话，不把登录 token 当设备凭据。
+	var boot recoveryChallenge
+	if got := callJSON(t, httpClient, endpoint, base+"/boot-challenges", "", "", "", map[string]string{"deviceId": manager.DeviceID, "accountGeneration": "1"}, &boot); got != 200 {
+		t.Fatalf("首手机boot HTTP %d", got)
+	}
+	bootProof, err := cryptox.NewDeviceBootProof(f.AccountID, "1", manager.DeviceID, manager.SigningPublic, manager.ReceivingPublic, boot.ChallengeID, boot.Nonce, strconv.FormatInt(boot.ExpiresAt, 10))
+	must(err)
+	bootBytes, err := bootProof.SigningBytes()
+	must(err)
+	must(json.Unmarshal(bootBytes, &expected))
+	if !reflect.DeepEqual(expected, boot.SigningPayload) {
+		t.Fatal("首手机boot挑战公钥不匹配")
+	}
+	bootSig, err := cryptox.SignDeviceBootProof(bootProof, managerPrivate)
+	must(err)
+	var managerSession struct {
+		Token string `json:"token"`
+	}
+	if got := callJSON(t, httpClient, endpoint, base+"/boot-sessions", "", "", "", map[string]string{"deviceId": manager.DeviceID, "accountGeneration": "1", "challengeId": boot.ChallengeID, "signature": bootSig}, &managerSession); got != 200 {
+		t.Fatalf("首手机boot完成HTTP %d", got)
+	}
+	temporary := "/var/lib/harmonia/30001"
+	uid, err := localkeys.CurrentUserID()
+	must(err)
+	store, err := localkeys.OpenEncryptedStateStore(localkeys.Config{Directory: filepath.Join(temporary, "protected"), UserID: uid})
+	must(err)
+	defer store.Close()
+	device, err := localkeys.GenerateDeviceKeys("new-cli")
+	must(err)
+	must(store.Vault().SaveDeviceKeys(device))
+	private := ed25519.NewKeyFromSeed(device.SigningSeed)
+	defer clear(private)
+	must(store.Vault().SaveSession(localkeys.LoginSession{Endpoint: endpoint, AccountID: f.AccountID, AccountGeneration: 1, Token: login.Token, ExpiresAt: time.Now().Add(time.Hour).Format(time.RFC3339Nano)}))
+	engine, err := localstate.New(store)
+	must(err)
+	config := syncclient.EnrollmentConfig{Endpoint: endpoint, HTTPClient: httpClient, AccountID: f.AccountID, AccountGeneration: 1, DeviceID: device.DeviceID, LoginToken: login.Token, SigningKey: private, ReceivingPrivateKey: device.ReceivingPrivate, Engine: engine}
+	enrollment, err := syncclient.NewEnrollment(config)
+	must(err)
+	defer enrollment.Close()
+	code, err := pairing.GenerateShortCode()
+	must(err)
+	defer clear(code)
+	status, err := enrollment.Begin(ctx, manager.DeviceID, "enroll-native-e2e", code)
+	must(err)
+	if status.Context.ApproverSigningPublicKey != root.RootSigningPublicKey || status.Context.ApproverReceivingPublicKey != root.RootReceivingPublicKey {
+		t.Fatal("手机端配对上下文不匹配已持有钥匙")
+	}
+	managerPAKE, message, err := pairing.NewApprover(status.Context, code)
+	must(err)
+	defer managerPAKE.Close()
+	relay := func(kind string, payload []byte) syncclient.PairingStatus {
+		t.Helper()
+		c := status.Context
+		r := cryptox.PairingRelay{AccountID: c.AccountID, AccountGeneration: c.AccountGeneration, SessionID: c.SessionID, ChallengeNonce: c.ChallengeNonce, Side: "approver", Kind: kind, Payload: cryptox.EncodeBase64(payload)}
+		signature, err := cryptox.SignPairingRelay(r, managerPrivate)
+		must(err)
+		var out syncclient.PairingStatus
+		if got := callJSON(t, httpClient, endpoint, base+"/pairings/enroll-native-e2e/relay", managerSession.Token, manager.DeviceID, "1", cryptox.PairingRelayRequest{Side: "approver", Kind: kind, Payload: r.Payload, Signature: signature}, &out); got != 200 {
+			t.Fatalf("管理手机中继HTTP %d", got)
+		}
+		return out
+	}
+	status = relay("message", message)
+	peer, err := cryptox.DecodeBase64(status.Messages["initiator"], 32, 32)
+	must(err)
+	confirmation, err := managerPAKE.Complete(peer)
+	must(err)
+	status = relay("confirmation", confirmation)
+	status, err = enrollment.Advance(ctx)
+	must(err)
+	peerMAC, err := cryptox.DecodeBase64(status.Confirmations["initiator"], 32, 32)
+	must(err)
+	must(managerPAKE.VerifyPeerConfirmation(peerMAC))
+	transcript, err := managerPAKE.TranscriptHash()
+	must(err)
+	newEnvelope, err := cryptox.WrapEnvironmentKey(envKey, cryptox.EnvelopeContext{AccountID: f.AccountID, AccountGeneration: "1", EnvironmentID: "dev", KeyVersion: "1", RecipientType: "device", RecipientID: device.DeviceID, RecipientGeneration: "1", RecipientPublicKey: cryptox.EncodeBase64(device.ReceivingPublic)})
+	must(err)
+	grant.SubjectDeviceID = device.DeviceID
+	grant.SubjectSigningPublicKey = cryptox.EncodeBase64(device.SigningPublic)
+	grant.SubjectReceivingPublicKey = cryptox.EncodeBase64(device.ReceivingPublic)
+	grant.Role = "rw"
+	grant.ExpiresAt = strconv.FormatInt(time.Now().Add(time.Hour).Unix(), 10)
+	grant.IdempotencyKey = "enroll-native-grant"
+	grant.Envelope = cryptox.EncodeBase64(newEnvelope)
+	signedGrant, err := cryptox.SignGrant(grant, managerPrivate)
+	must(err)
+	approval := cryptox.EnrollmentApproval{Context: status.Context.EnrollmentContext(), PairingProfile: pairing.Profile, TranscriptHash: transcript, Grants: []cryptox.SignedGrantWire{cryptox.GrantToWire(signedGrant)}}
+	certificate, err := approval.Certificate()
+	must(err)
+	signature, err := cryptox.SignEnrollmentCertificate(certificate, managerPrivate)
+	must(err)
+	if got := callJSON(t, httpClient, endpoint, base+"/pairings/enroll-native-e2e/approve", managerSession.Token, manager.DeviceID, "1", map[string]any{"grants": approval.Grants, "transcriptHash": transcript, "signature": signature}, &status); got != 200 {
+		t.Fatalf("手机双向确认后批准HTTP %d", got)
+	}
+	_, err = enrollment.Advance(ctx)
+	must(err)
+	receipt, err := enrollment.Receipt()
+	must(err)
+	if engine.State().Cloud.AccountID != "" {
+		t.Fatal("入网未经普通pull便写入云权威缓存")
+	}
+	receiptJSON, err := json.Marshal(receipt)
+	must(err)
+	trust := localkeys.TrustContext{Endpoint: endpoint, AccountID: f.AccountID, AccountGeneration: 1, DeviceID: device.DeviceID, SigningPublic: device.SigningPublic, ReceivingPublic: device.ReceivingPublic, Managers: map[string][]byte{manager.DeviceID: manager.SigningPublic}, PairingProfile: pairing.Profile, EnrollmentCertificate: receiptJSON, EnrollmentKey: receipt.IdempotencyKey, Accepted: false}
+	must(store.Vault().SaveTrustContext(trust))
+	encryptedReceipt, err := os.ReadFile(filepath.Join(temporary, "protected", "trust.v1.enc"))
+	must(err)
+	if bytes.Contains(encryptedReceipt, receiptJSON) || bytes.Contains(encryptedReceipt, []byte(login.Token)) || bytes.Contains(encryptedReceipt, code) {
+		t.Fatal("待完成资料未加密")
+	}
+	result, err := enrollment.Complete(ctx)
+	must(err)
+	if result.Sequence != 2 { t.Fatal("真实配对完成序号不符") }
+	trust.Accepted = true
+	must(store.Vault().SaveTrustContext(trust))
+	bootClient, err := syncclient.NewForBoot(syncclient.Config{Endpoint: endpoint, HTTPClient: httpClient, AccountID: f.AccountID, AccountGeneration: 1, DeviceID: device.DeviceID, Verifier: result.Verifier, Engine: engine})
+	must(err)
+	synced, err := bootClient.BootDevice(ctx, private)
+	must(err)
+	_, err = synced.Pull(ctx)
+	must(err)
+	must(engine.Activate("dev", 10, time.Now()))
+	packet, err := cryptox.EncryptValue(envKey, cryptox.ValueContext{AccountID: f.AccountID, AccountGeneration: "1", EnvironmentID: "dev", KeyVersion: "1", Name: "NATIVE_SYNTHETIC"}, []byte("native-paired-value"))
+	must(err)
+	mutation := cryptox.Mutation{AccountID: f.AccountID, AccountGeneration: "1", DeviceID: device.DeviceID, EnvironmentID: "dev", KeyVersion: "1", GrantGeneration: "1", Operation: "put", IdempotencyKey: "native-enrolled-write", Name: "NATIVE_SYNTHETIC", Payload: cryptox.EncodeBase64(packet)}
+	written, err := synced.Submit(ctx, wireMutation(t, mutation, private))
+	must(err)
+	if !written.Applied || written.Accepted.Sequence != 3 {
+		t.Fatal("真实入网设备未经正式下发完成写入")
+	}
+	effective, err := engine.Effective(time.Now())
+	must(err)
+	if effective[mutation.Name] != "native-paired-value" {
+		t.Fatal("跨语言签名/HPKE/AEAD值不匹配")
+	}
+	onDisk, err := os.ReadFile(filepath.Join(temporary, "protected", "state.v1.enc"))
+	must(err)
+	if bytes.Contains(onDisk, []byte("native-paired-value")) {
+		t.Fatal("真实下发缓存出现明文")
+	}
+	// 删除本次登录会话；后续daemon仅靠此来宾中新生成的设备材料完成boot。
+	must(store.Vault().Delete("session-v1"))
+	must(store.Close())
+	t.Log("本来宾原生SPAKE2、双签入网、设备boot与签名共享写入通过；登录session已删除")
+}

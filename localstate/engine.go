@@ -73,8 +73,9 @@ type ManagedValue struct {
 }
 
 type State struct {
-	Version      int    `json:"version"`
-	SessionEpoch uint64 `json:"sessionEpoch,omitempty"`
+	Version       int    `json:"version"`
+	SessionEpoch  uint64 `json:"sessionEpoch,omitempty"`
+	AccountClosed bool   `json:"accountClosed,omitempty"`
 	// Synthetic 只由明确测试入口写入，网络客户端必须拒绝这种状态。
 	// 它不能替代设备入网，也不能绕过信任建立。
 	Synthetic  bool                         `json:"synthetic,omitempty"`
@@ -576,6 +577,7 @@ func (e *Engine) logout(epoch *uint64) error {
 			return ErrLocalSession
 		}
 		s.SessionEpoch++
+		s.AccountClosed = true
 		s.Cloud = CloudSnapshot{Environments: map[string]Environment{}}
 		s.Active = nil
 		s.Overrides = map[string]map[string]string{}
@@ -691,4 +693,19 @@ func SelectImport(candidates map[string]string, selected []string) (map[string]s
 // EnableSyntheticFixtures 只能把状态永久标记为测试来源，不能取消该标记。
 func (e *Engine) EnableSyntheticFixtures() error {
 	return e.transaction(func(s *State) error { s.Synthetic = true; return nil })
+}
+
+// CompleteEnrollmentAtEpoch 仅供已完成真实配对且服务器确认完整双签收据的控制器。
+// 不接收未签云快照，不可由IPC、pending或unknown状态调用。
+func (e *Engine) CompleteEnrollmentAtEpoch(epoch uint64) error {
+	return e.transaction(func(s *State) error {
+		if s.SessionEpoch != epoch {
+			return ErrLocalSession
+		}
+		if s.Cloud.AccountID != "" || len(s.Originals) != 0 || len(s.Managed) != 0 {
+			return ErrAccount
+		}
+		s.AccountClosed = false
+		return nil
+	})
 }

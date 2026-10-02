@@ -78,7 +78,7 @@ type Vault struct {
 	closed    bool
 }
 
-var slots = map[string]string{"state-v1": "state.v1.enc", "device-v1": "device.v1.enc", "session-v1": "session.v1.enc", "trust-v1": "trust.v1.enc", "provider-v1": "provider.v1.enc", "windows-originals-v1": "windows-originals.v1.enc"}
+var slots = map[string]string{"state-v1": "state.v1.enc", "device-v1": "device.v1.enc", "session-v1": "session.v1.enc", "trust-v1": "trust.v1.enc", "provider-v1": "provider.v1.enc", "windows-originals-v1": "windows-originals.v1.enc", "writes-v1": "writes.v1.enc"}
 
 func strictJSON(data []byte, dst any) error {
 	dec := json.NewDecoder(bytes.NewReader(data))

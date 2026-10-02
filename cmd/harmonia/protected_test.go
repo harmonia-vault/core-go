@@ -346,3 +346,46 @@ func TestProtectedDaemonWithoutTrustIsIdleAndLogoutKeepsIPC(t *testing.T) {
 		t.Fatal("untrusted idle daemon contacted server")
 	}
 }
+
+func TestDurableLogoutCrashCannotBootOldTrust(t *testing.T) {
+	directory := protectedTestDirectory(t)
+	store, err := protectedStore(protectedOptions{directory: directory})
+	mustCLI(t, err)
+	keys, err := localkeys.GenerateDeviceKeys("synthetic-old-device")
+	mustCLI(t, err)
+	vault := store.Vault()
+	mustCLI(t, vault.SaveDeviceKeys(keys))
+	mustCLI(t, vault.SaveTrustContext(localkeys.TrustContext{Endpoint: "https://synthetic.invalid", AccountID: "acct", AccountGeneration: 1, DeviceID: keys.DeviceID, SigningPublic: keys.SigningPublic, ReceivingPublic: keys.ReceivingPublic, Managers: map[string][]byte{"synthetic-manager": keys.SigningPublic}, PairingProfile: pairing.Profile, EnrollmentCertificate: []byte(`{"syntheticStorageOnly":true}`), EnrollmentKey: "synthetic-old-enrollment", Accepted: true}))
+	mustCLI(t, vault.Save("writes-v1", []byte(`{"syntheticPendingOnly":true}`)))
+	engine, err := localstate.New(store)
+	mustCLI(t, err)
+	mustCLI(t, engine.Logout())
+	mustCLI(t, store.Close())
+	// 模拟恰在state logout已durable、旧keys/trust/journal尚未清时崩溃。
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		done <- runWithRuntime(ctx, []string{"daemon", "--local-directory", directory, "--interval", "20ms", "--sync-interval", "1s"}, io.Discard, io.Discard, commandRuntime{})
+	}()
+	endpoint, err := ipcEndpoint(filepath.Join(directory, "ipc"), "", "")
+	mustCLI(t, err)
+	eventuallyCLI(t, func() bool {
+		response, err := localipc.Call(context.Background(), endpoint, localipc.Request{Command: "status"})
+		return err == nil && response.OK && response.Status.AccountGeneration == 0
+	})
+	cancel()
+	mustCLI(t, <-done)
+	store, err = protectedStore(protectedOptions{directory: directory})
+	mustCLI(t, err)
+	defer store.Close()
+	for _, slot := range []string{"device-v1", "session-v1", "trust-v1", "writes-v1"} {
+		if _, err = store.Vault().Load(slot); !errors.Is(err, os.ErrNotExist) {
+			t.Fatal("logout crash retained old account material", slot, err)
+		}
+	}
+	restored, err := localstate.New(store)
+	mustCLI(t, err)
+	if !restored.State().AccountClosed {
+		t.Fatal("logout tombstone silently unlocked")
+	}
+}

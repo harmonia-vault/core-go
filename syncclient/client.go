@@ -102,6 +102,10 @@ func newClient(config Config, requireToken bool) (*Client, error) {
 	if config.Engine == nil || config.Verifier == nil {
 		return nil, errors.New("trusted verifier and local engine are required")
 	}
+	_, enrollmentOnly := config.Verifier.(deniedEnrollmentVerifier)
+	if config.Engine.State().AccountClosed && !enrollmentOnly {
+		return nil, localstate.ErrLocalSession
+	}
 	if config.Engine.State().Synthetic {
 		return nil, errors.New("synthetic fixture state cannot connect to a server")
 	}

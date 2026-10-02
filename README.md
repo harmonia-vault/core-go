@@ -40,7 +40,7 @@ mise exec -- go run ./cmd/harmonia logout --fixture \
   --state test-state/state.json --provider-file test-state/environment.json
 ```
 
-`status` 仅输出元数据；`export` 明确输出可 source 的有效变量；`exec -- <程序>` 将有效值传给新建子进程；它们不能外部修改已存在进程。`import-preview --from <候选JSON> --select A,B` 只选择明确勾选的项，不扫描宿主环境，也不提交云端。共享写入的 `put/delete/import` CLI 命令仍关闭；`login/pair` 只能使用下述受保护目录，不能使用 fixture。
+`status` 仅输出元数据；`export` 明确输出可 source 的有效变量；`exec -- <程序>` 将有效值传给新建子进程；它们不能外部修改已存在进程。`import-preview --from <候选JSON> --select A,B` 只选择明确勾选的项，不扫描宿主环境，也不提交云端。共享写入 `put/delete/import` 只能经受保护后台在线提交；`login/pair` 只能使用下述受保护目录，不能使用 fixture。
 
 `--platform-fragment <绝对路径>` 可在隔离目录验证真实 shell fragment，`shell-hook --shell bash --platform-fragment <绝对路径>` 仅生成供审查的 hook 文本。请勿把演示接到真实凭据或宿主 shell。
 
@@ -95,7 +95,31 @@ mise exec -- go run ./cmd/harmonia logout --local-directory "$LOCAL_DIR"
 
 后台独占加密 Store，重启只用设备 Ed25519 持钥挑战换取绑定会话。未入网或仍 pending 的后台只提供本地状态和恢复，不连接网络。暂停时仅刷新授权和签名环境生命周期，保持普通值及数据序号；授权序号可以领先，恢复时从零重建当前可读历史。删除、降权、撤销及到期仍执行；轮换密文清单仅作为生命周期签名证明，不在暂停时下发变量。普通会话到期会立即重做设备挑战；设备不可信或账号 generation 失效时清账号材料并恢复托管项，所有环境授权失效时清值缓存但保留既有可信设备以便日后重新获权。
 
-退出 CLI 不停止后台；退出账号等待旧同步停止并删除设备、会话、信任资料，后台仍可应答。停止后台/崩溃保留配置。登录和配对目前必须在 daemon 停止时执行，正式共享写入、手机管理界面和自动服务安装尚未接入。Windows 正式受保护 daemon 在原生 DPAPI、服务 SID、SCM 验收前明确关闭。这里的命令说明用于合成自托管测试，不代表安全功能已完整或适合生产凭据。
+退出 CLI 不停止后台；退出账号等待旧同步停止并删除设备、会话、信任资料，后台仍可应答。停止后台/崩溃保留配置。登录和配对目前必须在 daemon 停止时执行，手机管理界面和自动服务安装尚未接入。Windows 正式受保护 daemon 在原生 DPAPI、服务 SID、SCM 验收前明确关闭。这里的命令说明用于合成自托管测试，不代表安全功能已完整或适合生产凭据。
+
+## 显式共享写入
+
+共享 `put/delete/import` 与本机 override 是独立命令。受保护的值只从标准输入进入，拒绝 `--value` 参数；空值和换行按输入原样保留。每值最多 64 KiB，导入一次最多 16 个选中变量、选中值合计 64 KiB。候选 JSON 标准输入最多 1 MiB；未选中的项不会进入 IPC 或云端。当前尚未实现本机会话环境扫描，候选须由用户主动准备；daemon 不采集宿主 env。
+
+```sh
+# value.txt、candidates.json 只含私有合成测试数据，不把值放到argv。
+mise exec -- go run ./cmd/harmonia put --local-directory "$LOCAL_DIR" \
+  --environment environment-id --name TOKEN --value-stdin < value.txt
+mise exec -- go run ./cmd/harmonia delete --local-directory "$LOCAL_DIR" \
+  --environment environment-id --name TOKEN
+mise exec -- go run ./cmd/harmonia import --local-directory "$LOCAL_DIR" \
+  --environment environment-id --import-stdin --select TOKEN,URL < candidates.json
+mise exec -- go run ./cmd/harmonia override-set --local-directory "$LOCAL_DIR" \
+  --environment environment-id --name TOKEN --value-stdin < local-value.txt
+```
+
+后台串行预拉当前签授权，确认 RW/Admin、到期和环境版本，再用本机钥匙解封环境钥、随机 AEAD 加密并签名。提交前，`writes-v1` 以机器保护保存原签名密文和请求 ID；没有原始值。服务端仍逐次检查权限，LWW 按服务器接受顺序；协议没有变量 CAS 或 `expectedSequence`，本机预拉序号仅记录提交基线。暂停时拒绝共享写入，离线不会把输入应用到本机。
+
+CLI 在请求前输出非秘密的请求 ID，结果仅含总项数、接受项数、接受序号和是否完成验签下发。结果不明时运行 `write-retry --local-directory "$LOCAL_DIR" --request-id <原ID>`，不重新输入值。它先按本设备幂等 ID 查询精确接受回执的内容摘要与原序号，再用原密文/签名重试未接受项；不通过当前同名值猜成功，不换 nonce 或新 ID。重启保留同一日志。被后来写入覆盖时，精确已见签名及原序号仍可证明接受；当前可读同版本缺少该验签项时不宣称下发完成。轮换、降权或失权会取消旧待提交包并清密文，只保留有界 ID/摘要回执资料用于安全查询。
+
+导入是多个独立 LWW 写入，可能部分成功；日志保留各项结果，同一请求重试不会重写已接受项。只保留最近最多 32 个请求；未解决项不会被自动驱逐，日志或持久化失败时拒绝发出新写。已接受后失权，接受记录不意味着值还能在本机生效。退出、全局设备撤销和账号代际失效清 `writes-v1`；持久账号关闭墓碑让崩溃重启继续清旧材料，不能复活旧入网授权。
+
+自托管私有 CA 可以显式指定 `--ca-file <PEM证书>`，文件最多 1 MiB，追加系统根池并保留完整证书链、主机名和期限校验，不关闭 TLS 验证。系统信任设置不被修改。
 
 ## 验证
 
@@ -107,7 +131,7 @@ mise exec -- go run ./cmd/harmonia logout --local-directory "$LOCAL_DIR"
 
 ## 尚未完成的入口与安全门槛
 
-成熟原生 SPAKE2 的入网库与受保护 CLI/后台已有合成 TLS、加密状态及真实 Go/TypeScript/SQLite 集成验证；手机平台钥匙保护、手机端接线、Android Go 桥、正式共享写入 CLI 与三平台无人登录启动仍有验收门槛。fixture daemon 仅用于隔离服务通信验收。
+成熟原生 SPAKE2 的入网库与受保护 CLI/后台已有合成 TLS、加密状态及真实 Go/TypeScript/SQLite 集成验证；手机平台钥匙保护、手机端接线、Android Go 桥、三平台无人登录启动仍有验收门槛。fixture daemon 仅用于隔离服务通信验收。
 
 本机 fixture 状态包含明文缓存，私有文件权限不能替代服务机器保护层。Windows ACL、profile/hive 生命周期与 Session 0 交互广播仍需真实 VM 验证。硬盘解锁前服务无法启动，已有进程读过的明文无法追回。
 

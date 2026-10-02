@@ -44,6 +44,10 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	serverAddress := flags.String("server", "", "用户明确指定的自托管 HTTPS 地址")
 	email := flags.String("email", "", "邮箱登录账号")
 	approver := flags.String("approver", "", "既有可信管理手机的设备 ID")
+	importStdin := flags.Bool("import-stdin", false, "从标准输入读取候选JSON，只导入select选中项")
+	valueStdin := flags.Bool("value-stdin", false, "明确从标准输入读取完整UTF8值，不使用argv")
+	requestID := flags.String("request-id", "", "本机共享写幂等ID；可用于write-retry")
+	caFile := flags.String("ca-file", "", "用户明确指定的自托管PEM CA；保留标准HTTPS验证")
 	passwordStdin := flags.Bool("password-stdin", false, "明确从标准输入读取一行密码，绝不从环境或参数读取")
 	providerPath := flags.String("provider-file", "", "仅用于隔离测试的 JSON 环境文件")
 	fixture := flags.Bool("fixture", false, "显式启用合成测试；禁止作为设备 enrollment")
@@ -66,6 +70,19 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
+	if *caFile != "" && runtimeOptions.httpClient == nil {
+		client, err := clientWithCA(*caFile)
+		if err != nil {
+			return err
+		}
+		runtimeOptions.httpClient = client
+	}
+	valueArgument := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "value" {
+			valueArgument = true
+		}
+	})
 	protectedIPC := false
 	if *localDirectory != "" {
 		if *fixture || *statePath != "" || *providerPath != "" || *input != "" {
@@ -109,7 +126,7 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 		}
 		return json.NewEncoder(out).Encode(preview)
 	}
-	if command == "put" || command == "delete" || command == "import" || command == "login" || command == "pair" {
+	if command == "login" || command == "pair" {
 		return errors.New("login/pair须明确 --local-directory；正式共享写入CLI尚未接线，不能离线共享写入")
 	}
 	if *ipcDirectory != "" && command != "daemon" {
@@ -127,7 +144,31 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 			request.Priority = priority
 		case "deactivate":
 			request.EnvironmentID = *environment
+		case "put", "delete", "import", "write-retry":
+			if !protectedIPC {
+				return errors.New("共享写入仅允许受保护后台，不接受fixture")
+			}
+			if valueArgument {
+				return errors.New("共享变量值不能通过--value参数传入；请明确--value-stdin")
+			}
+			request, err = sharedCLIRequest(command, *environment, *name, *requestID, *valueStdin, *importStdin, *from, *selected, runtimeOptions.input)
+			if err != nil {
+				return err
+			}
+			if _, err = fmt.Fprintf(out, "共享请求ID：%s\n", request.RequestID); err != nil {
+				return err
+			}
 		case "override-set":
+			if protectedIPC {
+				if valueArgument || !*valueStdin {
+					return errors.New("受保护override值仅接受明确--value-stdin，不能使用--value argv")
+				}
+				inputValue, err := readSharedInput(runtimeOptions.input)
+				if err != nil {
+					return err
+				}
+				value = &inputValue
+			}
 			request.EnvironmentID = *environment
 			request.Name = *name
 			request.Value = value
@@ -143,6 +184,11 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 		response, err := localipc.Call(ctx, endpoint, request)
 		if err != nil {
 			return err
+		}
+		if response.Write != nil {
+			if err = json.NewEncoder(out).Encode(response.Write); err != nil {
+				return err
+			}
 		}
 		if !response.OK {
 			return fmt.Errorf("后台本地操作失败：%s", response.Code)
@@ -166,6 +212,9 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 			return child.Run()
 		}
 		return nil
+	}
+	if command == "put" || command == "delete" || command == "import" || command == "write-retry" {
+		return errors.New("共享写入需要--local-directory与正在运行的受保护后台")
 	}
 	if *statePath == "" {
 		return errors.New("必须明确指定 --state；不会读取宿主默认目录")

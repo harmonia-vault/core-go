@@ -201,14 +201,22 @@ func TestServicesSafeBindings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{"User=harmonia-test", "NoNewPrivileges=true", "ProtectHome=true", "CapabilityBoundingSet=", "--local-user"} {
+	for _, required := range []string{"User=harmonia-test", "NoNewPrivileges=true", "ProtectHome=true", "CapabilityBoundingSet=", "--local-user", "--local-directory"} {
 		if !strings.Contains(string(linux.Content), required) {
 			t.Fatal("missing " + required)
+		}
+	}
+	for _, forbidden := range []string{"--state", "--platform-fragment", "--fixture"} {
+		if strings.Contains(string(linux.Content), forbidden) {
+			t.Fatal("正式服务包含fixture/旧明文参数", forbidden)
 		}
 	}
 	mac, err := LaunchDaemon(cfg)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !strings.Contains(string(mac.Content), "<string>--local-directory</string>") || strings.Contains(string(mac.Content), "<string>--state</string>") {
+		t.Fatal("LaunchDaemon未使用加密目录")
 	}
 	decoder := xml.NewDecoder(strings.NewReader(string(mac.Content)))
 	for {
@@ -244,6 +252,24 @@ func TestServicesSafeBindings(t *testing.T) {
 	}
 	if !serviceNamePattern.MatchString(manifest.ServiceName) || !strings.HasPrefix(manifest.Account, `NT SERVICE\`) {
 		t.Fatal("unbound service account")
+	}
+	if len(manifest.Arguments) < 3 || manifest.Arguments[1] != "--local-directory" || len(manifest.Gates) == 0 || !strings.Contains(manifest.Gates[0], "仍关闭") {
+		t.Fatal("Windows清单未绑定新接口和原生关闭门槛")
+	}
+	for _, argument := range manifest.Arguments {
+		if argument == "--state" || argument == "--fixture" {
+			t.Fatal("正式清单包含fixture/旧参数")
+		}
+	}
+	cfg.BinaryPath = "/usr/local/bin/harmonia"
+	cfg.CAFile = "/usr/local/share/harmonia-test/ca.pem"
+	withCA, err := Systemd(cfg)
+	if err != nil || !strings.Contains(string(withCA.Content), "--ca-file") {
+		t.Fatal("显式CA未进入服务参数", err)
+	}
+	cfg.CAFile = "/usr/local/share/ca.pem\nUser=root"
+	if _, err := Systemd(cfg); err == nil {
+		t.Fatal("接受CA路径注入")
 	}
 	if _, err := WindowsService(ServiceConfig{UserID: "not-a-SID", BinaryPath: `C:\harmonia.exe`, StateDirectory: `C:\harmonia`}); err == nil {
 		t.Fatal("accepted invalid SID")

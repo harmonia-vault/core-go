@@ -62,7 +62,7 @@ func boolInt(value bool) int64 {
 	return 0
 }
 func TestRejectedBodyCannotLeakValuesOrInjectIdentity(t *testing.T) {
-	for _, body := range []string{`{"error":"SYNTHETIC_SECRET"}`, `{"error":"device_untrusted","accountId":"attacker"}`, `{"error":"device_untrusted"} {}`, strings.Repeat("SYNTHETIC_SECRET", 500)} {
+	for _, body := range []string{`{"error":"SYNTHETIC_SECRET"}`, `{"error":"synthetic_secret_lowercase"}`, `{"error":"` + strings.Repeat("a", 64) + `"}`, `{"error":"device_untrusted","accountId":"attacker"}`, `{"error":"device_untrusted"} {}`, strings.Repeat("SYNTHETIC_SECRET", 500)} {
 		engine := testEngine(t)
 		cloud, err := (acceptVerifier{}).VerifyPull(context.Background(), Pull{Sequence: 1}, localstate.CloudSnapshot{})
 		check(t, err)
@@ -71,7 +71,8 @@ func TestRejectedBodyCannotLeakValuesOrInjectIdentity(t *testing.T) {
 		client := testClient(t, server, engine, acceptVerifier{})
 		_, err = client.Pull(context.Background())
 		server.Close()
-		if err == nil || strings.Contains(err.Error(), "SYNTHETIC_SECRET") || errors.Is(err, ErrTrustInvalidated) || engine.State().Cloud.Sequence != 1 {
+		var rejected *RequestError
+		if err == nil || !errors.As(err, &rejected) || rejected.Code != "request_rejected" || strings.Contains(err.Error(), "SYNTHETIC_SECRET") || errors.Is(err, ErrTrustInvalidated) || engine.State().Cloud.Sequence != 1 {
 			t.Fatal(err)
 		}
 	}

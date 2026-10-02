@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"sync"
 	"syscall"
 	"time"
 
@@ -70,81 +69,9 @@ func verifiedStoredContext(trust localkeys.TrustContext, keys localkeys.DeviceKe
 }
 func fmtUint(value uint64) string { return strconv.FormatUint(value, 10) }
 func wipeAccountSlots(vault *localkeys.Vault) error {
-	return errors.Join(vault.Delete("device-v1"), vault.Delete("session-v1"), vault.Delete("trust-v1"))
+	return errors.Join(vault.Delete("device-v1"), vault.Delete("session-v1"), vault.Delete("trust-v1"), vault.Delete("writes-v1"))
 }
 
-type syncWorker struct {
-	cancel  context.CancelFunc
-	done    chan struct{}
-	notices chan error
-	once    sync.Once
-}
-
-func (w *syncWorker) stop() {
-	if w == nil {
-		return
-	}
-	w.once.Do(func() { w.cancel(); <-w.done })
-}
-func startSyncWorker(parent context.Context, engine *localstate.Engine, trust localkeys.TrustContext, signing ed25519.PrivateKey, verifier *syncclient.PinnedVerifier, r commandRuntime, interval time.Duration) *syncWorker {
-	ctx, cancel := context.WithCancel(parent)
-	worker := &syncWorker{cancel: cancel, done: make(chan struct{}), notices: make(chan error, 1)}
-	go func() {
-		defer close(worker.done)
-		var bound *syncclient.Client
-		for {
-			perform := func() error {
-				boot := func() error {
-					client, err := syncclient.NewForBoot(syncclient.Config{Endpoint: trust.Endpoint, HTTPClient: r.httpClient, AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: trust.DeviceID, Engine: engine, Verifier: verifier, Now: r.now})
-					if err != nil {
-						return err
-					}
-					bound, err = client.BootDevice(ctx, signing)
-					return err
-				}
-				if bound == nil {
-					if err := boot(); err != nil {
-						return err
-					}
-				}
-				refresh := func() error {
-					if engine.State().Paused {
-						_, err := bound.RefreshAuthorizations(ctx)
-						return err
-					}
-					_, err := bound.Pull(ctx)
-					return err
-				}
-				err := refresh()
-				var rejected *syncclient.RequestError
-				if errors.As(err, &rejected) && rejected.Status == 401 && rejected.Code == "unauthorized" {
-					bound = nil
-					if err = boot(); err == nil {
-						err = refresh()
-					}
-				}
-				if errors.Is(err, syncclient.ErrTrustInvalidated) || errors.Is(err, localstate.ErrLocalSession) {
-					bound = nil
-				}
-				return err
-			}
-			err := perform()
-			select {
-			case worker.notices <- err:
-			case <-ctx.Done():
-				return
-			}
-			timer := time.NewTimer(interval)
-			select {
-			case <-ctx.Done():
-				timer.Stop()
-				return
-			case <-timer.C:
-			}
-		}
-	}()
-	return worker
-}
 func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out, errOut io.Writer) error {
 	if runtime.GOOS == "windows" {
 		return errors.New("Windows受保护daemon的DPAPI、专用服务SID与SCM原生验收尚未通过；保持关闭")
@@ -195,6 +122,9 @@ func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out
 	var signing ed25519.PrivateKey
 	var verifier *syncclient.PinnedVerifier
 	clearMaterial := func() {
+		if worker != nil {
+			worker.closeWriter()
+		}
 		if verifier != nil {
 			verifier.Close()
 		}
@@ -203,7 +133,17 @@ func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out
 		clear(keys.ReceivingPrivate)
 	}
 	defer func() { worker.stop(); clearMaterial() }()
-	trust, trustErr := vault.LoadTrustContext()
+	var trust localkeys.TrustContext
+	var trustErr error
+	if engine.State().AccountClosed {
+		// 崩溃可能发生在durable logout之后、slot清理之前；绝不复活旧信任。
+		if err = wipeAccountSlots(vault); err != nil {
+			return err
+		}
+		trustErr = os.ErrNotExist
+	} else {
+		trust, trustErr = vault.LoadTrustContext()
+	}
 	if trustErr == nil && trust.Accepted {
 		keys, err = vault.LoadDeviceKeys()
 		if err != nil {
@@ -214,11 +154,19 @@ func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out
 			return err
 		}
 		signing = ed25519.NewKeyFromSeed(keys.SigningSeed)
-		worker = startSyncWorker(daemonCtx, engine, trust, signing, verifier, r, o.syncInterval)
+		worker, err = startSyncWorker(daemonCtx, engine, trust, signing, verifier, vault, r, o.syncInterval)
+		if err != nil {
+			return err
+		}
 	} else if trustErr != nil && !errors.Is(trustErr, os.ErrNotExist) {
 		return trustErr
 	}
-	server, err := localipc.Listen(localipc.Config{Endpoint: endpoint, Engine: engine, Provider: providerInterface, OnLogout: func(context.Context) error {
+	server, err := localipc.Listen(localipc.Config{Endpoint: endpoint, Engine: engine, Provider: providerInterface, OnlineWrite: func(ctx context.Context, request localipc.SharedWriteRequest) (localipc.SharedWriteResult, error) {
+		if worker == nil {
+			return localipc.SharedWriteResult{RequestID: request.RequestID}, syncclient.ErrWritePermission
+		}
+		return worker.write(ctx, request)
+	}, OnLogout: func(context.Context) error {
 		// worker 不获取 IPC operations 锁；取消后等待所有HTTP/验签，避免回调死锁。
 		worker.stop()
 		clearMaterial()
@@ -254,6 +202,9 @@ func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out
 			if errors.Is(syncErr, syncclient.ErrTrustInvalidated) {
 				var rejected *syncclient.RequestError
 				if errors.As(syncErr, &rejected) && rejected.Code == "no_current_grant" {
+					if err = worker.cancelWrites(engine.State().SessionEpoch); err != nil {
+						return err
+					}
 					if err = vault.Delete("session-v1"); err != nil {
 						return err
 					}

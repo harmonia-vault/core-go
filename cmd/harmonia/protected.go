@@ -269,6 +269,10 @@ func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandR
 		return err
 	}
 	defer result.Verifier.Close()
+	// Complete已确认双方签证与服务器ack；unknown/pending分支不会到此。
+	if err = engine.CompleteEnrollmentAtEpoch(engine.State().SessionEpoch); err != nil {
+		return err
+	}
 	if err = saveReceipt(vault, session, keys, result.Receipt, true); err != nil {
 		return err
 	}
