@@ -1,0 +1,448 @@
+package mobilebridge
+
+import (
+	"bytes"
+	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/ecdh"
+	"crypto/ed25519"
+	"crypto/hkdf"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"io"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+	"unicode/utf8"
+
+	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/localstate"
+	"github.com/harmonia-vault/core-go/mobileworkflow"
+	"github.com/harmonia-vault/core-go/syncclient"
+)
+
+const stateHeader = "HARMST01"
+const maxState = 8 << 20
+const maxWorkflowCommand = 32768
+
+// SealedStateStore 只能由可信原生层实现；每次回调必须同步原子保存密文后返回。
+// 不接受 Dart/服务器实现，不返回解密后的状态、钥匙或随机 token。
+type SealedStateStore interface{ SaveSealed(packet []byte) error }
+
+type stateBinding struct {
+	Namespace          string `json:"namespace"`
+	Version            int    `json:"version"`
+	Endpoint           string `json:"endpoint"`
+	DeviceID           string `json:"deviceId"`
+	SigningPublicKey   string `json:"signingPublicKey"`
+	ReceivingPublicKey string `json:"receivingPublicKey"`
+	AccountID          string `json:"accountId"`
+	AccountGeneration  string `json:"accountGeneration"`
+	Checkpoint         uint64 `json:"checkpoint"`
+	AccountClosed      bool   `json:"accountClosed"`
+}
+
+// VaultWorkflow 每次系统强认证后创建，一次业务操作后关闭。软件 AES 状态钥只在本对象存活。
+// namespace 是原生包名和文件域，附加 CA 来自原生系统证书/明确测试 CA，均禁止 Dart 提供。
+type VaultWorkflow struct {
+	mu           sync.Mutex
+	workflow     *mobileworkflow.Workflow
+	key          []byte
+	binding      stateBinding
+	store        SealedStateStore
+	deleteDevice bool
+	cancelMu     sync.Mutex
+	cancel       context.CancelFunc
+}
+
+func WorkflowProfile() (string, error) {
+	return encode(map[string]any{"version": 1, "realVaultReady": false, "experimental": true,
+		"profile": "first-root-admin-v1", "systemAuthenticationPerOperation": true,
+		"operations":  []string{"register", "verifyEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "logout"},
+		"unsupported": []string{"approveDevice", "recover", "rotateRecovery", "rotateEnvironmentKey", "roles", "accountReset"}})
+}
+
+func (d *Device) OpenWorkflow(endpoint, namespace string, sealed, additionalCA []byte, store SealedStateStore) (*VaultWorkflow, error) {
+	canonical, err := validateEndpoint(endpoint)
+	if err != nil || canonical != endpoint || namespace == "" || len(namespace) > 512 || !utf8.ValidString(namespace) || store == nil {
+		return nil, errInput
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if len(d.signing) != 64 || len(d.receiving) != 32 {
+		return nil, errClosed
+	}
+	receive, err := ecdh.X25519().NewPrivateKey(d.receiving)
+	if err != nil {
+		return nil, errInput
+	}
+	sign := d.signing.Public().(ed25519.PublicKey)
+	id := sha256.Sum256(sign)
+	binding := stateBinding{Namespace: namespace, Version: 1, Endpoint: endpoint, DeviceID: hex.EncodeToString(id[:]), SigningPublicKey: cryptox.EncodeBase64(sign), ReceivingPublicKey: cryptox.EncodeBase64(receive.PublicKey().Bytes())}
+	// 独立用途域派生状态 AES 钥；设备签名/接收钥仍独立生成。此钥不是硬件内钥。
+	// namespace+完整 endpoint+双公钥固定 KDF，跨文件/包/端点/设备替换失败。
+	info, _ := json.Marshal([]string{"harmonia/native-workflow-aes/v1", namespace, endpoint, binding.SigningPublicKey, binding.ReceivingPublicKey})
+	input := append(bytes.Clone(d.signing[:32]), d.receiving...)
+	defer clear(input)
+	key, err := hkdf.Key(sha256.New, input, nil, string(info), 32)
+	if err != nil {
+		return nil, errInput
+	}
+	v := &VaultWorkflow{key: key, binding: binding, store: store}
+	var plain []byte
+	if len(sealed) > 0 {
+		plain, err = v.open(sealed)
+		if err != nil {
+			v.Close()
+			return nil, errors.New("protected workflow state rejected")
+		}
+		defer clear(plain)
+	}
+	client, err := workflowHTTPClient(additionalCA)
+	if err != nil {
+		v.Close()
+		return nil, err
+	}
+	v.workflow, err = mobileworkflow.New(mobileworkflow.Config{Endpoint: endpoint, HTTPClient: client, SigningKey: d.signing, ReceivingPrivateKey: d.receiving, ProtectedState: plain, SaveProtectedState: v.save})
+	if err != nil {
+		v.Close()
+		return nil, errors.New("protected workflow state rejected")
+	}
+	return v, nil
+}
+
+func workflowHTTPClient(additionalCA []byte) (*http.Client, error) {
+	if len(additionalCA) > 2<<20 {
+		return nil, errInput
+	}
+	roots, err := x509.SystemCertPool()
+	if err != nil || roots == nil {
+		roots = x509.NewCertPool()
+	}
+	if len(additionalCA) > 0 && !roots.AppendCertsFromPEM(additionalCA) {
+		return nil, errors.New("native CA certificates rejected")
+	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}
+	return &http.Client{Transport: transport, Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, nil
+}
+
+func projectedBinding(plain []byte) (stateBinding, error) {
+	var p struct {
+		Version            int              `json:"version"`
+		Endpoint           string           `json:"endpoint"`
+		DeviceID           string           `json:"deviceId"`
+		SigningPublicKey   string           `json:"signingPublicKey"`
+		ReceivingPublicKey string           `json:"receivingPublicKey"`
+		AccountID          string           `json:"accountId"`
+		AccountGeneration  string           `json:"accountGeneration"`
+		Cloud              localstate.State `json:"cloud"`
+	}
+	if len(plain) == 0 || len(plain) > maxState || json.Unmarshal(plain, &p) != nil {
+		return stateBinding{}, errInput
+	}
+	if p.Cloud.Cloud.AccountID != "" && (p.Cloud.Cloud.AccountID != p.AccountID || strconv.FormatUint(p.Cloud.Cloud.AccountGeneration, 10) != p.AccountGeneration) {
+		return stateBinding{}, errInput
+	}
+	return stateBinding{Version: p.Version, Endpoint: p.Endpoint, DeviceID: p.DeviceID, SigningPublicKey: p.SigningPublicKey, ReceivingPublicKey: p.ReceivingPublicKey, AccountID: p.AccountID, AccountGeneration: p.AccountGeneration, Checkpoint: p.Cloud.Cloud.Sequence, AccountClosed: p.Cloud.AccountClosed}, nil
+}
+func (v *VaultWorkflow) matches(b stateBinding) bool {
+	return b.Namespace == v.binding.Namespace && b.Version == 1 && b.Endpoint == v.binding.Endpoint && b.DeviceID == v.binding.DeviceID && b.SigningPublicKey == v.binding.SigningPublicKey && b.ReceivingPublicKey == v.binding.ReceivingPublicKey
+}
+func (v *VaultWorkflow) aead() (cipher.AEAD, error) {
+	b, e := aes.NewCipher(v.key)
+	if e != nil {
+		return nil, e
+	}
+	return cipher.NewGCM(b)
+}
+func (v *VaultWorkflow) save(plain []byte) error {
+	b, err := projectedBinding(plain)
+	b.Namespace = v.binding.Namespace
+	if err != nil || !v.matches(b) {
+		return errInput
+	}
+	if v.binding.AccountID != "" && (v.binding.AccountID != b.AccountID || v.binding.AccountGeneration != b.AccountGeneration || !b.AccountClosed && b.Checkpoint < v.binding.Checkpoint) {
+		return errInput
+	}
+	metadata, _ := json.Marshal(b)
+	if len(metadata) > 4096 {
+		return errInput
+	}
+	aad := make([]byte, 12+len(metadata))
+	copy(aad, stateHeader)
+	binary.BigEndian.PutUint32(aad[8:12], uint32(len(metadata)))
+	copy(aad[12:], metadata)
+	gcm, err := v.aead()
+	if err != nil {
+		return err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err = rand.Read(nonce); err != nil {
+		return err
+	}
+	packet := append(bytes.Clone(aad), nonce...)
+	packet = gcm.Seal(packet, nonce, plain, aad)
+	if err = v.store.SaveSealed(packet); err != nil {
+		return errors.New("native atomic protected save failed")
+	}
+	v.binding = b
+	return nil
+}
+func (v *VaultWorkflow) open(packet []byte) ([]byte, error) {
+	if len(packet) < 12+12+16 || len(packet) > maxState+8192 || string(packet[:8]) != stateHeader {
+		return nil, errInput
+	}
+	n := int(binary.BigEndian.Uint32(packet[8:12]))
+	if n < 1 || n > 4096 || 12+n+28 > len(packet) {
+		return nil, errInput
+	}
+	aad := packet[:12+n]
+	var b stateBinding
+	dec := json.NewDecoder(bytes.NewReader(packet[12 : 12+n]))
+	dec.DisallowUnknownFields()
+	if dec.Decode(&b) != nil || !v.matches(b) {
+		return nil, errInput
+	}
+	expected, _ := json.Marshal(b)
+	if !bytes.Equal(expected, packet[12:12+n]) {
+		return nil, errInput
+	}
+	gcm, err := v.aead()
+	if err != nil {
+		return nil, err
+	}
+	plain, err := gcm.Open(nil, packet[12+n:24+n], packet[24+n:], aad)
+	if err != nil {
+		return nil, errInput
+	}
+	actual, err := projectedBinding(plain)
+	actual.Namespace = v.binding.Namespace
+	if err != nil || actual != b {
+		clear(plain)
+		return nil, errInput
+	}
+	v.binding = b
+	return plain, nil
+}
+
+func (v *VaultWorkflow) Cancel() {
+	v.cancelMu.Lock()
+	defer v.cancelMu.Unlock()
+	if v.cancel != nil {
+		v.cancel()
+	}
+}
+
+func (v *VaultWorkflow) Close() {
+	v.Cancel()
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	// OpenWorkflow 错误路径没有锁；外部调用在原生串行 worker 中运行。
+	if v.workflow != nil {
+		v.workflow.Close()
+		v.workflow = nil
+	}
+	clear(v.key)
+	v.key = nil
+	v.store = nil
+}
+func (v *VaultWorkflow) RequiresDeviceDeletion() bool {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	return v.deleteDevice
+}
+
+type workflowCommand struct {
+	endpoint  string
+	operation string
+	fields    map[string]string
+}
+
+var operationFields = map[string][]string{
+	"register": {"email", "password"}, "verifyEmail": {"accountId", "accountGeneration", "challengeId", "token"},
+	"beginInitialization": {"email", "password", "name", "id"}, "completeInitialization": {"recoveryCode"},
+	"revokeSelf":          {"id"},
+	"selfRevocationInfo":  {},
+	"queryInitialization": {}, "pull": {}, "view": {}, "logout": {},
+	"setVariable": {"environmentId", "name", "value", "id"}, "deleteVariable": {"environmentId", "name", "id"},
+	"createEnvironment": {"name", "id"}, "renameEnvironment": {"environmentId", "name", "id"}, "deleteEnvironment": {"environmentId", "id"},
+}
+
+func parseWorkflowCommand(raw string) (workflowCommand, error) {
+	c := workflowCommand{fields: map[string]string{}}
+	if len(raw) == 0 || len(raw) > maxWorkflowCommand || !utf8.ValidString(raw) {
+		return c, errInput
+	}
+	dec := json.NewDecoder(strings.NewReader(raw))
+	t, e := dec.Token()
+	if e != nil || t != json.Delim('{') {
+		return c, errInput
+	}
+	seen := map[string]bool{}
+	version := false
+	for dec.More() {
+		t, e = dec.Token()
+		name, ok := t.(string)
+		if e != nil || !ok || seen[name] {
+			return c, errInput
+		}
+		seen[name] = true
+		if name == "version" {
+			var n int
+			if dec.Decode(&n) != nil || n != 1 {
+				return c, errInput
+			}
+			version = true
+			continue
+		}
+		var s string
+		if dec.Decode(&s) != nil {
+			return c, errInput
+		}
+		if name == "operation" {
+			c.operation = s
+		} else {
+			c.fields[name] = s
+		}
+	}
+	if _, e = dec.Token(); e != nil {
+		return c, errInput
+	}
+	var extra any
+	if dec.Decode(&extra) != io.EOF || !version {
+		return c, errInput
+	}
+	endpoint, exists := c.fields["endpoint"]
+	if !exists {
+		return c, errInput
+	}
+	if canonical, e := validateEndpoint(endpoint); e != nil || canonical != endpoint {
+		return c, errInput
+	}
+	c.endpoint = endpoint
+	delete(c.fields, "endpoint")
+	fields, ok := operationFields[c.operation]
+	if !ok || len(fields) != len(c.fields) {
+		return c, errInput
+	}
+	for _, name := range fields {
+		if _, ok = c.fields[name]; !ok {
+			return c, errInput
+		}
+	}
+	return c, nil
+}
+
+// Execute 只返回已验签业务视图或本次新恢复码；随机会话/保护状态/私钥没有导出路径。
+func (v *VaultWorkflow) Execute(raw string) (string, error) {
+	c, err := parseWorkflowCommand(raw)
+	if err != nil {
+		return "", err
+	}
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if c.endpoint != v.binding.Endpoint {
+		return "", errInput
+	}
+	if v.workflow == nil || len(v.key) != 32 {
+		return "", errClosed
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	v.cancelMu.Lock()
+	v.cancel = cancel
+	v.cancelMu.Unlock()
+	defer func() { cancel(); v.cancelMu.Lock(); v.cancel = nil; v.cancelMu.Unlock() }()
+	f := c.fields
+	var data any
+	var code string
+	switch c.operation {
+	case "register":
+		data, err = v.workflow.Register(ctx, f["email"], f["password"])
+	case "verifyEmail":
+		err = v.workflow.VerifyEmail(ctx, mobileworkflow.EmailProof{AccountID: f["accountId"], AccountGeneration: f["accountGeneration"], ChallengeID: f["challengeId"], Token: f["token"]})
+	case "beginInitialization":
+		err = v.workflow.Login(ctx, f["email"], f["password"])
+		if err == nil {
+			code, err = v.workflow.BeginInitialization(ctx, f["name"], f["id"])
+		}
+	case "completeInitialization":
+		data, err = v.workflow.CompleteInitialization(ctx, f["recoveryCode"])
+	case "queryInitialization":
+		var state string
+		state, err = v.workflow.QueryInitialization(ctx)
+		data = map[string]string{"state": state}
+	case "view":
+		data, err = v.workflow.View()
+	case "pull":
+		data, err = v.workflow.Pull(ctx)
+	case "setVariable":
+		data, err = v.workflow.SetVariable(ctx, f["environmentId"], f["name"], f["value"], f["id"])
+	case "deleteVariable":
+		data, err = v.workflow.DeleteVariable(ctx, f["environmentId"], f["name"], f["id"])
+	case "createEnvironment":
+		data, err = v.workflow.CreateEnvironment(ctx, f["name"], f["id"])
+	case "renameEnvironment":
+		data, err = v.workflow.RenameEnvironment(ctx, f["environmentId"], f["name"], f["id"])
+	case "deleteEnvironment":
+		data, err = v.workflow.DeleteEnvironment(ctx, f["environmentId"], f["id"])
+	case "selfRevocationInfo":
+		data, err = v.workflow.SelfRevocationInfo()
+	case "revokeSelf":
+		var result mobileworkflow.SelfRevocationResult
+		result, err = v.workflow.RevokeSelf(ctx, f["id"])
+		data = result
+		if result.DeviceInvalidated {
+			v.deleteDevice = true
+		}
+	case "logout":
+		v.deleteDevice = true
+		err = v.workflow.Logout()
+	}
+	out := map[string]any{"version": 1, "ok": err == nil, "experimental": true}
+	if code != "" {
+		out["recoveryCode"] = code
+	}
+	if c.operation == "revokeSelf" && data != nil {
+		out["data"] = data
+	}
+	if err == nil {
+		if data != nil {
+			out["data"] = data
+		}
+	} else {
+		status := "REJECTED"
+		switch {
+		case errors.Is(err, syncclient.ErrTrustInvalidated):
+			status = "TRUST_INVALIDATED"
+			v.deleteDevice = true
+		case errors.Is(err, mobileworkflow.ErrPending), errors.Is(err, syncclient.ErrAcceptedNotApplied), errors.Is(err, syncclient.ErrWritePending), errors.Is(err, mobileworkflow.ErrSelfRevocationPending):
+			status = "PENDING"
+			out["retrySameId"] = true
+		case errors.Is(err, mobileworkflow.ErrNotTrusted):
+			status = "NOT_TRUSTED"
+		case errors.Is(err, syncclient.ErrSelfRevocationExpired):
+			status = "REVOCATION_EXPIRED_PENDING"
+		case errors.Is(err, mobileworkflow.ErrClosed):
+			status = "CLOSED"
+		case errors.Is(err, localstate.ErrUnauthorized):
+			status = "UNAUTHORIZED"
+		case errors.Is(err, syncclient.ErrWriteConflict):
+			status = "ID_CONFLICT"
+		}
+		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" {
+			out["retrySameId"] = true
+		}
+		out["code"] = status
+	}
+	return encode(out)
+}

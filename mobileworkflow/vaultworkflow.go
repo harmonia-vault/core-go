@@ -35,7 +35,6 @@ var ErrUnsupported = errors.New("this mobile lifecycle is not connected")
 var ErrPending = errors.New("server result uncertain; query the same initialization before retrying")
 var ErrClosed = errors.New("native authenticated device is closed")
 var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
-var faultPattern = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
 
 // Config 只供可信原生持钥代码或合成 Go 测试使用，禁止作为 MethodChannel 输入。
 // ProtectedState 是原生 AES 验证解包后的完整上下文；不接受服务器或 Dart 提供的上下文。
@@ -114,6 +113,9 @@ type protectedState struct {
 	Labels             map[string]labelState         `json:"labels"`
 	WriteJournal       []byte                        `json:"writeJournal,omitempty"`
 	EnvironmentWrites  map[string]*environmentRecord `json:"environmentWrites,omitempty"`
+	InitialAuthorities []cryptox.SignedGrantWire     `json:"initialAuthorities,omitempty"`
+	PendingApproval    *approvalRecord               `json:"pendingApproval,omitempty"`
+	SelfRevocation     []byte                        `json:"selfRevocation,omitempty"`
 }
 type memoryStore struct{ state localstate.State }
 
@@ -262,7 +264,22 @@ func New(config Config) (*Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Workflow{signing: bytes.Clone(config.SigningKey), receiving: bytes.Clone(config.ReceivingPrivateKey), http: client, now: now, state: state, store: store, engine: engine, saveNative: config.SaveProtectedState}, nil
+	workflow := &Workflow{signing: bytes.Clone(config.SigningKey), receiving: bytes.Clone(config.ReceivingPrivateKey), http: client, now: now, state: state, store: store, engine: engine, saveNative: config.SaveProtectedState}
+	if len(state.SelfRevocation) > 0 {
+		if _, err := workflow.restoreSelfRevocation(); err != nil {
+			workflow.Close()
+			return nil, err
+		}
+	}
+	if err := workflow.validateInitialAuthorities(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
+	if err := workflow.validateApprovalRecord(state.PendingApproval); err != nil {
+		workflow.Close()
+		return nil, err
+	}
+	return workflow, nil
 }
 func (w *Workflow) Close() {
 	w.mu.Lock()
@@ -277,6 +294,11 @@ func (w *Workflow) Close() {
 	w.receiving = nil
 	w.client = nil
 	w.login = nil
+	clear(w.state.SelfRevocation)
+	if w.http != nil {
+		w.http.CloseIdleConnections()
+		w.http = nil
+	}
 	w.state = protectedState{}
 	w.store = nil
 	w.engine = nil
@@ -288,8 +310,8 @@ func (w *Workflow) Close() {
 func (w *Workflow) Logout() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if err := w.check(); err != nil {
-		return err
+	if w.closed {
+		return ErrClosed
 	}
 	if err := w.engine.Logout(); err != nil {
 		return err
@@ -300,6 +322,12 @@ func (w *Workflow) Logout() error {
 func (w *Workflow) check() error {
 	if w.closed {
 		return ErrClosed
+	}
+	if len(w.state.SelfRevocation) > 0 {
+		return ErrSelfRevocationPending
+	}
+	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 {
+		return ErrApprovalPending
 	}
 	return nil
 }
@@ -601,9 +629,15 @@ func (w *Workflow) CompleteInitialization(ctx context.Context, completeCodeReent
 	}
 	id, name := p.Proposal.Environments[0].EnvironmentID, p.Name
 	w.state.Root = &root
+	previousAuthorities := w.state.InitialAuthorities
+	w.state.InitialAuthorities = nil
+	for _, env := range p.Proposal.Environments {
+		w.state.InitialAuthorities = append(w.state.InitialAuthorities, env.Grant)
+	}
 	w.state.Pending = nil
 	if err = w.persist(); err != nil {
 		w.state.Root = nil
+		w.state.InitialAuthorities = previousAuthorities
 		w.state.Pending = p
 		return View{}, errors.Join(ErrPending, err)
 	}
@@ -666,10 +700,10 @@ func (w *Workflow) request(ctx context.Context, path, token string, body any, ou
 			Error string `json:"error"`
 		}
 		code := "request_rejected"
-		if len(data) <= 4096 && decode(data, &wire) == nil && faultPattern.MatchString(wire.Error) {
+		if len(data) <= 4096 && decode(data, &wire) == nil {
 			code = wire.Error
 		}
-		return &syncclient.RequestError{Status: response.StatusCode, Code: code}
+		return syncclient.NewRequestError(response.StatusCode, code)
 	}
 	return decode(data, out)
 }
@@ -768,6 +802,10 @@ func (w *Workflow) boot(ctx context.Context) error {
 func (w *Workflow) invalidateTrust() error {
 	w.state.Root = nil
 	w.state.Pending = nil
+	w.state.InitialAuthorities = nil
+	w.state.PendingApproval = nil
+	clear(w.state.SelfRevocation)
+	w.state.SelfRevocation = nil
 	w.state.Grants = nil
 	w.state.Labels = map[string]labelState{}
 	w.state.WriteJournal = nil
@@ -787,6 +825,12 @@ func (w *Workflow) invalidateTrust() error {
 	return err
 }
 func (w *Workflow) refresh(ctx context.Context) error {
+	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 {
+		return ErrApprovalPending
+	}
+	return w.refreshForApproval(ctx)
+}
+func (w *Workflow) refreshForApproval(ctx context.Context) error {
 	if w.state.Root == nil {
 		return ErrNotTrusted
 	}

@@ -22,8 +22,18 @@ func (e *RequestError) Error() string {
 	return fmt.Sprintf("server rejected request (HTTP %d, %s)", e.Status, e.Code)
 }
 
+// NewRequestError 将不可信服务端代码限制为已审查的固定协议枚举。
+// 任意文本、hex、密码等价凭据或内部信息均归一为 request_rejected。
+func NewRequestError(status int, code string) *RequestError {
+	fault := &RequestError{Status: status, Code: "request_rejected"}
+	if knownFaultCodes[code] {
+		fault.Code = code
+	}
+	return fault
+}
+
 func parseRequestError(response *http.Response) *RequestError {
-	fault := &RequestError{Status: response.StatusCode, Code: "request_rejected"}
+	fault := NewRequestError(response.StatusCode, "")
 	// 错误体只读取固定小上限；未知字段、额外 JSON、任意文本不进入日志/错误。
 	data, err := io.ReadAll(io.LimitReader(response.Body, 4097))
 	if err == nil && len(data) <= 4096 {

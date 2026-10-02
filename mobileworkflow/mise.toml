@@ -1,0 +1,14 @@
+[tools]
+go = "1.26.4"
+
+[tasks.test]
+description = "验证手机业务及严格原生保护边界"
+run = "go test . -count=1 -v"
+
+[tasks.test-native-approval]
+description = "用固定成熟SPAKE2和TLS验证首根手机审批与加密原包日志"
+run = "go test -tags harmonia_boringssl . -run Approval -count=1 -v"
+
+[tasks.test-native-approval-race]
+description = "验证手机审批Go状态并发，原生AEAD由隔离替身实现"
+run = "go test -race -tags harmonia_boringssl . -run Approval -count=1"
