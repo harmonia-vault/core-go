@@ -1,0 +1,100 @@
+{
+  "description": "全部为公开合成测试数据；标准 Go HPKE 生成真实封套，独立 Node 标准 crypto 生成确定编码与 Ed25519 签名；不是生产账号。",
+  "syntheticRootSigningSeedHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "syntheticRootReceivingPrivateHex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+  "syntheticRecoverySeedHex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+  "syntheticLoginToken": "synthetic-login-token-for-initialize",
+  "syntheticEnvironmentKeys": [
+    {
+      "environmentId": "environment-alpha",
+      "keyHex": "1415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f30313233"
+    },
+    {
+      "environmentId": "environment-beta",
+      "keyHex": "28292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f4041424344454647"
+    }
+  ],
+  "trustRoot": {
+    "rootDeviceId": "device-root",
+    "rootSigningPublicKey": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+    "rootReceivingPublicKey": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ",
+    "recoveryGeneration": "1",
+    "recoverySigningPublicKey": "KnHeFr3__fgh55FpvPvsnbCT9aaOxWMwHathWTBsWsA",
+    "recoveryReceivingPublicKey": "JpLdT3CN-jjTem9WGDgs66p7ZRw5yL9VlMP22qUYATQ",
+    "signature": "3xK8mFuNMsuQRqy1vQjACRccj53W6CNaus5ouImpzahwA4OkaDIkZ0J8LhAhktuPw3iUhlk3ew8Iy5Se8zsPDA"
+  },
+  "trustRootSigningHex": "5b226861726d6f6e69612f74727573742d726f6f742f7631222c226163636f756e742d74657374222c2231222c226465766963652d726f6f74222c2241364548765f504f454c3464634e3059353076416d57666b316a436270513166486479475a424a564d6267222c224e594279316a5a59674e4775366a4b61333545684f446852375347696a6a74313657585130733057596c51222c2231222c224b6e48654672335f5f66676835354670765076736e6243543961614f78574d774861746857544273577341222c224a704c645433434e2d6a6a54656d395747446773363670375a527735794c39566c4d503232715559415451225d",
+  "proposal": {
+    "idempotencyKey": "initialize-test-1",
+    "device": {
+      "id": "device-root",
+      "signingPublicKey": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+      "receivingPublicKey": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ"
+    },
+    "recoveryGeneration": "1",
+    "recoverySigningPublicKey": "KnHeFr3__fgh55FpvPvsnbCT9aaOxWMwHathWTBsWsA",
+    "recoveryReceivingPublicKey": "JpLdT3CN-jjTem9WGDgs66p7ZRw5yL9VlMP22qUYATQ",
+    "trustRootSignature": "3xK8mFuNMsuQRqy1vQjACRccj53W6CNaus5ouImpzahwA4OkaDIkZ0J8LhAhktuPw3iUhlk3ew8Iy5Se8zsPDA",
+    "environments": [
+      {
+        "environmentId": "environment-beta",
+        "keyVersion": "1",
+        "recoveryEnvelope": "YMWuQvtlTS99LOQYleT7kWVpk26qAyxH2Br774TnLCyc7pLMONsTJMyyCPRqjea3L2S-eCio7QFlfMCR90hmAIzAcGLimdAIECuDWVUgi_U",
+        "grant": {
+          "grant": {
+            "accountId": "account-test",
+            "accountGeneration": "1",
+            "issuerDeviceId": "device-root",
+            "subjectDeviceId": "device-root",
+            "subjectSigningPublicKey": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+            "subjectReceivingPublicKey": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ",
+            "environmentId": "environment-beta",
+            "keyVersion": "1",
+            "grantGeneration": "1",
+            "role": "admin",
+            "expiresAt": "0",
+            "idempotencyKey": "grant-initialize-environment-beta",
+            "envelope": "uT4J3m24LuEmE-FjXK_JBkt157EE4w3BHnP61iHqxGwygFYSAiNFpXCL4K8h2PVx4Tp-2xhpH4H_JLkPKEjUlGKWq0jl9kaiwYWf0JabzVo"
+          },
+          "signature": "iPo2rD_oqLT1AdIffeU45O7hM01crEaoQInuLQFiJ1ZaN4-NRo-xLI3HRqUeBgi32mZgKfgM4ZCq6rXwA_9iDQ"
+        }
+      },
+      {
+        "environmentId": "environment-alpha",
+        "keyVersion": "1",
+        "recoveryEnvelope": "Bae4KXpFbgvNRx1gHGOBBMOY0jFjjQpVgHjFZ9WZpAlDFYtpjuv1cUoaQY6qQrQ62wf0zlHUN6f045Kim9CCjp7bxJmcLe1cZkiUsk6d9JE",
+        "grant": {
+          "grant": {
+            "accountId": "account-test",
+            "accountGeneration": "1",
+            "issuerDeviceId": "device-root",
+            "subjectDeviceId": "device-root",
+            "subjectSigningPublicKey": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+            "subjectReceivingPublicKey": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ",
+            "environmentId": "environment-alpha",
+            "keyVersion": "1",
+            "grantGeneration": "1",
+            "role": "admin",
+            "expiresAt": "0",
+            "idempotencyKey": "grant-initialize-environment-alpha",
+            "envelope": "9_kIyPaMzeyq961SC2lEPFjOz2Ocx9FGF52oIkCQxQrAAB09-sW2XlPwstGRf0WF2LbL61f1yddIlVXn8yJ_iteQ83CQ0KO4_EHVKe_uWXQ"
+          },
+          "signature": "7wCwniAXbMPh4AiMEMfC6_e4aV9dopXS_QrIt821-Pv1G_BPALEzNGkPA1zdR7bxtCaNKaFnBA-Cc-Z-XvuDDQ"
+        }
+      }
+    ]
+  },
+  "proposalCanonical": "[\"harmonia/vault-initialization-proposal/v1\",\"initialize-test-1\",\"device-root\",\"A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg\",\"NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ\",\"1\",\"KnHeFr3__fgh55FpvPvsnbCT9aaOxWMwHathWTBsWsA\",\"JpLdT3CN-jjTem9WGDgs66p7ZRw5yL9VlMP22qUYATQ\",\"3xK8mFuNMsuQRqy1vQjACRccj53W6CNaus5ouImpzahwA4OkaDIkZ0J8LhAhktuPw3iUhlk3ew8Iy5Se8zsPDA\",[[\"environment-alpha\",\"1\",\"Bae4KXpFbgvNRx1gHGOBBMOY0jFjjQpVgHjFZ9WZpAlDFYtpjuv1cUoaQY6qQrQ62wf0zlHUN6f045Kim9CCjp7bxJmcLe1cZkiUsk6d9JE\",\"WyJoYXJtb25pYS9ncmFudC92MSIsImFjY291bnQtdGVzdCIsIjEiLCJkZXZpY2Utcm9vdCIsImRldmljZS1yb290IiwiQTZFSHZfUE9FTDRkY04wWTUwdkFtV2ZrMWpDYnBRMWZIZHlHWkJKVk1iZyIsIk5ZQnkxalpZZ05HdTZqS2EzNUVoT0RoUjdTR2lqanQxNldYUTBzMFdZbFEiLCJlbnZpcm9ubWVudC1hbHBoYSIsIjEiLCIxIiwiYWRtaW4iLCIwIiwiZ3JhbnQtaW5pdGlhbGl6ZS1lbnZpcm9ubWVudC1hbHBoYSIsIjlfa0l5UGFNemV5cTk2MVNDMmxFUEZqT3oyT2N4OUZHRjUyb0lrQ1F4UXJBQUIwOS1zVzJYbFB3c3RHUmYwV0YyTGJMNjFmMXlkZElsVlhuOHlKX2l0ZVE4M0NRMEtPNF9FSFZLZV91V1hRIl0\",\"7wCwniAXbMPh4AiMEMfC6_e4aV9dopXS_QrIt821-Pv1G_BPALEzNGkPA1zdR7bxtCaNKaFnBA-Cc-Z-XvuDDQ\"],[\"environment-beta\",\"1\",\"YMWuQvtlTS99LOQYleT7kWVpk26qAyxH2Br774TnLCyc7pLMONsTJMyyCPRqjea3L2S-eCio7QFlfMCR90hmAIzAcGLimdAIECuDWVUgi_U\",\"WyJoYXJtb25pYS9ncmFudC92MSIsImFjY291bnQtdGVzdCIsIjEiLCJkZXZpY2Utcm9vdCIsImRldmljZS1yb290IiwiQTZFSHZfUE9FTDRkY04wWTUwdkFtV2ZrMWpDYnBRMWZIZHlHWkJKVk1iZyIsIk5ZQnkxalpZZ05HdTZqS2EzNUVoT0RoUjdTR2lqanQxNldYUTBzMFdZbFEiLCJlbnZpcm9ubWVudC1iZXRhIiwiMSIsIjEiLCJhZG1pbiIsIjAiLCJncmFudC1pbml0aWFsaXplLWVudmlyb25tZW50LWJldGEiLCJ1VDRKM20yNEx1RW1FLUZqWEtfSkJrdDE1N0VFNHczQkhuUDYxaUhxeEd3eWdGWVNBaU5GcFhDTDRLOGgyUFZ4NFRwLTJ4aHBINEhfSkxrUEtFalVsR0tXcTBqbDlrYWl3WVdmMEphYnpWbyJd\",\"iPo2rD_oqLT1AdIffeU45O7hM01crEaoQInuLQFiJ1ZaN4-NRo-xLI3HRqUeBgi32mZgKfgM4ZCq6rXwA_9iDQ\"]]]",
+  "proof": {
+    "accountId": "account-test",
+    "accountGeneration": "1",
+    "loginTokenHash": "50bba79490b0a59813880c50d612bd211e21d3b070140d35c01e0f54fe516270",
+    "challengeId": "initialize-challenge-test-1",
+    "nonce": "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t8",
+    "expiresAt": "4102444800",
+    "proposalHash": "a9554b4c8a9278b3897e3c7d940432b0589942788b7946a168721b56eed6d830"
+  },
+  "proofSigningHex": "5b226861726d6f6e69612f7661756c742d696e697469616c697a652f7631222c226163636f756e742d74657374222c2231222c2235306262613739343930623061353938313338383063353064363132626432313165323164336230373031343064333563303165306635346665353136323730222c22696e697469616c697a652d6368616c6c656e67652d746573742d31222c22774d484377385446787366497963724c7a4d334f7a3944523074505531646258324e6e6132397a64337438222c2234313032343434383030222c2261393535346234633861393237386233383937653363376439343034333262303538393934323738386237393436613136383732316235366565643664383330225d",
+  "rootSignature": "rg_udObBp14z63CqRHIX_ALU_jpjehtP049ySuHhh0CWtTqtlgSuX0kqZPTvsetKqw0Tczc0_p4OdM6OF5JMAQ",
+  "recoverySignature": "_LwL44ZaoIHvWAA1Lthj4uI_Vi3Jl1Udh1H5_n53OI3ZSdslEmOC7jvtmwAUs37z0LTwcjHDkGHUBk242pShDA"
+}

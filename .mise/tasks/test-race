@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# mise description="运行全部 Go 测试与 race detector"
-set -euo pipefail
-mise exec -- go test -race ./... -count=1

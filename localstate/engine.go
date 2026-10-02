@@ -19,6 +19,7 @@ import (
 var (
 	ErrReplay       = errors.New("cloud checkpoint moved backwards or changed at the same sequence")
 	ErrAccount      = errors.New("account changed: logout and restore managed values first")
+	ErrLocalSession = errors.New("local account session changed")
 	ErrUnauthorized = errors.New("environment is unavailable or its grant has expired")
 	namePattern     = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
 )
@@ -46,13 +47,16 @@ type MutationCheckpoint struct {
 }
 
 type CloudSnapshot struct {
-	AccountID         string                        `json:"accountId"`
-	AccountGeneration uint64                        `json:"accountGeneration"`
-	Sequence          uint64                        `json:"sequence"`
-	Environments      map[string]Environment        `json:"environments"`
-	GrantCheckpoints  map[string]uint64             `json:"grantCheckpoints,omitempty"`
-	GrantFingerprints map[string]string             `json:"grantFingerprints,omitempty"`
-	SeenMutations     map[string]MutationCheckpoint `json:"seenMutations,omitempty"`
+	AccountID              string                        `json:"accountId"`
+	AccountGeneration      uint64                        `json:"accountGeneration"`
+	Sequence               uint64                        `json:"sequence"`
+	AuthorizationSequence  uint64                        `json:"authorizationSequence,omitempty"`
+	EnvironmentCheckpoints map[string]MutationCheckpoint `json:"environmentCheckpoints,omitempty"`
+	DeletedEnvironments    map[string]uint64             `json:"deletedEnvironments,omitempty"`
+	Environments           map[string]Environment        `json:"environments"`
+	GrantCheckpoints       map[string]uint64             `json:"grantCheckpoints,omitempty"`
+	GrantFingerprints      map[string]string             `json:"grantFingerprints,omitempty"`
+	SeenMutations          map[string]MutationCheckpoint `json:"seenMutations,omitempty"`
 }
 
 type Activation struct {
@@ -69,7 +73,8 @@ type ManagedValue struct {
 }
 
 type State struct {
-	Version int `json:"version"`
+	Version      int    `json:"version"`
+	SessionEpoch uint64 `json:"sessionEpoch,omitempty"`
 	// Synthetic 只由明确测试入口写入，网络客户端必须拒绝这种状态。
 	// 它不能替代设备入网，也不能绕过信任建立。
 	Synthetic  bool                         `json:"synthetic,omitempty"`
@@ -256,10 +261,21 @@ func expire(s *State, now time.Time) bool {
 // AcceptSnapshot 只接受已经完整验证权限的明文快照。
 // 更高账号代际使旧环境与 override 全部失效；相同检查点必须内容一致。
 func (e *Engine) AcceptSnapshot(in CloudSnapshot, now time.Time) error {
+	return e.acceptSnapshot(in, now, nil)
+}
+
+// AcceptSnapshotAtEpoch 防止退出账号后的在途旧响应重新填充本地权威缓存。
+func (e *Engine) AcceptSnapshotAtEpoch(in CloudSnapshot, now time.Time, epoch uint64) error {
+	return e.acceptSnapshot(in, now, &epoch)
+}
+func (e *Engine) acceptSnapshot(in CloudSnapshot, now time.Time, epoch *uint64) error {
 	if err := validateCloud(in); err != nil {
 		return err
 	}
 	return e.transaction(func(s *State) error {
+		if epoch != nil && s.SessionEpoch != *epoch {
+			return ErrLocalSession
+		}
 		old := s.Cloud
 		if old.AccountID != "" && old.AccountID != in.AccountID {
 			return ErrAccount
@@ -277,6 +293,12 @@ func (e *Engine) AcceptSnapshot(in CloudSnapshot, now time.Time) error {
 				check := clone(*s)
 				check.Cloud = in
 				expire(&check, now)
+				if old.AuthorizationSequence == 0 {
+					old.AuthorizationSequence = old.Sequence
+				}
+				if check.Cloud.AuthorizationSequence == 0 {
+					check.Cloud.AuthorizationSequence = check.Cloud.Sequence
+				}
 				a, _ := json.Marshal(old)
 				b, _ := json.Marshal(check.Cloud)
 				if string(a) != string(b) {
@@ -302,6 +324,10 @@ func (e *Engine) AcceptSnapshot(in CloudSnapshot, now time.Time) error {
 			}
 		}
 		if generationChanged {
+			if s.SessionEpoch == ^uint64(0) {
+				return ErrLocalSession
+			}
+			s.SessionEpoch++
 			s.Overrides = map[string]map[string]string{}
 			s.Active = nil
 		}
@@ -537,8 +563,19 @@ func (e *Engine) Reconcile(ctx context.Context, p Provider, now time.Time) error
 
 // Logout 立即删除云明文与 override。原值记录保留到 provider 恢复成功，
 // 崩溃或 provider 错误之后仍能按变量重试清理。
-func (e *Engine) Logout() error {
+func (e *Engine) Logout() error { return e.logout(nil) }
+
+// LogoutAtEpoch 让当前网络会话的拒绝不能清理随后建立的新账号上下文。
+func (e *Engine) LogoutAtEpoch(epoch uint64) error { return e.logout(&epoch) }
+func (e *Engine) logout(epoch *uint64) error {
 	return e.transaction(func(s *State) error {
+		if epoch != nil && s.SessionEpoch != *epoch {
+			return ErrLocalSession
+		}
+		if s.SessionEpoch == ^uint64(0) {
+			return ErrLocalSession
+		}
+		s.SessionEpoch++
 		s.Cloud = CloudSnapshot{Environments: map[string]Environment{}}
 		s.Active = nil
 		s.Overrides = map[string]map[string]string{}
@@ -546,6 +583,89 @@ func (e *Engine) Logout() error {
 		s.Paused = false
 		return nil
 	})
+}
+
+// InvalidateAuthorizationsAtEpoch 停用全部环境来源但保留仍可信的设备身份、
+// 已见检查点和本机激活偏好。所有环境授权到期不等于账号退出或设备被撤销。
+func (e *Engine) InvalidateAuthorizationsAtEpoch(epoch uint64) error {
+	return e.transaction(func(s *State) error {
+		if s.SessionEpoch != epoch || s.SessionEpoch == ^uint64(0) {
+			return ErrLocalSession
+		}
+		s.SessionEpoch++
+		for name := range s.Originals {
+			s.SafetyKeys[name] = true
+		}
+		s.Cloud.Environments = map[string]Environment{}
+		s.Overrides = map[string]map[string]string{}
+		s.Managed = map[string]ManagedValue{}
+		return nil
+	})
+}
+
+// AcceptAuthorizationRefreshAtEpoch 只接受已验证的安全授权投影，不推进数据
+// 序号，不添加环境或变量、不改变已有值。暂停刷新也可删失权来源并标记恢复。
+func (e *Engine) AcceptAuthorizationRefreshAtEpoch(in CloudSnapshot, now time.Time, epoch uint64) error {
+	if err := validateCloud(in); err != nil {
+		return err
+	}
+	return e.transaction(func(s *State) error {
+		old := s.Cloud
+		if s.SessionEpoch != epoch {
+			return ErrLocalSession
+		}
+		if old.AccountID != "" && (old.AccountID != in.AccountID || old.AccountGeneration != in.AccountGeneration) {
+			return ErrAccount
+		}
+		if in.Sequence != old.Sequence || in.AuthorizationSequence < old.Sequence || in.AuthorizationSequence < old.AuthorizationSequence {
+			return ErrReplay
+		}
+		for id, next := range in.Environments {
+			previous, exists := old.Environments[id]
+			if !exists || previous.KeyVersion != next.KeyVersion {
+				return ErrUnauthorized
+			}
+			for key, value := range next.Values {
+				if previous.Values[key] != value {
+					return ErrReplay
+				}
+				if _, exists := previous.Values[key]; !exists {
+					return ErrReplay
+				}
+			}
+			if roleRank(next.Role) > roleRank(previous.Role) || previous.ExpiresAt != nil && (next.ExpiresAt == nil || next.ExpiresAt.After(*previous.ExpiresAt)) {
+				return ErrUnauthorized
+			}
+		}
+		for id, previous := range old.Environments {
+			next, exists := in.Environments[id]
+			if !exists || !allowed(next, now) {
+				markSafety(s, previous)
+				delete(s.Overrides, id)
+			} else {
+				for key := range previous.Values {
+					if _, exists := next.Values[key]; !exists {
+						s.SafetyKeys[key] = true
+						delete(s.Managed, key)
+						delete(s.Overrides[id], key)
+					}
+				}
+			}
+		}
+		s.Cloud = in
+		s.Cloud = clone(*s).Cloud
+		expire(s, now)
+		return nil
+	})
+}
+func roleRank(role Role) int {
+	if role == Admin {
+		return 3
+	}
+	if role == ReadWrite {
+		return 2
+	}
+	return 1
 }
 
 // SelectImport 只返回人明确选择的候选变量；不扫描宿主，也不修改

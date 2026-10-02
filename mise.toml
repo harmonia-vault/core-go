@@ -1,2 +1,14 @@
 [tools]
 go = "1.26.4"
+
+[tasks.test]
+description = "运行全部合成 Go 测试"
+run = "go test ./... -count=1"
+
+[tasks.test-race]
+description = "运行全部 Go 测试与 race detector"
+run = "go test -race ./... -count=1"
+
+[tasks.cross-compile]
+description = "交叉构建三平台 CLI，不生成安装包"
+run = "bash .mise/scripts/cross-compile.sh"

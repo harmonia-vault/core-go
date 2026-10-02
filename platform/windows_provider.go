@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/harmonia-vault/core-go/localkeys"
 	"github.com/harmonia-vault/core-go/localstate"
 )
 
@@ -30,6 +31,7 @@ type WindowsProvider struct {
 	store     UserEnvironmentStore
 	originals map[string]registryOriginal
 	statePath string
+	secret    *localkeys.Vault
 }
 
 func NewWindowsProvider(expectedSID string, store UserEnvironmentStore) (*WindowsProvider, error) {

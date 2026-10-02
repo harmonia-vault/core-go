@@ -1,0 +1,16 @@
+{
+  "description": "公开合成签名向量；payload 为应用层合成32字节消息，不是有效SPAKE2交换。",
+  "relay": {
+    "accountId": "account-test",
+    "accountGeneration": "1",
+    "sessionId": "pairing-enroll-test-1",
+    "challengeNonce": "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t8",
+    "side": "initiator",
+    "kind": "message",
+    "payload": "yMnKy8zNzs_Q0dLT1NXW19jZ2tvc3d7f4OHi4-Tl5uc"
+  },
+  "signingHex": "5b226861726d6f6e69612f70616972696e672d72656c61792f7631222c226163636f756e742d74657374222c2231222c2270616972696e672d656e726f6c6c2d746573742d31222c22774d484377385446787366497963724c7a4d334f7a3944523074505531646258324e6e6132397a64337438222c22696e69746961746f72222c226d657373616765222c22794d6e4b79387a4e7a735f5130644c54314e585731396a5a3274766333643766344f4869342d546c357563225d",
+  "signature": "m97G17m_mwlQXI8m2MMEsFoPuLRjJngUfk88JOND1TPCV2J9L6Lu6btDAdCIgCxYFNhro1tIObg8GW5siVMQCA",
+  "syntheticSigningSeedHex": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f",
+  "signingPublicKey": "zRSzf5VulTGU_3-3Oz2B3MVh1hp1OAlLfD4aZD7l86o"
+}

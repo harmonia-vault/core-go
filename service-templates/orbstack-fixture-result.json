@@ -1,0 +1,42 @@
+{
+  "schema": "harmonia/linux-vm-fixture-acceptance/v1",
+  "environment": {
+    "machine": "OrbStack Ubuntu",
+    "architecture": "aarch64",
+    "virtualization": "lxc",
+    "systemd": "systemd 255 (255.4-1ubuntu8.17)"
+  },
+  "checks": {
+    "localkeys_native_nonroot_with_acl": "通过",
+    "platform_native_nonroot": "通过；zsh 缺失跳过",
+    "systemd_noninteractive_start_uid_and_no_capabilities": "通过",
+    "systemd_sandbox_effective": "未验证：OrbStack LXC 全局 drop-in 关闭沙盒",
+    "current_user_cli_and_second_uid_denial": "通过",
+    "ssh_bash_merge_and_priority": "通过",
+    "local_override_and_prompt_correction_preserve_unrelated": "通过",
+    "pause_restart_and_resume_convergence": "通过",
+    "offline_expiry_during_pause_fallback": "通过",
+    "logout_keywise_restore_preserve_unrelated": "通过"
+  },
+  "gates": [
+    "未重启整机：真实 boot/start-before-login 尚未验收",
+    "合成 fixture，不证明真实设备授权或云同步",
+    "Windows DPAPI/ACL/hive/Session 0 与 macOS LaunchDaemon 原生服务未跑",
+    "VM 未安装 zsh，sh 无可移植自动 prompt hook",
+    "systemd 沙盒被隔离机全局 zzz-lxc-service.conf 覆盖，未修改此配置；需完整 Linux VM 再验"
+  ],
+  "service_protection_fields": {
+    "CapabilityBoundingSet": "",
+    "AmbientCapabilities": "",
+    "ProtectHome": "no",
+    "ProtectSystem": "no",
+    "NoNewPrivileges": "no"
+  },
+  "result": "通过",
+  "cleanup": "通过",
+  "default_ssh": {
+    "service": "inactive",
+    "socket": "inactive",
+    "socket_enabled": "disabled"
+  }
+}

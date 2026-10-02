@@ -1,0 +1,228 @@
+{
+  "changes": [
+    {
+      "grantsHash": "db3ac67480a88dfe047c32b307415783b2e2192a9dce8f32f4d853e87cb122b2",
+      "mutationsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "operation": "create",
+      "payloadBase64": "WyJoYXJtb25pYS9lbnZpcm9ubWVudC1jaGFuZ2UvdjEiLCJzeW50aGV0aWMtYWNjb3VudCIsIjEiLCJhZG1pbiIsInByb2QiLCJjcmVhdGUiLCJkZXYiLCIxIiwiMSIsIjAiLCIxIiwiMCIsImNyZWF0ZS1wcm9kIiwiRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVRIiwiMSIsIkVoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJIiwiZGIzYWM2NzQ4MGE4OGRmZTA0N2MzMmIzMDc0MTU3ODNiMmUyMTkyYTlkY2U4ZjMyZjRkODUzZTg3Y2IxMjJiMiIsIjRmNTNjZGExOGMyYmFhMGMwMzU0YmI1ZjlhM2VjYmU1ZWQxMmFiNGQ4ZTExYmE4NzNjMmYxMTE2MTIwMmI5NDUiXQ",
+      "signed": {
+        "change": {
+          "accountId": "synthetic-account",
+          "accountGeneration": "1",
+          "deviceId": "admin",
+          "environmentId": "prod",
+          "operation": "create",
+          "authorityEnvironmentId": "dev",
+          "authorityKeyVersion": "1",
+          "authorityGrantGeneration": "1",
+          "previousKeyVersion": "0",
+          "keyVersion": "1",
+          "expectedSequence": "0",
+          "idempotencyKey": "create-prod",
+          "labelPayload": "EREREREREREREREREREREREREREREREREREREREREREREREREREREQ",
+          "recoveryGeneration": "1",
+          "recoveryEnvelope": "EhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhI",
+          "grants": [
+            {
+              "grant": {
+                "accountId": "synthetic-account",
+                "accountGeneration": "1",
+                "issuerDeviceId": "admin",
+                "subjectDeviceId": "admin",
+                "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                "subjectReceivingPublicKey": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+                "environmentId": "prod",
+                "keyVersion": "1",
+                "grantGeneration": "1",
+                "role": "admin",
+                "expiresAt": "0",
+                "idempotencyKey": "grant-admin",
+                "envelope": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk"
+              },
+              "signature": "JECXv3zKyEsidWBAHD96eu9IfeBkB_fi1P1HtU9sB1sH6cmOw8Zmy-RCwYX9yKxDW7JpNsGm8i_vueBAZKufAg"
+            }
+          ],
+          "mutations": []
+        },
+        "signature": "2JxFi36pI-24HTgfH0na3K92x8AMPBg86MDqVxTbyD0IcFYeQRWMlYBprt5EFN_h629JCRMm2phe5FzyAOICBg"
+      }
+    },
+    {
+      "grantsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "mutationsHash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "operation": "delete",
+      "payloadBase64": "WyJoYXJtb25pYS9lbnZpcm9ubWVudC1jaGFuZ2UvdjEiLCJzeW50aGV0aWMtYWNjb3VudCIsIjEiLCJhZG1pbiIsInByb2QiLCJkZWxldGUiLCJwcm9kIiwiMSIsIjEiLCIxIiwiMSIsIjUiLCJkZWxldGUtcHJvZCIsIiIsIjEiLCIiLCI0ZjUzY2RhMThjMmJhYTBjMDM1NGJiNWY5YTNlY2JlNWVkMTJhYjRkOGUxMWJhODczYzJmMTExNjEyMDJiOTQ1IiwiNGY1M2NkYTE4YzJiYWEwYzAzNTRiYjVmOWEzZWNiZTVlZDEyYWI0ZDhlMTFiYTg3M2MyZjExMTYxMjAyYjk0NSJd",
+      "signed": {
+        "change": {
+          "accountId": "synthetic-account",
+          "accountGeneration": "1",
+          "deviceId": "admin",
+          "environmentId": "prod",
+          "operation": "delete",
+          "authorityEnvironmentId": "prod",
+          "authorityKeyVersion": "1",
+          "authorityGrantGeneration": "1",
+          "previousKeyVersion": "1",
+          "keyVersion": "1",
+          "expectedSequence": "5",
+          "idempotencyKey": "delete-prod",
+          "labelPayload": "",
+          "recoveryGeneration": "1",
+          "recoveryEnvelope": "",
+          "grants": [],
+          "mutations": []
+        },
+        "signature": "pfPYIOeySxvWJsih4V-9jrd1jYsUFG1xrpsoNu000ZYJEVHZatPL8UDSjmTu_3rWTPTAnORDICoj1Kx549uwBw"
+      }
+    },
+    {
+      "grantsHash": "ae36cfe071cfe2aec845bbb5c18c8a6fb0fea5143bc64588bf18827d79b541c0",
+      "mutationsHash": "159ddfe0fa2c9944ef2d66c771407fc899644bcae0ad54bbec106432e8c4280f",
+      "operation": "rotate",
+      "payloadBase64": "WyJoYXJtb25pYS9lbnZpcm9ubWVudC1jaGFuZ2UvdjEiLCJzeW50aGV0aWMtYWNjb3VudCIsIjEiLCJhZG1pbiIsInByb2QiLCJyb3RhdGUiLCJwcm9kIiwiMSIsIjEiLCIxIiwiMiIsIjMiLCJyb3RhdGUtcHJvZCIsIkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUkVSRVJFUSIsIjEiLCJFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSVNFaElTRWhJU0VoSSIsImFlMzZjZmUwNzFjZmUyYWVjODQ1YmJiNWMxOGM4YTZmYjBmZWE1MTQzYmM2NDU4OGJmMTg4MjdkNzliNTQxYzAiLCIxNTlkZGZlMGZhMmM5OTQ0ZWYyZDY2Yzc3MTQwN2ZjODk5NjQ0YmNhZTBhZDU0YmJlYzEwNjQzMmU4YzQyODBmIl0",
+      "signed": {
+        "change": {
+          "accountId": "synthetic-account",
+          "accountGeneration": "1",
+          "deviceId": "admin",
+          "environmentId": "prod",
+          "operation": "rotate",
+          "authorityEnvironmentId": "prod",
+          "authorityKeyVersion": "1",
+          "authorityGrantGeneration": "1",
+          "previousKeyVersion": "1",
+          "keyVersion": "2",
+          "expectedSequence": "3",
+          "idempotencyKey": "rotate-prod",
+          "labelPayload": "EREREREREREREREREREREREREREREREREREREREREREREREREREREQ",
+          "recoveryGeneration": "1",
+          "recoveryEnvelope": "EhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhI",
+          "grants": [
+            {
+              "grant": {
+                "accountId": "synthetic-account",
+                "accountGeneration": "1",
+                "issuerDeviceId": "admin",
+                "subjectDeviceId": "writer",
+                "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                "subjectReceivingPublicKey": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+                "environmentId": "prod",
+                "keyVersion": "2",
+                "grantGeneration": "2",
+                "role": "rw",
+                "expiresAt": "0",
+                "idempotencyKey": "grant-writer",
+                "envelope": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk"
+              },
+              "signature": "uwSvxRQE9paGczHLJy-q-rlpnaEPBPIpugJ50HnLBhIYby8O9rOtD1dDsJV7uGdlWe1269edDmudhMQ-qGDdCg"
+            },
+            {
+              "grant": {
+                "accountId": "synthetic-account",
+                "accountGeneration": "1",
+                "issuerDeviceId": "admin",
+                "subjectDeviceId": "reader",
+                "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                "subjectReceivingPublicKey": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+                "environmentId": "prod",
+                "keyVersion": "2",
+                "grantGeneration": "2",
+                "role": "rw",
+                "expiresAt": "0",
+                "idempotencyKey": "grant-reader",
+                "envelope": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk"
+              },
+              "signature": "iVrwn6Cl8aOdUQnE4SFkcnR9rPJJhYgUB-t3gP6dmCvTakJJzq9C3C2L-6nmpsxqdNNkBitNjHd33nAnGRU8BQ"
+            },
+            {
+              "grant": {
+                "accountId": "synthetic-account",
+                "accountGeneration": "1",
+                "issuerDeviceId": "admin",
+                "subjectDeviceId": "admin",
+                "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                "subjectReceivingPublicKey": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+                "environmentId": "prod",
+                "keyVersion": "2",
+                "grantGeneration": "2",
+                "role": "admin",
+                "expiresAt": "0",
+                "idempotencyKey": "grant-admin",
+                "envelope": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk"
+              },
+              "signature": "vxF6Vsms_pI7qOALTrTeIumo9tzK0S3wTPw25oq1QuaWBekne4swEPDTgrm5LM5E1OfCyb6EFah9qJzi_48fCQ"
+            }
+          ],
+          "mutations": [
+            {
+              "mutation": {
+                "accountId": "synthetic-account",
+                "accountGeneration": "1",
+                "deviceId": "admin",
+                "environmentId": "prod",
+                "keyVersion": "2",
+                "grantGeneration": "2",
+                "operation": "put",
+                "idempotencyKey": "rotate-Z_KEY",
+                "name": "Z_KEY",
+                "payload": "ExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEw"
+              },
+              "signature": "s_8cCOtheE3UijhKFY3j_16yZw5NBiNimon9iQAmeeTa-_TQjD7mZiRxak2E--c-LRkfuAoRUXVlUCkeau1lBA"
+            },
+            {
+              "mutation": {
+                "accountId": "synthetic-account",
+                "accountGeneration": "1",
+                "deviceId": "admin",
+                "environmentId": "prod",
+                "keyVersion": "2",
+                "grantGeneration": "2",
+                "operation": "put",
+                "idempotencyKey": "rotate-A_KEY",
+                "name": "A_KEY",
+                "payload": "ExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTEw"
+              },
+              "signature": "uKMn8b_DnP6rFj1yCtvJg1-MJIVswAAbgiW8fHhJuQAPCtPujRJniyC9Q5mW9S4frAzVs4jzKgSkDKcf9gLbBA"
+            }
+          ]
+        },
+        "signature": "V8iYwGiGNDJCmZeOgvbuHyM4Wx9bRH5qTkH0joqbUFZJdW0rDzE8d4Yqy7nAIpFoXinW7lpy60FjznC998MXDQ"
+      }
+    }
+  ],
+  "description": "合成材料：固定seed只用于公开跨语言协议向量，非实际秘密",
+  "revocation": {
+    "authoritiesHash": "615c9f22135ddf29ba380eca5ad030f84ab09c6a71b328fbd479bf32cc74809e",
+    "payloadBase64": "WyJoYXJtb25pYS9kZXZpY2UtcmV2b2NhdGlvbi92MSIsInN5bnRoZXRpYy1hY2NvdW50IiwiMSIsImFkbWluIiwicmVhZGVyIiwiaW9qajNYUUo4Wlg5VXRzdFBMcGRjc3BuQ2I4ZGxCSWI4M1NJQWJRUGIxdyIsIkNBZ0lDQWdJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWciLCJyZXZva2UtcmVhZGVyIiwiY2hhbGxlbmdlLXN5bnRoZXRpYyIsImU4MGQxYjkwYzEzNDBkMWQ1ZWFmNTA3MzA2ZDA3M2FkOWNkMDA1NmM1NzhiMDVjNjZlNmMwMzViMTc3YTRhMzQiLCJGUlVWRlJVVkZSVVZGUlVWRlJVVkZSVVZGUlVWRlJVVkZSVVZGUlVWRlJVIiwiMTgwMDAwMDEyMCIsIjYxNWM5ZjIyMTM1ZGRmMjliYTM4MGVjYTVhZDAzMGY4NGFiMDljNmE3MWIzMjhmYmQ0NzliZjMyY2M3NDgwOWUiXQ",
+    "signed": {
+      "revocation": {
+        "accountId": "synthetic-account",
+        "accountGeneration": "1",
+        "deviceId": "admin",
+        "subjectDeviceId": "reader",
+        "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+        "subjectReceivingPublicKey": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+        "idempotencyKey": "revoke-reader",
+        "challengeId": "challenge-synthetic",
+        "sessionHash": "e80d1b90c1340d1d5eaf507306d073ad9cd0056c578b05c66e6c035b177a4a34",
+        "nonce": "FRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRU",
+        "expiresAt": "1800000120",
+        "authorities": [
+          {
+            "environmentId": "prod",
+            "keyVersion": "2",
+            "grantGeneration": "2"
+          },
+          {
+            "environmentId": "dev",
+            "keyVersion": "1",
+            "grantGeneration": "1"
+          }
+        ]
+      },
+      "signature": "CCsCi8nxuoxTKSHUqO-iq1pfBtwUknDsnbdyuSQ_nUW1yRgBU_xjfkVR0VK7uON-NdxWbWzQyhuMeRuvjC5kCw"
+    }
+  },
+  "signingPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+  "syntheticSigningSeedHex": "0101010101010101010101010101010101010101010101010101010101010101"
+}

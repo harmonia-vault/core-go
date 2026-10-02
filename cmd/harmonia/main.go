@@ -1,4 +1,4 @@
-// harmonia 首版 CLI 的云端信任入口仍关闭；隔离 fixture 用于验证本地行为。
+// harmonia CLI 的共享数据只经可信入网、受保护状态与验签下发；fixture 单独隔离。
 package main
 
 import (
@@ -12,11 +12,13 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/harmonia-vault/core-go/localipc"
 	"github.com/harmonia-vault/core-go/localstate"
 	"github.com/harmonia-vault/core-go/platform"
 )
@@ -28,13 +30,21 @@ func main() {
 	}
 }
 func run(ctx context.Context, args []string, out, errOut io.Writer) error {
+	return runWithRuntime(ctx, args, out, errOut, commandRuntime{input: os.Stdin})
+}
+func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, runtimeOptions commandRuntime) error {
 	if len(args) == 0 {
-		return errors.New("用法：harmonia <status|activate|deactivate|override-set|override-remove|pause|resume|reconcile|logout|export|exec|daemon|fixture-load|import-preview|shell-hook> --state <私有状态文件>")
+		return errors.New("用法：harmonia <login|pair|daemon|status|activate|priority|deactivate|override-set|override-remove|pause|resume|logout|export|exec> --local-directory <受保护目录>；合成测试另用 --fixture --state")
 	}
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
 	flags.SetOutput(errOut)
-	statePath := flags.String("state", "", "当前用户的私有状态文件")
+	statePath := flags.String("state", "", "当前用户的私有 fixture 状态文件")
+	localDirectory := flags.String("local-directory", "", "受保护机器状态目录；与明文fixture互斥")
+	serverAddress := flags.String("server", "", "用户明确指定的自托管 HTTPS 地址")
+	email := flags.String("email", "", "邮箱登录账号")
+	approver := flags.String("approver", "", "既有可信管理手机的设备 ID")
+	passwordStdin := flags.Bool("password-stdin", false, "明确从标准输入读取一行密码，绝不从环境或参数读取")
 	providerPath := flags.String("provider-file", "", "仅用于隔离测试的 JSON 环境文件")
 	fixture := flags.Bool("fixture", false, "显式启用合成测试；禁止作为设备 enrollment")
 	input := flags.String("input", "", "合成 cloud snapshot JSON")
@@ -43,15 +53,38 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) error {
 	value := flags.String("value", "", "本机 override 值")
 	priority := flags.Int("priority", 0, "更大的优先级覆盖同名变量")
 	interval := flags.Duration("interval", 2*time.Second, "daemon 本地收敛间隔")
+	syncInterval := flags.Duration("sync-interval", 15*time.Second, "后台在线验证/拉取间隔，暂停仅刷新授权")
 	once := flags.Bool("once", false, "daemon 仅执行一次测试收敛")
 	localUser := flags.String("local-user", "", "服务明确绑定的本地 uid/SID")
 	fragment := flags.String("platform-fragment", "", "明确指定的隔离 POSIX fragment")
+	ipcDirectory := flags.String("ipc-dir", "", "后台 IPC 私有目录；CLI 连接时不打开状态文件")
+	ipcServiceSID := flags.String("ipc-service-sid", "", "Windows 后台虚拟服务 SID；fixture 默认当前用户")
 	windowsService := flags.String("windows-service", "", "Windows SCM 服务名")
 	from := flags.String("from", "", "待选变量 JSON 文件；不会扫描宿主环境")
 	selected := flags.String("select", "", "明确选择的逗号分隔变量名")
 	shell := flags.String("shell", "sh", "sh/bash/zsh hook")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
+	}
+	protectedIPC := false
+	if *localDirectory != "" {
+		if *fixture || *statePath != "" || *providerPath != "" || *input != "" {
+			return errors.New("受保护目录不能混用明文 fixture/state/provider-file 输入")
+		}
+		if command == "login" || command == "pair" {
+			return protectedAccountCommand(ctx, protectedOptions{command: command, directory: *localDirectory, server: *serverAddress, email: *email, approver: *approver, userID: *localUser, serviceSID: *ipcServiceSID, passwordStdin: *passwordStdin}, runtimeOptions, out, errOut)
+		}
+		if command == "daemon" {
+			return protectedDaemon(ctx, daemonOptions{directory: *localDirectory, userID: *localUser, serviceSID: *ipcServiceSID, ipcDirectory: *ipcDirectory, fragment: *fragment, windowsService: *windowsService, interval: *interval, syncInterval: *syncInterval, once: *once}, runtimeOptions, out, errOut)
+		}
+		if *ipcDirectory == "" {
+			absolute, err := filepath.Abs(*localDirectory)
+			if err != nil {
+				return err
+			}
+			*ipcDirectory = filepath.Join(absolute, "ipc")
+		}
+		protectedIPC = true
 	}
 	if command == "shell-hook" {
 		hook, err := platform.RenderShellHook(*shell, *fragment)
@@ -77,7 +110,62 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) error {
 		return json.NewEncoder(out).Encode(preview)
 	}
 	if command == "put" || command == "delete" || command == "import" || command == "login" || command == "pair" {
-		return errors.New("可信设备 enrollment 与受保护凭据存储尚未完成；正式云端命令保持关闭，不能离线共享写入")
+		return errors.New("login/pair须明确 --local-directory；正式共享写入CLI尚未接线，不能离线共享写入")
+	}
+	if *ipcDirectory != "" && command != "daemon" {
+		if !*fixture && !protectedIPC {
+			return errors.New("IPC CLI 需要明确 --local-directory 或隔离 --fixture")
+		}
+		endpoint, err := ipcEndpoint(*ipcDirectory, *localUser, *ipcServiceSID)
+		if err != nil {
+			return err
+		}
+		request := localipc.Request{Command: command}
+		switch command {
+		case "activate", "priority":
+			request.EnvironmentID = *environment
+			request.Priority = priority
+		case "deactivate":
+			request.EnvironmentID = *environment
+		case "override-set":
+			request.EnvironmentID = *environment
+			request.Name = *name
+			request.Value = value
+		case "override-remove":
+			request.EnvironmentID = *environment
+			request.Name = *name
+		case "status", "export", "pause", "resume", "logout":
+		case "exec":
+			request.Command = "export"
+		default:
+			return errors.New("此命令不在后台 IPC 白名单中")
+		}
+		response, err := localipc.Call(ctx, endpoint, request)
+		if err != nil {
+			return err
+		}
+		if !response.OK {
+			return fmt.Errorf("后台本地操作失败：%s", response.Code)
+		}
+		if command == "status" {
+			return json.NewEncoder(out).Encode(response.Status)
+		}
+		if command == "export" {
+			return renderExports(out, response.Values)
+		}
+		if command == "exec" {
+			remaining := flags.Args()
+			if len(remaining) == 0 {
+				return errors.New("exec 后需要 -- <程序> [参数]")
+			}
+			child := exec.CommandContext(ctx, remaining[0], remaining[1:]...)
+			child.Env = composeEnvironment(os.Environ(), response.Values, nil)
+			child.Stdout = out
+			child.Stderr = errOut
+			child.Stdin = os.Stdin
+			return child.Run()
+		}
+		return nil
 	}
 	if *statePath == "" {
 		return errors.New("必须明确指定 --state；不会读取宿主默认目录")
@@ -144,6 +232,18 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) error {
 		err = engine.AcceptSnapshot(cloud, now)
 	case "activate":
 		err = engine.Activate(*environment, *priority, now)
+	case "priority":
+		found := false
+		for _, a := range engine.State().Active {
+			if a.EnvironmentID == *environment {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.New("环境尚未激活")
+		}
+		err = engine.Activate(*environment, *priority, now)
 	case "deactivate":
 		err = engine.Deactivate(*environment)
 	case "override-set":
@@ -167,17 +267,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) error {
 		if err != nil {
 			return err
 		}
-		keys := sortedKeys(effective)
-		for _, key := range keys {
-			quote, err := platform.ShellQuote(effective[key])
-			if err != nil {
-				return err
-			}
-			if _, err = fmt.Fprintf(out, "export %s=%s\n", key, quote); err != nil {
-				return err
-			}
-		}
-		return nil
+		return renderExports(out, effective)
 	case "exec":
 		effective, err := engine.Effective(now)
 		if err != nil {
@@ -195,7 +285,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) error {
 		return child.Run()
 	case "daemon":
 		if !*fixture {
-			return errors.New("正式开机服务尚缺可信设备 enrollment、机器保护与本地 IPC；保持关闭")
+			return errors.New("正式开机服务尚缺可信设备 enrollment、受保护同步编排及原生服务验收；保持关闭")
 		}
 		if *localUser != "" {
 			if strings.ContainsAny(*localUser, "\x00\r\n") {
@@ -210,11 +300,36 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) error {
 			return providerErr
 		}
 		loop := func(runCtx context.Context) error {
-			if err := engine.Reconcile(runCtx, provider, time.Now()); err != nil {
+			if *once {
+				return engine.Reconcile(runCtx, provider, time.Now())
+			}
+			directory := *ipcDirectory
+			if directory == "" {
+				absolute, err := filepath.Abs(*statePath)
+				if err != nil {
+					return err
+				}
+				directory = filepath.Join(filepath.Dir(absolute), "ipc")
+			}
+			endpoint, err := ipcEndpoint(directory, *localUser, *ipcServiceSID)
+			if err != nil {
 				return err
 			}
-			if *once {
-				return nil
+			background, err := localipc.Listen(localipc.Config{Endpoint: endpoint, Engine: engine, Provider: provider})
+			if err != nil {
+				return err
+			}
+			serveCtx, stop := context.WithCancel(runCtx)
+			done := make(chan error, 1)
+			go func() { defer close(done); done <- background.Serve(serveCtx) }()
+			defer func() {
+				stop()
+				_ = background.Close()
+				for range done {
+				}
+			}()
+			if err = background.Reconcile(runCtx, time.Now()); err != nil {
+				return err
 			}
 			ticker := time.NewTicker(*interval)
 			defer ticker.Stop()
@@ -222,8 +337,10 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) error {
 				select {
 				case <-runCtx.Done():
 					return nil
+				case err := <-done:
+					return err
 				case now := <-ticker.C:
-					if err := engine.Reconcile(runCtx, provider, now); err != nil {
+					if err := background.Reconcile(runCtx, now); err != nil {
 						return err
 					}
 				}
@@ -305,4 +422,47 @@ func composeEnvironment(base []string, desired map[string]string, originals map[
 		out = append(out, key+"="+values[key])
 	}
 	return out
+}
+
+func ipcEndpoint(directory, userID, serviceSID string) (localipc.Endpoint, error) {
+	absolute, err := filepath.Abs(directory)
+	if err != nil {
+		return localipc.Endpoint{}, err
+	}
+	if runtime.GOOS != "windows" {
+		// 解析 /tmp、/var 等系统链接，随后由原生层拒绝目录内链接及身份混淆。
+		if canonical, resolveErr := filepath.EvalSymlinks(absolute); resolveErr == nil {
+			absolute = canonical
+		} else if errors.Is(resolveErr, os.ErrNotExist) {
+			parent, parentErr := filepath.EvalSymlinks(filepath.Dir(absolute))
+			if parentErr != nil {
+				return localipc.Endpoint{}, parentErr
+			}
+			absolute = filepath.Join(parent, filepath.Base(absolute))
+		} else {
+			return localipc.Endpoint{}, resolveErr
+		}
+	}
+	if userID == "" {
+		userID, err = localipc.CurrentUserID()
+		if err != nil {
+			return localipc.Endpoint{}, err
+		}
+	}
+	if serviceSID == "" && strings.HasPrefix(userID, "S-") {
+		serviceSID = userID
+	}
+	return localipc.Endpoint{Directory: absolute, UserID: userID, ServiceSID: serviceSID}, nil
+}
+func renderExports(out io.Writer, values map[string]string) error {
+	for _, key := range sortedKeys(values) {
+		quoted, err := platform.ShellQuote(values[key])
+		if err != nil {
+			return err
+		}
+		if _, err = fmt.Fprintf(out, "export %s=%s\n", key, quoted); err != nil {
+			return err
+		}
+	}
+	return nil
 }

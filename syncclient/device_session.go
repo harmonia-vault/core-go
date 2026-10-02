@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/localstate"
 )
 
 type DeviceChallenge struct {
@@ -75,8 +76,11 @@ func (c *Client) BindDevice(ctx context.Context, signingKey ed25519.PrivateKey) 
 	if err := c.request(ctx, "POST", c.endpointFor("/device-sessions"), proof, &session); err != nil {
 		return nil, err
 	}
-	if _, err := cryptox.DecodeBase64(session.Token, 32, 32); err != nil || session.ExpiresAt <= now.Unix() {
+	if _, err := cryptox.DecodeBase64(session.Token, 32, 32); err != nil || session.ExpiresAt <= c.config.Now().Unix() {
 		return nil, errors.New("invalid device-bound session")
+	}
+	if c.config.Engine.State().SessionEpoch != c.epoch {
+		return nil, localstate.ErrLocalSession
 	}
 	bound := *c
 	bound.config = c.config

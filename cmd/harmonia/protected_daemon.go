@@ -1,0 +1,275 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"crypto/ed25519"
+	"errors"
+	"io"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"sync"
+	"syscall"
+	"time"
+
+	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/localipc"
+	"github.com/harmonia-vault/core-go/localkeys"
+	"github.com/harmonia-vault/core-go/localstate"
+	"github.com/harmonia-vault/core-go/platform"
+	"github.com/harmonia-vault/core-go/syncclient"
+)
+
+type daemonOptions struct {
+	directory, userID, serviceSID, ipcDirectory, fragment, windowsService string
+	interval, syncInterval                                                time.Duration
+	once                                                                  bool
+}
+
+// verifiedStoredContext 核验受保护的双签收据及精确公钥。证书期限是历史配对
+// 挑战期限，不当成当前授权；当前环境权限仍由每次服务器检查和签授权决定。
+func verifiedStoredContext(trust localkeys.TrustContext, keys localkeys.DeviceKeys) (*syncclient.PinnedVerifier, error) {
+	if !trust.Accepted {
+		return nil, errors.New("待完成入网不能启动网络同步")
+	}
+	receipt, err := decodeReceipt(trust.EnrollmentCertificate)
+	if err != nil {
+		return nil, err
+	}
+	c := receipt.Approval.Context
+	if receipt.IdempotencyKey != trust.EnrollmentKey || c.AccountID != trust.AccountID || c.AccountGeneration != fmtUint(trust.AccountGeneration) || c.InitiatorDeviceID != keys.DeviceID || c.InitiatorSigningPublicKey != cryptox.EncodeBase64(keys.SigningPublic) || c.InitiatorReceivingPublicKey != cryptox.EncodeBase64(keys.ReceivingPublic) || receipt.Approval.PairingProfile != trust.PairingProfile {
+		return nil, errors.New("受保护入网证书与账号/设备公钥不匹配")
+	}
+	if _, err = c.CanonicalBytes(); err != nil {
+		return nil, err
+	}
+	manager, err := cryptox.DecodeBase64(c.ApproverSigningPublicKey, 32, 32)
+	if err != nil {
+		return nil, err
+	}
+	if len(trust.Managers) != 1 || !bytes.Equal(trust.Managers[c.ApproverDeviceID], manager) {
+		return nil, errors.New("本版只接受已PAKE确认的管理钥匙，不能静默扩展信任")
+	}
+	cert, err := receipt.Approval.Certificate()
+	if err != nil {
+		return nil, err
+	}
+	if err = cryptox.VerifyEnrollmentCertificate(cert, receipt.Approval.ApproverSignature, ed25519.PublicKey(manager)); err != nil {
+		return nil, err
+	}
+	if err = cryptox.VerifyEnrollmentCertificate(cert, receipt.Approval.InitiatorSignature, ed25519.PublicKey(keys.SigningPublic)); err != nil {
+		return nil, err
+	}
+	if err = cryptox.VerifyEnrollmentGrants(cert, receipt.Approval.Grants, ed25519.PublicKey(manager)); err != nil {
+		return nil, err
+	}
+	return syncclient.NewPinnedVerifier(syncclient.PinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Managers: map[string]ed25519.PublicKey{c.ApproverDeviceID: ed25519.PublicKey(manager)}})
+}
+func fmtUint(value uint64) string { return strconv.FormatUint(value, 10) }
+func wipeAccountSlots(vault *localkeys.Vault) error {
+	return errors.Join(vault.Delete("device-v1"), vault.Delete("session-v1"), vault.Delete("trust-v1"))
+}
+
+type syncWorker struct {
+	cancel  context.CancelFunc
+	done    chan struct{}
+	notices chan error
+	once    sync.Once
+}
+
+func (w *syncWorker) stop() {
+	if w == nil {
+		return
+	}
+	w.once.Do(func() { w.cancel(); <-w.done })
+}
+func startSyncWorker(parent context.Context, engine *localstate.Engine, trust localkeys.TrustContext, signing ed25519.PrivateKey, verifier *syncclient.PinnedVerifier, r commandRuntime, interval time.Duration) *syncWorker {
+	ctx, cancel := context.WithCancel(parent)
+	worker := &syncWorker{cancel: cancel, done: make(chan struct{}), notices: make(chan error, 1)}
+	go func() {
+		defer close(worker.done)
+		var bound *syncclient.Client
+		for {
+			perform := func() error {
+				boot := func() error {
+					client, err := syncclient.NewForBoot(syncclient.Config{Endpoint: trust.Endpoint, HTTPClient: r.httpClient, AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: trust.DeviceID, Engine: engine, Verifier: verifier, Now: r.now})
+					if err != nil {
+						return err
+					}
+					bound, err = client.BootDevice(ctx, signing)
+					return err
+				}
+				if bound == nil {
+					if err := boot(); err != nil {
+						return err
+					}
+				}
+				refresh := func() error {
+					if engine.State().Paused {
+						_, err := bound.RefreshAuthorizations(ctx)
+						return err
+					}
+					_, err := bound.Pull(ctx)
+					return err
+				}
+				err := refresh()
+				var rejected *syncclient.RequestError
+				if errors.As(err, &rejected) && rejected.Status == 401 && rejected.Code == "unauthorized" {
+					bound = nil
+					if err = boot(); err == nil {
+						err = refresh()
+					}
+				}
+				if errors.Is(err, syncclient.ErrTrustInvalidated) || errors.Is(err, localstate.ErrLocalSession) {
+					bound = nil
+				}
+				return err
+			}
+			err := perform()
+			select {
+			case worker.notices <- err:
+			case <-ctx.Done():
+				return
+			}
+			timer := time.NewTimer(interval)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+		}
+	}()
+	return worker
+}
+func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out, errOut io.Writer) error {
+	if runtime.GOOS == "windows" {
+		return errors.New("Windows受保护daemon的DPAPI、专用服务SID与SCM原生验收尚未通过；保持关闭")
+	}
+	if o.once {
+		return errors.New("--once 仅用于隔离fixture收敛；受保护daemon须持续运行以处理授权与到期")
+	}
+	if o.windowsService != "" {
+		return errors.New("当前平台不接受Windows SCM服务参数")
+	}
+	if o.interval < 10*time.Millisecond || o.syncInterval < time.Second {
+		return errors.New("daemon interval至少10ms，sync-interval至少1s")
+	}
+	store, err := protectedStore(protectedOptions{directory: o.directory, userID: o.userID, serviceSID: o.serviceSID})
+	if err != nil {
+		return err
+	}
+	defer store.Close()
+	engine, err := localstate.New(store)
+	if err != nil {
+		return err
+	}
+	vault := store.Vault()
+	fragment := o.fragment
+	if fragment == "" {
+		fragment = filepath.Join(vault.Directory(), "environment.sh")
+	}
+	provider, err := platform.NewSecurePOSIXProvider(fragment, vault)
+	if err != nil {
+		return err
+	}
+	providerInterface := localstate.Provider(provider)
+	if r.provider != nil {
+		providerInterface = r.provider
+	}
+	directory := o.ipcDirectory
+	if directory == "" {
+		directory = filepath.Join(vault.Directory(), "ipc")
+	}
+	endpoint, err := ipcEndpoint(directory, o.userID, o.serviceSID)
+	if err != nil {
+		return err
+	}
+	daemonCtx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	var worker *syncWorker
+	var keys localkeys.DeviceKeys
+	var signing ed25519.PrivateKey
+	var verifier *syncclient.PinnedVerifier
+	clearMaterial := func() {
+		if verifier != nil {
+			verifier.Close()
+		}
+		clear(signing)
+		clear(keys.SigningSeed)
+		clear(keys.ReceivingPrivate)
+	}
+	defer func() { worker.stop(); clearMaterial() }()
+	trust, trustErr := vault.LoadTrustContext()
+	if trustErr == nil && trust.Accepted {
+		keys, err = vault.LoadDeviceKeys()
+		if err != nil {
+			return err
+		}
+		verifier, err = verifiedStoredContext(trust, keys)
+		if err != nil {
+			return err
+		}
+		signing = ed25519.NewKeyFromSeed(keys.SigningSeed)
+		worker = startSyncWorker(daemonCtx, engine, trust, signing, verifier, r, o.syncInterval)
+	} else if trustErr != nil && !errors.Is(trustErr, os.ErrNotExist) {
+		return trustErr
+	}
+	server, err := localipc.Listen(localipc.Config{Endpoint: endpoint, Engine: engine, Provider: providerInterface, OnLogout: func(context.Context) error {
+		// worker 不获取 IPC operations 锁；取消后等待所有HTTP/验签，避免回调死锁。
+		worker.stop()
+		clearMaterial()
+		return wipeAccountSlots(vault)
+	}})
+	if err != nil {
+		return err
+	}
+	done := make(chan error, 1)
+	go func() { done <- server.Serve(daemonCtx) }()
+	defer func() { cancel(); _ = server.Close(); <-done }()
+	if err = server.Reconcile(daemonCtx, time.Now()); err != nil {
+		return err
+	}
+	ticker := time.NewTicker(o.interval)
+	defer ticker.Stop()
+	var notices <-chan error
+	if worker != nil {
+		notices = worker.notices
+	}
+	for {
+		select {
+		case <-daemonCtx.Done():
+			return nil
+		case err := <-done:
+			done <- err
+			return err
+		case now := <-ticker.C:
+			if err = server.Reconcile(daemonCtx, now); err != nil {
+				return err
+			}
+		case syncErr := <-notices:
+			if errors.Is(syncErr, syncclient.ErrTrustInvalidated) {
+				var rejected *syncclient.RequestError
+				if errors.As(syncErr, &rejected) && rejected.Code == "no_current_grant" {
+					if err = vault.Delete("session-v1"); err != nil {
+						return err
+					}
+				} else {
+					worker.stop()
+					clearMaterial()
+					notices = nil
+					if err = wipeAccountSlots(vault); err != nil {
+						return err
+					}
+				}
+			}
+			// 普通网络错误保持离线配置；本地期限独立由ticker检查，不日志值/请求。
+			if err = server.Reconcile(daemonCtx, time.Now()); err != nil {
+				return err
+			}
+		}
+	}
+}

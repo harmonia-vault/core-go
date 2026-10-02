@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/harmonia-vault/core-go/localkeys"
 	"github.com/harmonia-vault/core-go/localstate"
 )
 
@@ -111,6 +112,7 @@ type POSIXProvider struct {
 	mu       sync.Mutex
 	path     string
 	baseline map[string]string
+	secret   *localkeys.Vault
 	state    posixState
 }
 
@@ -218,12 +220,8 @@ func (p *POSIXProvider) Apply(ctx context.Context, changes []localstate.Change) 
 		next.Desired[change.Name] = *change.Value
 		delete(next.Released, change.Name)
 	}
-	data, err := json.Marshal(next)
-	if err != nil {
-		return err
-	}
 	// 写 state 后写 fragment；若中断，重新打开会根据 state 重建 fragment。
-	if err := writePrivateFile(p.path+".state.json", append(data, '\n'), []byte(`{"marker":"`+stateMarker+`"`)); err != nil {
+	if err := p.saveState(next); err != nil {
 		return err
 	}
 	p.state = next
@@ -240,6 +238,9 @@ func (p *POSIXProvider) writeFragment(state posixState) error {
 	data, err := renderPOSIXFragment(p.path, state.Desired, released, state.Paused, state.Revisions)
 	if err != nil {
 		return err
+	}
+	if p.secret != nil {
+		return p.secret.WriteEnvironmentFragment(data)
 	}
 	return writePrivateFile(p.path, data, []byte(fragmentMarker))
 }

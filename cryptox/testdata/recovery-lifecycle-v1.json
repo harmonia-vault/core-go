@@ -1,0 +1,80 @@
+{
+  "description": "公开合成恢复/轮换签名向量；真实标准 Go HPKE 封套，独立 Node 标准 Ed25519/HKDF/SHA256 编码与签名。",
+  "syntheticOldRecoverySeedHex": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+  "syntheticNewRecoverySeedHex": "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+  "syntheticSessionToken": "4OHi4-Tl5ufo6err7O3u7_Dx8vP09fb3-Pn6-_z9_v8",
+  "syntheticEnvironmentKeys": [
+    {
+      "environmentId": "environment-alpha",
+      "keyHex": "1415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f30313233"
+    },
+    {
+      "environmentId": "environment-beta",
+      "keyHex": "28292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f4041424344454647"
+    }
+  ],
+  "priorTrustRoot": {
+    "rootDeviceId": "device-root",
+    "rootSigningPublicKey": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+    "rootReceivingPublicKey": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ",
+    "recoveryGeneration": "1",
+    "recoverySigningPublicKey": "KnHeFr3__fgh55FpvPvsnbCT9aaOxWMwHathWTBsWsA",
+    "recoveryReceivingPublicKey": "JpLdT3CN-jjTem9WGDgs66p7ZRw5yL9VlMP22qUYATQ",
+    "signature": "3xK8mFuNMsuQRqy1vQjACRccj53W6CNaus5ouImpzahwA4OkaDIkZ0J8LhAhktuPw3iUhlk3ew8Iy5Se8zsPDA"
+  },
+  "recoveryProof": {
+    "accountId": "account-test",
+    "accountGeneration": "1",
+    "recoveryGeneration": "1",
+    "challengeId": "recovery-challenge-test-1",
+    "nonce": "oKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr8",
+    "expiresAt": "4102444800"
+  },
+  "recoverySigningHex": "5b226861726d6f6e69612f7265636f766572792d70726f6f662f7631222c226163636f756e742d74657374222c2231222c2231222c227265636f766572792d6368616c6c656e67652d746573742d31222c226f4b47696f36536c7071656f71617172724b32757237437873724f3074626133754c6d3675377939767238222c2234313032343434383030225d",
+  "recoverySignature": "1EAT1r85R7hsBIt8zJHOxXfMVPUvo7aSJ5I1K2HkcP9A1X3ddKaUe5nbdIPqn7Yfp9NsGzV0GlCEXTw9U8mJCA",
+  "proposal": {
+    "idempotencyKey": "rotate-test-1",
+    "newRecoveryGeneration": "2",
+    "newRecoverySigningPublicKey": "-PHbTHzIzJH1E9uimZ8VxYrM7stEHXaq42X7tMsND3E",
+    "newRecoveryReceivingPublicKey": "fJiBzqi4ZrQQ9hupoFRZqA2KHb3hIeKvYgwbljgdxlU",
+    "envelopes": [
+      {
+        "environmentId": "environment-beta",
+        "keyVersion": "1",
+        "envelope": "ogrAdp0yTJIwAzWtTL6L-rDwdP9DzaJ9HOc_8XHWPEsljSgsxuW_GZBVHSp3-aEAxNP_1CjtafY8a0rAgf2c1d88VHIPWPCnbQ7kIVoo1FI"
+      },
+      {
+        "environmentId": "environment-alpha",
+        "keyVersion": "1",
+        "envelope": "mlOj4L8DiZVwophlTld7NEYgDk60tVnn9KvhGL6GkCO3EL-VCccFNA743ST8z2u4qFpeTI09OQPH9wQQ5HauVTo4_Wal7suAELHowHHcRW0"
+      }
+    ],
+    "newTrustRoot": {
+      "rootDeviceId": "device-root",
+      "rootSigningPublicKey": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+      "rootReceivingPublicKey": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ",
+      "recoveryGeneration": "2",
+      "recoverySigningPublicKey": "-PHbTHzIzJH1E9uimZ8VxYrM7stEHXaq42X7tMsND3E",
+      "recoveryReceivingPublicKey": "fJiBzqi4ZrQQ9hupoFRZqA2KHb3hIeKvYgwbljgdxlU",
+      "signature": "WW-EulC7a1cy7JJ8f_ZVghiCOTXQxRChJIGNU3iyBIb8uxg7XiYlUtblL7YIOqjhqxv8cK-qVh0ODVXCn9aoAA"
+    }
+  },
+  "rotationProof": {
+    "accountId": "account-test",
+    "accountGeneration": "1",
+    "sessionHash": "d90bad97384181273203dd0f8cc30e16a817bef7a51b026eb6bf0a7fcba3312a",
+    "recoveryGeneration": "1",
+    "challengeId": "rotation-challenge-test-1",
+    "nonce": "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t8",
+    "expiresAt": "4102444800",
+    "newRecoveryGeneration": "2",
+    "newRecoverySigningPublicKey": "-PHbTHzIzJH1E9uimZ8VxYrM7stEHXaq42X7tMsND3E",
+    "newRecoveryReceivingPublicKey": "fJiBzqi4ZrQQ9hupoFRZqA2KHb3hIeKvYgwbljgdxlU",
+    "envelopesHash": "6163a4fecf8307c35bd3fc92ab799067c6314f9b50a07240e7bee20062ffde7a",
+    "trustRootHash": "70d6b66e2b381fb59ad7afdc73f2b8377db72af7fabb8184206c9ccdbcbb553a"
+  },
+  "rotationSigningHex": "5b226861726d6f6e69612f7265636f766572792d726f746174696f6e2f7631222c226163636f756e742d74657374222c2231222c2264393062616439373338343138313237333230336464306638636333306531366138313762656637613531623032366562366266306137666362613333313261222c2231222c22726f746174696f6e2d6368616c6c656e67652d746573742d31222c22774d484377385446787366497963724c7a4d334f7a3944523074505531646258324e6e6132397a64337438222c2234313032343434383030222c2232222c222d50486254487a497a4a4831453975696d5a38567859724d377374454858617134325837744d734e443345222c22664a69427a7169345a725151396875706f46525a7141324b4862336849654b76596777626c6a6764786c55222c2236313633613466656366383330376333356264336663393261623739393036376336333134663962353061303732343065376265653230303632666664653761222c2237306436623636653262333831666235396164376166646337336632623833373764623732616637666162623831383432303663396363646263626235353361225d",
+  "rotationSignature": "toYq3K27G1HNn782D4vwyAQRt-N2i3HhIR2mpQHFuOQnlW0O8-xSlacac201CA-70yc3W1sjeE_0GRqzk4A5AA",
+  "envelopesCanonical": "[[\"environment-alpha\",\"1\",\"mlOj4L8DiZVwophlTld7NEYgDk60tVnn9KvhGL6GkCO3EL-VCccFNA743ST8z2u4qFpeTI09OQPH9wQQ5HauVTo4_Wal7suAELHowHHcRW0\"],[\"environment-beta\",\"1\",\"ogrAdp0yTJIwAzWtTL6L-rDwdP9DzaJ9HOc_8XHWPEsljSgsxuW_GZBVHSp3-aEAxNP_1CjtafY8a0rAgf2c1d88VHIPWPCnbQ7kIVoo1FI\"]]",
+  "trustRootHashCanonical": "[\"harmonia/trust-root/v1\",\"account-test\",\"1\",\"device-root\",\"A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg\",\"NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ\",\"2\",\"-PHbTHzIzJH1E9uimZ8VxYrM7stEHXaq42X7tMsND3E\",\"fJiBzqi4ZrQQ9hupoFRZqA2KHb3hIeKvYgwbljgdxlU\",\"WW-EulC7a1cy7JJ8f_ZVghiCOTXQxRChJIGNU3iyBIb8uxg7XiYlUtblL7YIOqjhqxv8cK-qVh0ODVXCn9aoAA\"]"
+}

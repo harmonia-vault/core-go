@@ -1,0 +1,28 @@
+{
+  "description": "全部为合成公开测试数据；此向量只检验 Harmonia 应用层绑定、HKDF/HMAC，不是 SPAKE2 群运算或 RFC9382 向量。",
+  "context": {
+    "accountId": "account-test",
+    "accountGeneration": "1",
+    "purpose": "enroll-device",
+    "sessionId": "pairing-test-1",
+    "challengeNonce": "gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp8",
+    "expiresAt": "4102444800",
+    "initiatorDeviceId": "device-new",
+    "initiatorSigningPublicKey": "A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
+    "initiatorReceivingPublicKey": "NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ",
+    "approverDeviceId": "device-admin",
+    "approverSigningPublicKey": "JUO5L_EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0",
+    "approverReceivingPublicKey": "Z13VdO13iTELPS52gfN5C0ZsdzsVIf7PNld5WDcepS8"
+  },
+  "canonicalContext": "[\"harmonia/pairing-context/v1\",\"boringssl-spake2-edwards25519-draft02-v1\",\"account-test\",\"1\",\"enroll-device\",\"pairing-test-1\",\"gIGCg4SFhoeIiYqLjI2Oj5CRkpOUlZaXmJmam5ydnp8\",\"4102444800\",\"device-new\",\"A6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg\",\"NYBy1jZYgNGu6jKa35EhODhR7SGijjt16WXQ0s0WYlQ\",\"device-admin\",\"JUO5L_EJVRFHatyDadtt3JM2ZaEZeN2hQE7hBmypVZ0\",\"Z13VdO13iTELPS52gfN5C0ZsdzsVIf7PNld5WDcepS8\"]",
+  "initiatorIdentity": "[\"harmonia/pairing-identity/v1\",\"initiator\",\"WyJoYXJtb25pYS9wYWlyaW5nLWNvbnRleHQvdjEiLCJib3Jpbmdzc2wtc3Bha2UyLWVkd2FyZHMyNTUxOS1kcmFmdDAyLXYxIiwiYWNjb3VudC10ZXN0IiwiMSIsImVucm9sbC1kZXZpY2UiLCJwYWlyaW5nLXRlc3QtMSIsImdJR0NnNFNGaG9lSWlZcUxqSTJPajVDUmtwT1VsWmFYbUptYW01eWRucDgiLCI0MTAyNDQ0ODAwIiwiZGV2aWNlLW5ldyIsIkE2RUh2X1BPRUw0ZGNOMFk1MHZBbVdmazFqQ2JwUTFmSGR5R1pCSlZNYmciLCJOWUJ5MWpaWWdOR3U2akthMzVFaE9EaFI3U0dpamp0MTZXWFEwczBXWWxRIiwiZGV2aWNlLWFkbWluIiwiSlVPNUxfRUpWUkZIYXR5RGFkdHQzSk0yWmFFWmVOMmhRRTdoQm15cFZaMCIsIloxM1ZkTzEzaVRFTFBTNTJnZk41QzBac2R6c1ZJZjdQTmxkNVdEY2VwUzgiXQ\"]",
+  "approverIdentity": "[\"harmonia/pairing-identity/v1\",\"approver\",\"WyJoYXJtb25pYS9wYWlyaW5nLWNvbnRleHQvdjEiLCJib3Jpbmdzc2wtc3Bha2UyLWVkd2FyZHMyNTUxOS1kcmFmdDAyLXYxIiwiYWNjb3VudC10ZXN0IiwiMSIsImVucm9sbC1kZXZpY2UiLCJwYWlyaW5nLXRlc3QtMSIsImdJR0NnNFNGaG9lSWlZcUxqSTJPajVDUmtwT1VsWmFYbUptYW01eWRucDgiLCI0MTAyNDQ0ODAwIiwiZGV2aWNlLW5ldyIsIkE2RUh2X1BPRUw0ZGNOMFk1MHZBbVdmazFqQ2JwUTFmSGR5R1pCSlZNYmciLCJOWUJ5MWpaWWdOR3U2akthMzVFaE9EaFI3U0dpamp0MTZXWFEwczBXWWxRIiwiZGV2aWNlLWFkbWluIiwiSlVPNUxfRUpWUkZIYXR5RGFkdHQzSk0yWmFFWmVOMmhRRTdoQm15cFZaMCIsIloxM1ZkTzEzaVRFTFBTNTJnZk41QzBac2R6c1ZJZjdQTmxkNVdEY2VwUzgiXQ\"]",
+  "syntheticRawKeyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+  "syntheticInitiatorMessageHex": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+  "syntheticApproverMessageHex": "e0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+  "transcript": "[\"harmonia/pairing-transcript/v1\",\"WyJoYXJtb25pYS9wYWlyaW5nLWNvbnRleHQvdjEiLCJib3Jpbmdzc2wtc3Bha2UyLWVkd2FyZHMyNTUxOS1kcmFmdDAyLXYxIiwiYWNjb3VudC10ZXN0IiwiMSIsImVucm9sbC1kZXZpY2UiLCJwYWlyaW5nLXRlc3QtMSIsImdJR0NnNFNGaG9lSWlZcUxqSTJPajVDUmtwT1VsWmFYbUptYW01eWRucDgiLCI0MTAyNDQ0ODAwIiwiZGV2aWNlLW5ldyIsIkE2RUh2X1BPRUw0ZGNOMFk1MHZBbVdmazFqQ2JwUTFmSGR5R1pCSlZNYmciLCJOWUJ5MWpaWWdOR3U2akthMzVFaE9EaFI3U0dpamp0MTZXWFEwczBXWWxRIiwiZGV2aWNlLWFkbWluIiwiSlVPNUxfRUpWUkZIYXR5RGFkdHQzSk0yWmFFWmVOMmhRRTdoQm15cFZaMCIsIloxM1ZkTzEzaVRFTFBTNTJnZk41QzBac2R6c1ZJZjdQTmxkNVdEY2VwUzgiXQ\",\"wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t8\",\"4OHi4-Tl5ufo6err7O3u7_Dx8vP09fb3-Pn6-_z9_v8\"]",
+  "transcriptHashHex": "b7333c736bbacf793f36f32026c8562ce7f0d24248b49b6a3e8f1b793a2c6161",
+  "initiatorConfirmationHex": "cd8cd8be81aeec7243a089d54cc6785bced046d58632ffab3d1697315f909d88",
+  "approverConfirmationHex": "76f83ef81c3d67f6494381df5b9b12c6d977137a03d9fd735da03fd42b4d032b",
+  "channelKeyHex": "b92ad4174cac650c13e22fe3d2daf5bf46bdfa78701722b15d9559432e2e9563"
+}

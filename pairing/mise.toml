@@ -1,0 +1,37 @@
+[tools]
+go = "1.26.4"
+cmake = "3.31.8"
+ninja = "1.12.1"
+node = "24.16.0"
+
+[tasks.test]
+description = "验证配对上下文与默认关闭行为"
+run = "go test . -count=1 -v"
+
+[tasks.test-native]
+description = "验证已构建本机 BoringSSL SPAKE2 薄包装器"
+run = "go test -tags harmonia_boringssl . -count=1 -v"
+
+[tasks.native-build]
+description = "构建固定本机 BoringSSL 并运行上游 SPAKE2 测试"
+run = "bash tools/build-native.sh"
+
+[tasks.test-vector-node]
+description = "使用 Node 标准 crypto 独立校验应用层向量"
+run = "node --test tools/check-vector.test.mjs"
+
+[tasks.test-default-cross]
+description = "交叉验证三平台默认无 cgo 的关闭配对构建"
+run = "bash tools/check-default-build.sh"
+
+[tasks.test-native-race]
+description = "验证本机配对 Go 状态的 race detector"
+run = "go test -race -tags harmonia_boringssl . -count=1"
+
+[tasks.native-build-android]
+description = "构建固定 Android arm64 BoringSSL 静态库，不代表 Android 运行通过"
+run = "bash tools/build-native.sh --android-arm64"
+
+[tasks.test-android-compile]
+description = "交叉编译 Android arm64 配对测试，不在本机执行 Android 二进制"
+run = "bash tools/check-android-build.sh"

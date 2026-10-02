@@ -458,3 +458,18 @@ func TestExpiryAndLogoutClearManagedPlaintextBeforeProviderRecovery(t *testing.T
 		})
 	}
 }
+
+func TestLocalSessionEpochRejectsInFlightSnapshotAndPersists(t *testing.T) {
+	e, store, _ := newTest(t)
+	epoch := e.State().SessionEpoch
+	must(t, e.Logout())
+	if !errors.Is(e.AcceptSnapshotAtEpoch(snapshot(1, env("one", map[string]string{"TOKEN": "old-response"})), testNow, epoch), ErrLocalSession) {
+		t.Fatal("old session response accepted")
+	}
+	restarted, err := New(store)
+	must(t, err)
+	if restarted.State().SessionEpoch != epoch+1 || restarted.State().Cloud.AccountID != "" {
+		t.Fatal("logout epoch was not persisted")
+	}
+	must(t, restarted.AcceptSnapshotAtEpoch(snapshot(1, env("one", map[string]string{"TOKEN": "new-response"})), testNow, restarted.State().SessionEpoch))
+}

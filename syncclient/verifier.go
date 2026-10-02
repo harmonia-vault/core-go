@@ -20,7 +20,7 @@ import (
 var ErrFullPullRequired = errors.New("new authorization requires full durable history")
 
 // PinnedTrust 只能由受信任手机确认/完整恢复流程提供；没有从服务器公钥
-// 自动建立信任的入口。当前正式 enrollment 未完成，CLI 不接受此结构。
+// 自动建立信任的入口。正式后台从已确认的受保护双签入网收据重建此结构。
 type PinnedTrust struct {
 	AccountID              string
 	AccountGeneration      uint64
@@ -89,14 +89,22 @@ func (v *PinnedVerifier) VerifyPull(ctx context.Context, pull Pull, previous loc
 		return localstate.CloudSnapshot{}, err
 	}
 	generation := strconv.FormatUint(v.trust.AccountGeneration, 10)
-	if pull.AccountID != v.trust.AccountID || pull.AccountGeneration != generation || pull.Sequence < previous.Sequence {
+	if pull.AccountID != v.trust.AccountID || pull.AccountGeneration != generation || pull.Sequence < previous.Sequence || pull.Sequence < previous.AuthorizationSequence || pull.Scope != "" {
 		return localstate.CloudSnapshot{}, errors.New("unbound/replayed checkpoint")
 	}
 	if previous.AccountID != "" && (previous.AccountID != v.trust.AccountID || previous.AccountGeneration != v.trust.AccountGeneration) {
 		return localstate.CloudSnapshot{}, errors.New("trusted context belongs to another account generation")
 	}
-	out := localstate.CloudSnapshot{AccountID: pull.AccountID, AccountGeneration: v.trust.AccountGeneration, Sequence: pull.Sequence, Environments: map[string]localstate.Environment{}, GrantCheckpoints: copyMap(previous.GrantCheckpoints), GrantFingerprints: copyMap(previous.GrantFingerprints), SeenMutations: copyMap(previous.SeenMutations)}
+	out := localstate.CloudSnapshot{AccountID: pull.AccountID, AccountGeneration: v.trust.AccountGeneration, Sequence: pull.Sequence, AuthorizationSequence: pull.Sequence, Environments: map[string]localstate.Environment{}, GrantCheckpoints: copyMap(previous.GrantCheckpoints), GrantFingerprints: copyMap(previous.GrantFingerprints), SeenMutations: copyMap(previous.SeenMutations)}
+	if err := v.verifyEnvironmentEvents(ctx, pull, previous, &out); err != nil {
+		return localstate.CloudSnapshot{}, err
+	}
 	environmentKeys := map[string][]byte{}
+	defer func() {
+		for _, key := range environmentKeys {
+			clear(key)
+		}
+	}()
 	seenGrant := map[string]bool{}
 	now := v.trust.Now()
 	for _, signed := range pull.Grants {
@@ -106,6 +114,9 @@ func (v *PinnedVerifier) VerifyPull(ctx context.Context, pull Pull, previous loc
 		g := signed.Grant
 		if g.SubjectDeviceID != v.trust.DeviceID || g.SubjectSigningPublicKey != cryptox.EncodeBase64(v.trust.DeviceSigningPublicKey) || g.SubjectReceivingPublicKey != v.receivingPublicKey {
 			return localstate.CloudSnapshot{}, errors.New("grant does not bind the exact local device keys")
+		}
+		if out.DeletedEnvironments[g.EnvironmentID] != 0 {
+			return localstate.CloudSnapshot{}, errors.New("grant attempted to restore deleted environment")
 		}
 		if seenGrant[g.EnvironmentID] {
 			return localstate.CloudSnapshot{}, errors.New("duplicate current environment grant")
@@ -237,6 +248,7 @@ func (v *PinnedVerifier) VerifyPull(ctx context.Context, pull Pull, previous loc
 				return localstate.CloudSnapshot{}, fmt.Errorf("environment value authentication failed: %w", err)
 			}
 			environment.Values[m.Name] = string(plaintext)
+			clear(plaintext)
 		default:
 			return localstate.CloudSnapshot{}, cryptox.ErrInvalidWire
 		}
@@ -244,3 +256,7 @@ func (v *PinnedVerifier) VerifyPull(ctx context.Context, pull Pull, previous loc
 	}
 	return out, nil
 }
+
+// Close 仅在后台已停止并等待所有在途操作之后调用，尽力清除持有的接收私钥。
+// 它不能保证 Go 运行时中的全部历史副本均已抹除。
+func (v *PinnedVerifier) Close() { clear(v.trust.ReceivingPrivateKey) }

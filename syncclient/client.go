@@ -41,12 +41,14 @@ type Event struct {
 	Authorization *SignedGrant   `json:"authorization,omitempty"`
 }
 type Pull struct {
-	Full              bool          `json:"-"`
-	AccountID         string        `json:"accountId"`
-	AccountGeneration string        `json:"accountGeneration"`
-	Sequence          uint64        `json:"sequence"`
-	Grants            []SignedGrant `json:"grants"`
-	Events            []Event       `json:"events"`
+	Full              bool               `json:"-"`
+	Scope             string             `json:"scope,omitempty"`
+	EnvironmentEvents []EnvironmentEvent `json:"environmentEvents,omitempty"`
+	AccountID         string             `json:"accountId"`
+	AccountGeneration string             `json:"accountGeneration"`
+	Sequence          uint64             `json:"sequence"`
+	Grants            []SignedGrant      `json:"grants"`
+	Events            []Event            `json:"events"`
 }
 type Acceptance struct {
 	Sequence uint64 `json:"sequence"`
@@ -77,9 +79,19 @@ type Client struct {
 	endpoint *url.URL
 	http     *http.Client
 	config   Config
+	epoch    uint64
 }
 
-func New(config Config) (*Client, error) {
+func New(config Config) (*Client, error) { return newClient(config, true) }
+
+// NewForBoot 只准备既有可信设备的无登录凭据持钥挑战；还不能读取或写入。
+func NewForBoot(config Config) (*Client, error) {
+	if config.Token != "" {
+		return nil, errors.New("boot must not retain a login credential")
+	}
+	return newClient(config, false)
+}
+func newClient(config Config, requireToken bool) (*Client, error) {
 	endpoint, err := url.Parse(config.Endpoint)
 	if err != nil {
 		return nil, errors.New("invalid HTTPS endpoint")
@@ -94,25 +106,17 @@ func New(config Config) (*Client, error) {
 		return nil, errors.New("synthetic fixture state cannot connect to a server")
 	}
 	idPattern := regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
-	if !idPattern.MatchString(config.AccountID) || !idPattern.MatchString(config.DeviceID) || config.AccountGeneration == 0 || config.Token == "" || strings.ContainsAny(config.Token, "\r\n") {
+	if !idPattern.MatchString(config.AccountID) || !idPattern.MatchString(config.DeviceID) || config.AccountGeneration == 0 || (requireToken && config.Token == "") || strings.ContainsAny(config.Token, "\r\n") {
 		return nil, errors.New("bound account, device and login session are required")
 	}
 	if config.Now == nil {
 		config.Now = time.Now
 	}
-	client := &http.Client{Timeout: 15 * time.Second}
-	if config.HTTPClient != nil {
-		*client = *config.HTTPClient
+	client, err := secureHTTP(config.HTTPClient)
+	if err != nil {
+		return nil, err
 	}
-	if transport, ok := client.Transport.(*http.Transport); ok && transport.TLSClientConfig != nil && transport.TLSClientConfig.InsecureSkipVerify {
-		return nil, errors.New("TLS certificate verification cannot be disabled")
-	}
-	// 禁止跨 URL 重定向，防止账号会话发送到非用户选定的端点。
-	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }
-	if client.Timeout == 0 {
-		client.Timeout = 15 * time.Second
-	}
-	return &Client{endpoint: endpoint, http: client, config: config}, nil
+	return &Client{endpoint: endpoint, http: client, config: config, epoch: config.Engine.State().SessionEpoch}, nil
 }
 func (c *Client) endpointFor(suffix string) *url.URL {
 	u := *c.endpoint
@@ -121,6 +125,13 @@ func (c *Client) endpointFor(suffix string) *url.URL {
 	return &u
 }
 func (c *Client) request(ctx context.Context, method string, u *url.URL, body any, out any) error {
+	if c.config.Engine.State().SessionEpoch != c.epoch {
+		return localstate.ErrLocalSession
+	}
+	bootRoute := strings.HasSuffix(u.Path, "/boot-challenges") || strings.HasSuffix(u.Path, "/boot-sessions")
+	if c.config.Token == "" && !bootRoute {
+		return errors.New("device-bound session required")
+	}
 	var reader io.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -133,7 +144,9 @@ func (c *Client) request(ctx context.Context, method string, u *url.URL, body an
 	if err != nil {
 		return errors.New("could not build server request")
 	}
-	req.Header.Set("Authorization", "Bearer "+c.config.Token)
+	if c.config.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.config.Token)
+	}
 	req.Header.Set("X-Harmonia-Device-Id", c.config.DeviceID)
 	req.Header.Set("X-Harmonia-Account-Generation", strconv.FormatUint(c.config.AccountGeneration, 10))
 	req.Header.Set("Cache-Control", "no-store")
@@ -146,8 +159,11 @@ func (c *Client) request(ctx context.Context, method string, u *url.URL, body an
 		return errors.New("HTTPS request failed")
 	}
 	defer response.Body.Close()
+	if c.config.Engine.State().SessionEpoch != c.epoch {
+		return localstate.ErrLocalSession
+	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("server rejected request (HTTP %d)", response.StatusCode)
+		return c.rejection(response, bootRoute)
 	}
 	const maximum = 8 << 20
 	data, err := io.ReadAll(io.LimitReader(response.Body, maximum+1))
@@ -175,7 +191,7 @@ func (c *Client) Pull(ctx context.Context) (Pull, error) {
 	if state.Paused {
 		return Pull{}, ErrPaused
 	}
-	return c.pull(ctx, state.Cloud)
+	return c.pullWithHistory(ctx, state.Cloud, state.Cloud.AuthorizationSequence > state.Cloud.Sequence)
 }
 func (c *Client) pull(ctx context.Context, previous localstate.CloudSnapshot) (Pull, error) {
 	return c.pullWithHistory(ctx, previous, false)
@@ -214,7 +230,7 @@ func (c *Client) pullWithHistory(ctx context.Context, previous localstate.CloudS
 	if verified.AccountID != result.AccountID || verified.AccountGeneration != c.config.AccountGeneration || verified.Sequence != result.Sequence {
 		return Pull{}, errors.New("verifier returned an unbound checkpoint")
 	}
-	if err = c.config.Engine.AcceptSnapshot(verified, c.config.Now()); err != nil {
+	if err = c.config.Engine.AcceptSnapshotAtEpoch(verified, c.config.Now(), c.epoch); err != nil {
 		return Pull{}, err
 	}
 	return result, nil
@@ -223,7 +239,7 @@ func (c *Client) pullWithHistory(ctx context.Context, previous localstate.CloudS
 // AcceptRevocationHint 为已认证通知后的授权刷新入口。暂停时只执行已知撤销/
 // 过期的本地安全重算；普通值写入仍由 localstate 的暂停行为阻止。
 func (c *Client) AcceptRevocationHint(ctx context.Context) (Pull, error) {
-	return c.pull(ctx, c.config.Engine.State().Cloud)
+	return c.RefreshAuthorizations(ctx)
 }
 
 // Submit 不乐观更改本地权威状态；网络失败可离线读取，不能离线共享写。

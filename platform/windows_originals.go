@@ -51,12 +51,16 @@ func NewPersistentWindowsProvider(expectedSID string, store UserEnvironmentStore
 	return p, nil
 }
 func (p *WindowsProvider) save() error {
-	if p.statePath == "" {
+	if p.statePath == "" && p.secret == nil {
 		return nil
 	}
 	data, err := json.Marshal(windowsOriginalState{Marker: windowsOriginalMarker, SID: p.store.UserSID(), Originals: p.originals})
 	if err != nil {
 		return err
+	}
+	if p.secret != nil {
+		defer clear(data)
+		return p.secret.Save("windows-originals-v1", data)
 	}
 	return writePrivateFile(p.statePath, append(data, '\n'), []byte(`{"marker":"`+windowsOriginalMarker+`"`))
 }
