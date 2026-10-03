@@ -78,12 +78,12 @@ func (c *fixtureClock) Advance(d time.Duration) {
 func fixture(t *testing.T) (*Registry, *fixtureClock, Binding, *fixtureOwner) {
 	t.Helper()
 	clock := &fixtureClock{now: time.Now()}
-	pub := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32))
-	x := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{2}, 32))
+	pub := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{1}, 32))
+	x := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{2}, 32))
 	id := sha256.Sum256(bytes.Repeat([]byte{1}, 32))
 	h := sha256.Sum256([]byte("synthetic-public-digest"))
 	scope := Scope{Namespace: "synthetic.native/recovery/v1", Slot: "recovery-state-v1", Endpoint: "https://synthetic.example.invalid", DeviceID: hex.EncodeToString(id[:]), DeviceSigningPublicKey: pub, DeviceReceivingPublicKey: x}
-	b := Binding{Scope: scope, AccountID: "synthetic-account", AccountGeneration: "1", RecoveryGeneration: "2", RootSigningPublicKey: pub, RootReceivingPublicKey: x, RecoverySigningPublicKey: pub, RecoveryReceivingPublicKey: x, InitializationProposalHash: hex.EncodeToString(h[:]), SessionHash: hex.EncodeToString(h[:]), ExpiresAt: clock.Now().Unix() + 300}
+	b := Binding{Scope: scope, SessionEpoch: 1, AuthorityHeadHash: hex.EncodeToString(h[:]), RootDeviceID: scope.DeviceID, AccountID: "synthetic-account", AccountGeneration: "1", RecoveryGeneration: "2", RootSigningPublicKey: pub, RootReceivingPublicKey: x, RecoverySigningPublicKey: pub, RecoveryReceivingPublicKey: x, InitializationProposalHash: hex.EncodeToString(h[:]), SessionHash: hex.EncodeToString(h[:]), ExpiresAt: clock.Now().Unix() + 300}
 	r, e := newRegistry(scope, clock.Now, clock.After)
 	if e != nil {
 		t.Fatal("registry setup failed")
@@ -126,6 +126,7 @@ func TestAuthoritativeBindingSubstitutionRejectedBeforeOwnerUse(t *testing.T) {
 		t.Fatal("install failed")
 	}
 	cases := []func(*Binding){
+		func(v *Binding) { v.SessionEpoch++ }, func(v *Binding) { v.AuthorityHeadHash = string(bytes.Repeat([]byte{'c'}, 64)) }, func(v *Binding) { v.RootDeviceID = string(bytes.Repeat([]byte{'d'}, 64)) },
 		func(v *Binding) { v.Endpoint = "https://other.example.invalid" }, func(v *Binding) { v.Slot = "other" }, func(v *Binding) { v.AccountID = "other" }, func(v *Binding) { v.AccountGeneration = "2" }, func(v *Binding) { v.RecoveryGeneration = "3" }, func(v *Binding) { v.RootSigningPublicKey = v.RootReceivingPublicKey }, func(v *Binding) { v.InitializationProposalHash = string(bytes.Repeat([]byte{'a'}, 64)) }, func(v *Binding) { v.SessionHash = string(bytes.Repeat([]byte{'b'}, 64)) }, func(v *Binding) { v.ExpiresAt++ }, func(v *Binding) { v.TransitionID = "different" },
 	}
 	for _, mutate := range cases {
@@ -332,4 +333,18 @@ func TestNewProcessRegistryCannotRestoreHandle(t *testing.T) {
 	if !errors.Is(json.Unmarshal([]byte(`{}`), &restored), ErrNativeOnly) {
 		t.Fatal("native handle decoded")
 	}
+}
+
+func TestRetirementPreservesAcceptedOrPendingOperationFault(t *testing.T) {
+	r, _, b, o := fixture(t)
+	h, e := r.Install(b, o)
+	if e != nil {
+		t.Fatal(e)
+	}
+	original := errors.New("synthetic accepted not applied")
+	e = r.Run(context.Background(), h, b, func(context.Context, *Lease) error { r.Clear(); return original })
+	if !errors.Is(e, original) || !errors.Is(e, context.Canceled) {
+		t.Fatal("retirement swallowed journal outcome")
+	}
+	o.check(t, 1)
 }

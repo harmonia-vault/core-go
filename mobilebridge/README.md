@@ -84,3 +84,7 @@ AndroidX `NativeWorkflowIntegrationTest` 的 `syntheticCA` runner 参数为夹�
 ## 受保护设备管理原生切片（2026-10-03 UTC）
 
 六个显式管理操作及Dart业务adapter沿用每op CryptoObject/同步AES保存，不改UI/defaultgateway/整体false。固定公开core894f2ad等归档加9个native候选，正常AAR/Kotlin APK实际构建，独立管理focused1/1 PASS110.889秒、42次系统设备密码、真实Go peer exit0；prepared取消/退休id、保存前置失败0POST、accepted但末次seal失败Appliedfalse/View关闭、accepted502同id恢复、RO/RW/none及新keyVersion更高GG、跨New原token另一设备撤销和Logout均实际通过。对端属于合成Go workflow，不声明正式CLI/桌面OS认证。精确源/产物哈希、复现和未跑边界见[MANAGEMENT_NATIVE.md](MANAGEMENT_NATIVE.md)。本轮PIN/两fixture包/文件alias/forward/HTTPS已清，preview/AVD保留；Recovery仍unsupported。
+
+## 连续恢复与显式 cert4 原生切片（2026-10-03 UTC）
+
+10 个 typed 恢复与 4 个显式 V4 批准操作已映射到 Go Registry/Kotlin 每操作 CryptoObject/Dart业务adapter。旧恢复 Ed 只在进程，handle 不入 Dart/JSON/磁盘，未知结果只原密封journal；完整新码完成后仍restricted，显式范围登记的Boot/Pull/proof3/最后保存才trusted。固定公开core6eec463等加15有限候选的同一正常AAR/独立APK三阶段全部PASS94.475秒、30次系统提示含1取消、两次force-stop；实际恢复可信E、Android E批准正式CLI4有限RW Y-only及daemon拒X、原ID恢复/最后seal失败/Logout清钥均通过。默认gateway与整体ready仍false；新login/pending/UI/PIN不属于本产物。完整来源哈希、历史FAIL与最终清理见[RECOVERY_NATIVE.md](RECOVERY_NATIVE.md)。

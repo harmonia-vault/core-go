@@ -59,10 +59,10 @@ func run() (resultErr error) {
 	nativeReady := flag.Bool("native-ready", false, "read bounded public fixture metadata from local Android test socket")
 	expectRejected := flag.Bool("expect-rejected", false, "expect native save gate to prevent approval POST; no enrollment claim")
 	transportOnly := flag.Bool("socket-test", false, "only verify local test socket transport, no enrollment claim")
-	version := flag.Int("certificate-version", 2, "explicit fixture path: 2 legacy CLI flag; 3 freshly compiled CLI default without downgrade")
+	version := flag.Int("certificate-version", 2, "explicit fixture path: 2 legacy CLI flag; 3 freshly compiled CLI default; 4 explicit continuous-recovery capability without downgrade")
 	deniedEnvironment := flag.String("deny-environment", "", "v3 fixture: known ungranted X must reject activation and write")
 	flag.Parse()
-	if *version != 2 && *version != 3 || *version == 2 && *deniedEnvironment != "" || *deniedEnvironment != "" && !publicID.MatchString(*deniedEnvironment) {
+	if *version != 2 && *version != 3 && *version != 4 || *version == 2 && *deniedEnvironment != "" || *deniedEnvironment != "" && !publicID.MatchString(*deniedEnvironment) {
 		return errFixture
 	}
 	if *port < 1024 || *port > 65535 {
@@ -138,8 +138,8 @@ func run() (resultErr error) {
 	}
 	fmt.Println("compiled CLI synthetic login passed")
 	pairArgs := []string{"pair", "--local-directory", directory, "--approver", *approver, "--ca-file", *ca}
-	if *version == 2 {
-		pairArgs = append(pairArgs, "--certificate-version", "2")
+	if *version == 2 || *version == 4 {
+		pairArgs = append(pairArgs, "--certificate-version", strconv.Itoa(*version))
 	}
 	// v3 deliberately exercises the official CLI default. No version fallback.
 	command := exec.CommandContext(ctx, *cli, pairArgs...)

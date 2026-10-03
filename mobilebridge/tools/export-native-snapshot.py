@@ -28,6 +28,25 @@ MANAGEMENT_MOBILE_FILES = [
     'tool/native-management-test.py',
 ]
 
+
+RECOVERY_CORE_FILES = [
+    'mobilebridge/workflow.go', 'mobilebridge/recovery.go',
+    'mobilebridge/recovery_registry.go', 'mobilebridge/recovery_test.go',
+    'mobilebridge/internal/recoverysessions/binding.go',
+    'mobilebridge/internal/recoverysessions/registry.go',
+    'mobilebridge/internal/recoverysessions/registry_test.go',
+    'mobilebridge/cmd/androidfixture/main.go',
+    'mobilebridge/cmd/crosscontroller/main.go',
+    'mobilebridge/cmd/recoverycontroller/main.go',
+]
+RECOVERY_MOBILE_FILES = [
+    'android/app/src/main/kotlin/org/harmoniavault/harmonia_mobile/nativebridge/NativeBridgePlugin.kt',
+    'lib/native/native_workflow_adapter.dart',
+    'android/app/src/androidTest/kotlin/org/harmoniavault/harmonia_mobile/nativebridge/NativeRecoveryIntegrationTest.kt',
+    'android/app/src/androidTest/kotlin/org/harmoniavault/harmonia_mobile/nativebridge/NativeRecoveryTestSocket.kt',
+    'tool/native-recovery-test.py',
+]
+
 def git(directory, *args):
     return subprocess.run(['git', '-C', str(directory), *args], check=True, capture_output=True).stdout
 
@@ -35,8 +54,9 @@ def git(directory, *args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workspace', type=Path, required=True)
-    parser.add_argument('--slice', choices=['v3', 'management'], default='v3')
+    parser.add_argument('--slice', choices=['v3', 'management', 'recovery'], default='v3')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--candidate-root', type=Path, help='可选的ignored有限源码staging；与正在开发的其它slice隔离')
     for name in ('workspace', 'core', 'mobile', 'server', 'protocol'):
         parser.add_argument('--'+name+'-revision', required=True)
     args = parser.parse_args()
@@ -48,6 +68,9 @@ def main():
         raise SystemExit('输出须是core-go/.build内不存在的新目录')
     if not git(workspace/'core-go', 'check-ignore', str(output)).strip():
         raise SystemExit('导出目录必须ignored')
+    candidate_root = workspace if args.candidate_root is None else args.candidate_root.resolve(strict=True)
+    if candidate_root != workspace and (not candidate_root.is_relative_to(cache) or args.candidate_root.is_symlink()):
+        raise SystemExit('候选staging须是本项目ignored .build中的正常目录')
     commits = {}
     archives = {}
     for name, directory in [('workspace', workspace), ('core', workspace/'core-go'), ('mobile', workspace/'mobile'), ('server', workspace/'server'), ('protocol', workspace/'protocol')]:
@@ -72,10 +95,12 @@ def main():
         with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
             tree.extractall(dest, filter='data')
         manifest['archiveSHA256'][name] = hashlib.sha256(archive).hexdigest()
-    selected = [('core-go', MANAGEMENT_CORE_FILES), ('mobile', MANAGEMENT_MOBILE_FILES)] if args.slice == 'management' else [('core-go', CORE_FILES), ('mobile', MOBILE_FILES)]
+    selected = {'v3': [('core-go', CORE_FILES), ('mobile', MOBILE_FILES)],
+                'management': [('core-go', MANAGEMENT_CORE_FILES), ('mobile', MANAGEMENT_MOBILE_FILES)],
+                'recovery': [('core-go', RECOVERY_CORE_FILES), ('mobile', RECOVERY_MOBILE_FILES)]}[args.slice]
     for name, files in selected:
         for filename in files:
-            source = workspace/name/filename
+            source = candidate_root/name/filename
             if not source.is_file() or source.is_symlink():
                 raise SystemExit('候选文件不是正常源码文件')
             data = source.read_bytes()

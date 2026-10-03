@@ -17,8 +17,8 @@ func bounded(v string, n int) bool {
 	return v != "" && len(v) <= n && utf8.ValidString(v) && !strings.ContainsAny(v, "\x00\r\n\t")
 }
 func publicKey(v string) bool {
-	b, e := base64.StdEncoding.Strict().DecodeString(v)
-	return e == nil && len(b) == 32 && base64.StdEncoding.EncodeToString(b) == v
+	b, e := base64.RawURLEncoding.Strict().DecodeString(v)
+	return e == nil && len(b) == 32 && base64.RawURLEncoding.EncodeToString(b) == v
 }
 func digest(v string) bool {
 	b, e := hex.DecodeString(v)
@@ -36,12 +36,12 @@ func validScope(s Scope) bool {
 	if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Opaque != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.RawPath != "" || u.String() != s.Endpoint || strings.ContainsAny(s.Endpoint, "\\#") || strings.ToLower(u.Host) != u.Host || strings.HasSuffix(s.Endpoint, "/") {
 		return false
 	}
-	pub, _ := base64.StdEncoding.Strict().DecodeString(s.DeviceSigningPublicKey)
+	pub, _ := base64.RawURLEncoding.Strict().DecodeString(s.DeviceSigningPublicKey)
 	id := sha256.Sum256(pub)
 	return s.DeviceID == hex.EncodeToString(id[:])
 }
 func validBinding(b Binding) bool {
-	if !validScope(b.Scope) || !identifier.MatchString(b.AccountID) || !generation(b.AccountGeneration) || !generation(b.RecoveryGeneration) || !publicKey(b.RootSigningPublicKey) || !publicKey(b.RootReceivingPublicKey) || !publicKey(b.RecoverySigningPublicKey) || !publicKey(b.RecoveryReceivingPublicKey) || !digest(b.InitializationProposalHash) || !digest(b.SessionHash) || b.ExpiresAt <= 0 {
+	if !validScope(b.Scope) || !identifier.MatchString(b.AccountID) || !generation(b.AccountGeneration) || !generation(b.RecoveryGeneration) || !publicKey(b.RootSigningPublicKey) || !publicKey(b.RootReceivingPublicKey) || !publicKey(b.RecoverySigningPublicKey) || !publicKey(b.RecoveryReceivingPublicKey) || !digest(b.InitializationProposalHash) || !digest(b.SessionHash) || !digest(b.AuthorityHeadHash) || !digest(b.RootDeviceID) || b.ExpiresAt <= 0 {
 		return false
 	}
 	if b.TransitionID == "" {

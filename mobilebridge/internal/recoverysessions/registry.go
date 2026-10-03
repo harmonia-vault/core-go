@@ -31,6 +31,8 @@ type Scope struct {
 // 全部字段都是公开身份/摘要；没有bearer、seed、code、Ed/X私钥或AES钥。
 type Binding struct {
 	Scope
+	SessionEpoch                                         uint64
+	AuthorityHeadHash, RootDeviceID                      string
 	AccountID, AccountGeneration, RecoveryGeneration     string
 	RootSigningPublicKey, RootReceivingPublicKey         string
 	RecoverySigningPublicKey, RecoveryReceivingPublicKey string
@@ -39,7 +41,7 @@ type Binding struct {
 	TransitionID, TransitionHash                         string
 }
 
-// EdOwner是未来typed Go RecoverySession的原生adapter；不提供RawKey或任意Sign。
+// EdOwner是typed Go RecoverySession的原生adapter；不提供RawKey或任意Sign。
 // Cancel/Close必须幂等，可并发；Close须让后续typed签名失败并清可控私钥缓冲。
 type EdOwner interface {
 	Cancel()
@@ -198,7 +200,7 @@ func (r *Registry) Run(ctx context.Context, handle Handle, expected Binding, ope
 	}()
 	err := operation(operationCtx, lease)
 	if operationCtx.Err() != nil {
-		return operationCtx.Err()
+		return errors.Join(err, operationCtx.Err())
 	}
 	r.mu.Lock()
 	invalid := e.retired || r.disposed || !r.now().Before(e.deadline)
@@ -229,7 +231,7 @@ func (l *Lease) Owner() (EdOwner, error) {
 }
 
 // Advance只接受同一恢复身份下的原transition；不能换id/hash、换session或延长期限。
-// future typedGo callback只有同步密封成功后才能提交此authoritative投影。
+// typedGo callback只有同步密封成功后才能提交此authoritative投影。
 func (l *Lease) Advance(next Binding) error {
 	r := l.registry
 	r.mu.Lock()
