@@ -64,3 +64,7 @@ run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge
 [tasks.test-mobile-dag-recovered-schema]
 description = "B3a 所有 preparation 嵌套对象精确字段、必填与 nullable 回归"
 run = "go test -race ./syncclient -run '^TestB3a' -count=1 -timeout=90s -json"
+
+[tasks.test-native-dag-registry]
+description = "原生opaque DAG registry生命周期、立即取消与正常detach的有限race测试"
+run = "go test -race ./mobilebridge -run TestNativeDAG -count=1 -timeout=45s -json"

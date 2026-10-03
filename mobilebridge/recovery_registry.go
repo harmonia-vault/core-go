@@ -223,6 +223,7 @@ func (r *RecoveryRegistry) invalidate() {
 	}
 }
 func (v *VaultWorkflow) invalidateRecoveryOwner() {
+	v.invalidateNativeDAGRegistry()
 	v.cancelMu.Lock()
 	r := v.recoveryRegistry
 	v.cancelMu.Unlock()

@@ -74,6 +74,7 @@ type VaultWorkflow struct {
 	lastSealed       []byte
 	protectedSHA256  string
 	recoveryRegistry *RecoveryRegistry
+	dagRegistry      *NativeDAGRegistry
 	cancelMu         sync.Mutex
 	cancel           context.CancelFunc
 }
@@ -315,6 +316,7 @@ func (v *VaultWorkflow) open(packet []byte) ([]byte, error) {
 }
 
 func (v *VaultWorkflow) Cancel() {
+	v.invalidateNativeDAGRegistry()
 	v.clearRecoveryOwner()
 	v.cancelOperation()
 }
@@ -331,6 +333,7 @@ func (v *VaultWorkflow) Close() {
 	v.mu.Lock()
 	defer func() {
 		v.mu.Unlock()
+		v.detachNativeDAGRegistry()
 		if v.saveFailed.Load() {
 			v.clearRecoveryOwner()
 		}
