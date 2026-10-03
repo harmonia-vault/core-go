@@ -348,3 +348,32 @@ func TestRetirementPreservesAcceptedOrPendingOperationFault(t *testing.T) {
 	}
 	o.check(t, 1)
 }
+
+func TestInvalidateCancelsAndRejectsLeaseBeforeDeferredClose(t *testing.T) {
+	r, _, b, o := fixture(t)
+	h, err := r.Install(b, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entered, unwind := make(chan context.Context, 1), make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		done <- r.Run(context.Background(), h, b, func(ctx context.Context, l *Lease) error { entered <- ctx; <-unwind; return nil })
+	}()
+	ctx := <-entered
+	r.Invalidate()
+	if ctx.Err() == nil {
+		t.Fatal("active context not canceled")
+	}
+	o.check(t, 0)
+	if err = r.Run(context.Background(), h, b, func(context.Context, *Lease) error { t.Fatal("invalidated lease executed"); return nil }); !errors.Is(err, ErrMissing) {
+		t.Fatal("new lease not rejected", err)
+	}
+	close(unwind)
+	if err = <-done; !errors.Is(err, context.Canceled) {
+		t.Fatal("active result reported success", err)
+	}
+	r.Clear()
+	r.Clear()
+	o.check(t, 1)
+}

@@ -292,7 +292,16 @@ func (r *Registry) expire(handle Handle) {
 // Clear用于Logout/Invalidate；Close用于dispose。active context立即取消，owner单次清理。
 func (r *Registry) Clear() { r.retire(Handle{}, false) }
 func (r *Registry) Close() { r.retire(Handle{}, true) }
+
+// Invalidate 立即禁止新 lease 并取消在途 context，但不回调 owner.Close。
+// 仅用于持久化回调持有业务锁的错误路径；调用方必须在操作解锁后 Clear。
+func (r *Registry) Invalidate() { r.markRetired(Handle{}, false) }
 func (r *Registry) retire(handle Handle, dispose bool) {
+	if e := r.markRetired(handle, dispose); e != nil {
+		e.closeOwner()
+	}
+}
+func (r *Registry) markRetired(handle Handle, dispose bool) *entry {
 	r.mu.Lock()
 	if dispose {
 		r.disposed = true
@@ -300,7 +309,7 @@ func (r *Registry) retire(handle Handle, dispose bool) {
 	e := r.current
 	if e == nil || handle != (Handle{}) && e.handle != handle {
 		r.mu.Unlock()
-		return
+		return nil
 	}
 	e.retired = true
 	if e.timer != nil {
@@ -310,5 +319,5 @@ func (r *Registry) retire(handle Handle, dispose bool) {
 		e.cancel()
 	}
 	r.mu.Unlock()
-	e.closeOwner()
+	return e
 }

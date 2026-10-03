@@ -1,35 +1,59 @@
 package syncclient
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/harmonia-vault/core-go/cryptox"
-	"github.com/harmonia-vault/core-go/localkeys"
 	"net/url"
 	"os"
 	"strconv"
 	"sync"
+
+	"github.com/harmonia-vault/core-go/cryptox"
 )
 
-type VaultDAGJournal struct {
-	mu                sync.Mutex
-	vault             *localkeys.Vault
-	endpoint, account string
-	generation        uint64
-	epoch             uint64
+// DAGJournalBinding 是已认证原生 owner 的范围，不是恢复或设备可信凭证。
+type DAGJournalBinding struct {
+	Endpoint, AccountID           string
+	AccountGeneration, OwnerEpoch uint64
 }
 
-func NewVaultDAGJournal(vault *localkeys.Vault, endpoint, account string, generation uint64) (*VaultDAGJournal, error) {
-	u, err := url.Parse(endpoint)
-	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || vault == nil || !enrollmentID.MatchString(account) || generation == 0 {
+// DAGJournalStore 只由可信 Go/原生存储实现，不是 MethodChannel 输入。
+// CAS 必须在同一 owner 锁内核绑定、AccountClosed/epoch、旧字节并同步原子保存。
+// expected=nil 只表示槽不存在；不允许无条件覆盖，也不允许跨存储错误自动重试。
+type DAGJournalStore interface {
+	LoadDAGJournal(DAGJournalBinding) ([]byte, error)
+	CompareAndSwapDAGJournal(DAGJournalBinding, []byte, []byte) error
+}
+
+var ErrDAGJournalConflict = errors.New("protected original DAG journal changed")
+
+// CheckedDAGJournal 共用严格原包验证和单调状态规则；存储层负责原子 owner/CAS。
+type CheckedDAGJournal struct {
+	mu      sync.Mutex
+	store   DAGJournalStore
+	binding DAGJournalBinding
+}
+
+func validateDAGJournalBinding(b DAGJournalBinding) error {
+	u, err := url.Parse(b.Endpoint)
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || !enrollmentID.MatchString(b.AccountID) || b.AccountGeneration == 0 {
+		return cryptox.ErrInvalidWire
+	}
+	return nil
+}
+func NewCheckedDAGJournal(store DAGJournalStore, binding DAGJournalBinding) (*CheckedDAGJournal, error) {
+	if store == nil || validateDAGJournalBinding(binding) != nil {
 		return nil, cryptox.ErrInvalidWire
 	}
-	epoch, err := vault.RecoveryDAGOwnerEpoch(account, generation)
-	if err != nil {
+	j := &CheckedDAGJournal{store: store, binding: binding}
+	// 即使槽尚未建立，也须通过当前 owner 检查，不能复活关闭的账号。
+	if err := j.OwnerAlive(); err != nil {
 		return nil, err
 	}
-	return &VaultDAGJournal{vault: vault, endpoint: endpoint, account: account, generation: generation, epoch: epoch}, nil
+	return j, nil
 }
+
 func validateProtectedDAGOperation(p ProtectedDAGOperation) error {
 	if p.Version != 1 || !enrollmentID.MatchString(p.OperationID) || p.Pin.AccountID != p.AccountID || p.Pin.AccountGeneration != strconv.FormatUint(p.AccountGeneration, 10) {
 		return cryptox.ErrInvalidWire
@@ -92,20 +116,50 @@ func validateProtectedDAGOperation(p ProtectedDAGOperation) error {
 	_, err = cryptox.VerifyRecoveryDependencyBundle(p.Pin, bundle)
 	return err
 }
-func (j *VaultDAGJournal) Save(p ProtectedDAGOperation) error {
+
+// DecodeDAGJournal 是 native-only 原保护记录的严格解码；不提供签名或授权。
+func DecodeDAGJournal(binding DAGJournalBinding, raw []byte) (ProtectedDAGOperation, error) {
+	var p ProtectedDAGOperation
+	var sealed struct {
+		OwnerEpoch uint64                `json:"ownerEpoch"`
+		Operation  ProtectedDAGOperation `json:"operation"`
+	}
+	if validateDAGJournalBinding(binding) != nil || len(raw) == 0 || len(raw) > cryptox.MaxRecoveryAuthorityBytes+4096 || strictJSONBytes(raw, &sealed) != nil || sealed.OwnerEpoch != binding.OwnerEpoch {
+		return p, cryptox.ErrInvalidWire
+	}
+	p = sealed.Operation
+	if p.Endpoint != binding.Endpoint || p.AccountID != binding.AccountID || p.AccountGeneration != binding.AccountGeneration {
+		return ProtectedDAGOperation{}, cryptox.ErrInvalidWire
+	}
+	if err := validateProtectedDAGOperation(p); err != nil {
+		return ProtectedDAGOperation{}, err
+	}
+	return p, nil
+}
+func (j *CheckedDAGJournal) Save(p ProtectedDAGOperation) error {
 	j.mu.Lock()
 	defer j.mu.Unlock()
-	if p.Endpoint != j.endpoint || p.AccountID != j.account || p.AccountGeneration != j.generation {
+	if p.Endpoint != j.binding.Endpoint || p.AccountID != j.binding.AccountID || p.AccountGeneration != j.binding.AccountGeneration {
 		return cryptox.ErrInvalidWire
 	}
 	if err := validateProtectedDAGOperation(p); err != nil {
 		return err
 	}
-	old, err := j.load()
+	previous, err := j.store.LoadDAGJournal(j.binding)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	if err == nil {
+	defer clear(previous)
+	if errors.Is(err, os.ErrNotExist) {
+		if len(previous) != 0 {
+			return cryptox.ErrInvalidWire
+		}
+		previous = nil
+	} else {
+		old, err := DecodeDAGJournal(j.binding, previous)
+		if err != nil {
+			return err
+		}
 		if old.Pin != p.Pin {
 			return cryptox.ErrInvalidWire
 		}
@@ -124,48 +178,33 @@ func (j *VaultDAGJournal) Save(p ProtectedDAGOperation) error {
 	raw, err := json.Marshal(struct {
 		OwnerEpoch uint64                `json:"ownerEpoch"`
 		Operation  ProtectedDAGOperation `json:"operation"`
-	}{j.epoch, p})
-	if err != nil {
+	}{j.binding.OwnerEpoch, p})
+	if err != nil || len(raw) > cryptox.MaxRecoveryAuthorityBytes+4096 {
 		return cryptox.ErrInvalidWire
 	}
 	defer clear(raw)
-	if len(raw) > cryptox.MaxRecoveryAuthorityBytes+4096 {
-		return cryptox.ErrInvalidWire
-	}
-	return j.vault.SaveRecoveryDAGJournal(j.account, j.generation, j.epoch, raw)
+	// 两个 checked 对象也不能在 load/save 间覆盖彼此，CAS 由唯一存储 owner 执行。
+	return j.store.CompareAndSwapDAGJournal(j.binding, previous, raw)
 }
-func (j *VaultDAGJournal) Load() (ProtectedDAGOperation, error) {
+func (j *CheckedDAGJournal) Load() (ProtectedDAGOperation, error) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
-	return j.load()
-}
-func (j *VaultDAGJournal) load() (ProtectedDAGOperation, error) {
-	var p ProtectedDAGOperation
-	raw, err := j.vault.LoadRecoveryDAGJournal(j.account, j.generation, j.epoch)
+	raw, err := j.store.LoadDAGJournal(j.binding)
 	if err != nil {
-		return p, err
+		clear(raw)
+		return ProtectedDAGOperation{}, err
 	}
 	defer clear(raw)
-	var sealed struct {
-		OwnerEpoch uint64                `json:"ownerEpoch"`
-		Operation  ProtectedDAGOperation `json:"operation"`
-	}
-	if len(raw) > cryptox.MaxRecoveryAuthorityBytes+4096 || strictJSONBytes(raw, &sealed) != nil || sealed.OwnerEpoch != j.epoch {
-		return p, cryptox.ErrInvalidWire
-	}
-	p = sealed.Operation
-	if p.Endpoint != j.endpoint || p.AccountID != j.account || p.AccountGeneration != j.generation {
-		return p, cryptox.ErrInvalidWire
-	}
-	return p, validateProtectedDAGOperation(p)
+	return DecodeDAGJournal(j.binding, raw)
 }
-
-// 仅检查唯一原生owner仍存活；不读取或输出设备钥匙。
-func (j *VaultDAGJournal) OwnerAlive() error {
-	raw, err := j.vault.LoadRecoveryDAGJournal(j.account, j.generation, j.epoch)
+func (j *CheckedDAGJournal) OwnerAlive() error {
+	raw, err := j.store.LoadDAGJournal(j.binding)
 	clear(raw)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 	return err
 }
+
+// EqualDAGJournalBytes 保留 nil（不存在）与空记录（损坏）的区别。
+func EqualDAGJournalBytes(a, b []byte) bool { return (a == nil) == (b == nil) && bytes.Equal(a, b) }

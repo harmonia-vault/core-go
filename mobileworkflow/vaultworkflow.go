@@ -46,6 +46,9 @@ type Config struct {
 	ProtectedState      []byte
 	Now                 func() time.Time
 	SaveProtectedState  func([]byte) error
+	// DAG 必须使用原生 whole-state 原子 CAS；旧 Save-only provider 不获得此能力。
+	SaveProtectedStateCAS func(expectedSHA256 string, next []byte) error
+	CheckProtectedState   func(expectedSHA256 string) error
 }
 type ViewEnvironment struct {
 	ID        string            `json:"id"`
@@ -100,6 +103,7 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
+	RecoveryDAG        *recoveryDAGState             `json:"recoveryDAG,omitempty"`
 	PendingApprovalV4  *approvalRecordV4             `json:"pendingApprovalV4,omitempty"`
 	RecoveredDevice    *recoveredDeviceRecord        `json:"recoveredDevice,omitempty"`
 	RecoveryAuthority  *recoveryAuthorityRecord      `json:"recoveryAuthority,omitempty"`
@@ -137,21 +141,25 @@ func clone[T any](value T) T {
 }
 
 type Workflow struct {
-	recoverySession *RecoverySession
-	mu              sync.Mutex
-	signing         ed25519.PrivateKey
-	receiving       []byte
-	http            *http.Client
-	now             func() time.Time
-	state           protectedState
-	store           *memoryStore
-	engine          *localstate.Engine
-	client          *syncclient.Client
-	verifier        *syncclient.PinnedVerifier
-	login           *syncclient.LoginResult
-	closed          bool
-	saveNative      func([]byte) error
-	writer          *syncclient.Writer
+	dagPersistenceFailed bool
+	saveNativeCAS        func(string, []byte) error
+	checkNativeState     func(string) error
+	protectedSHA256      string
+	recoverySession      *RecoverySession
+	mu                   sync.Mutex
+	signing              ed25519.PrivateKey
+	receiving            []byte
+	http                 *http.Client
+	now                  func() time.Time
+	state                protectedState
+	store                *memoryStore
+	engine               *localstate.Engine
+	client               *syncclient.Client
+	verifier             *syncclient.PinnedVerifier
+	login                *syncclient.LoginResult
+	closed               bool
+	saveNative           func([]byte) error
+	writer               *syncclient.Writer
 }
 
 func New(config Config) (*Workflow, error) {
@@ -283,7 +291,11 @@ func New(config Config) (*Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
-	workflow := &Workflow{signing: bytes.Clone(config.SigningKey), receiving: bytes.Clone(config.ReceivingPrivateKey), http: client, now: now, state: state, store: store, engine: engine, saveNative: config.SaveProtectedState}
+	workflow := &Workflow{signing: bytes.Clone(config.SigningKey), receiving: bytes.Clone(config.ReceivingPrivateKey), http: client, now: now, state: state, store: store, engine: engine, saveNative: config.SaveProtectedState, saveNativeCAS: config.SaveProtectedStateCAS, checkNativeState: config.CheckProtectedState, protectedSHA256: protectedStateHash(config.ProtectedState)}
+	if err := workflow.validateDAGStateLocked(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
 	if len(state.SelfRevocation) > 0 {
 		if _, err := workflow.restoreSelfRevocation(); err != nil {
 			workflow.Close()
@@ -402,6 +414,12 @@ func (w *Workflow) check() error {
 	return nil
 }
 func (w *Workflow) checkWithoutManagement() error {
+	if w.dagPersistenceFailed {
+		return ErrDAGPersistence
+	}
+	if w.state.RecoveryDAG != nil {
+		return ErrRecoveryRestricted
+	}
 	if w.closed {
 		return ErrClosed
 	}
@@ -916,6 +934,7 @@ func (w *Workflow) boot(ctx context.Context) error {
 
 // 网络客户端已经在同epoch清Cloud并置AccountClosed，手机再清原生持久信任资料与进程中的钥。
 func (w *Workflow) invalidateTrust() error {
+	w.state.RecoveryDAG = nil
 	if w.managementPending() {
 		clear(w.state.Management.Pending.Packet)
 	}
@@ -1174,6 +1193,7 @@ func (w *Workflow) persist() error {
 	if len(encoded) > 8<<20 || w.saveNative(encoded) != nil {
 		return errors.New("native protected state persistence failed")
 	}
+	w.protectedSHA256 = protectedStateHash(encoded)
 	return nil
 }
 func (w *Workflow) ensureWriter() error {

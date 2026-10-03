@@ -47,6 +47,12 @@ func (w *Workflow) enrollmentPending() bool {
 	return w.state.EnrollmentV3 != nil && !w.state.EnrollmentV3.Applied
 }
 func (w *Workflow) mobileEnrollmentGate() error {
+	if w.dagPersistenceFailed {
+		return ErrDAGPersistence
+	}
+	if w.state.RecoveryDAG != nil {
+		return ErrRecoveryRestricted
+	}
 	if w.closed {
 		return ErrClosed
 	}

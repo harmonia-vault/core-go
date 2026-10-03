@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "scope": "mobile DAG S1 Go journal and native persistence contract; capabilities remain closed",
+  "baseCoreCommit": "06db7bb0c16312db8cf84511dd73284dbadfc7c8",
+  "baseArchive": {
+    "sha256": "745c575e6fe4b4369428337f060d631b095206c5f64043a9bc60594315f45ff9",
+    "bytes": 3512320
+  },
+  "toolchain": {
+    "go": "go1.26.4",
+    "GOOS": "darwin",
+    "GOARCH": "arm64",
+    "buildTags": []
+  },
+  "executedSourceInventory": {
+    "sha256": "3b4b95ca789f2b0562d054bb30ef8c04f0f2c60fa1200cc40d231d5048d5ca20",
+    "files": 369,
+    "encoding": "UTF-8 sorted relative paths; each line SHA256 + two spaces + path + LF; excludes the two new documentation/evidence files"
+  },
+  "changedExecutableInputs": [
+    {
+      "path": "localkeys/recovery_dag.go",
+      "baseSHA256": "f84bb5d7da8a93163600cacfbd2dccb9890a0b3880072fe983fd5aa49cc2df1c",
+      "sha256": "799b03d4ace86ae173fc7a60e6c64a23d7a265caeb940e4982f37440adb641d8",
+      "bytes": 2617
+    },
+    {
+      "path": "localkeys/recovery_dag_test.go",
+      "baseSHA256": "ca0dcdb8a1ad8c5bc7d7280d66ee7803a8c8cc756b41ed84dabbe2cb13b1e0eb",
+      "sha256": "fc890e4604aaebe2006e0c988b51bd920c2ff786998e550e53f683cb599ead68",
+      "bytes": 2953
+    },
+    {
+      "path": "mise.toml",
+      "baseSHA256": "fdd3032485f087206042ccd5fa0aeb4d57be5a9ceb8737e0ebf411765f0c659b",
+      "sha256": "1b2244dc867686210750e713c4d5b8d5fb90166f0dd2d74757c031f9d95b50ba",
+      "bytes": 635
+    },
+    {
+      "path": "mobilebridge/internal/recoverysessions/registry.go",
+      "baseSHA256": "05aacadb8fb38d66c886831282fc31eff81c23bdb4f807f1db229bd16e4b7997",
+      "sha256": "0e78f34220bb195e6818f601214046db45b80436c86a2209cd4c7b83f8fbd4f1",
+      "bytes": 9536
+    },
+    {
+      "path": "mobilebridge/internal/recoverysessions/registry_test.go",
+      "baseSHA256": "f9adaff5143f99baafd5fc2bebcc9f67bb99200eebf9e5145e167a1141b30110",
+      "sha256": "c339433568f435da21742266f62e97ba805c9ca4d29f56d0b40a79f8153456d9",
+      "bytes": 13057
+    },
+    {
+      "path": "mobilebridge/recovery_registry.go",
+      "baseSHA256": "888b09077340d19e989a26d07a89eb6bf4bc5b30fc8a612594cb67af78c712b0",
+      "sha256": "5ff7794f1be6280517308aeaae9d4c260f414cf7976fd2cd7f0710af2708ef6e",
+      "bytes": 7159
+    },
+    {
+      "path": "mobilebridge/workflow.go",
+      "baseSHA256": "61a5c240bb0692f4b9038748df67833bdae744e82d393f5227659958d82ad6e0",
+      "sha256": "12d0097aca2b2ba861dcc4b9820cf1c63b03fcd2efcf31f9eecc4317e3d5e8b3",
+      "bytes": 25843
+    },
+    {
+      "path": "mobilebridge/workflow_cas_test.go",
+      "baseSHA256": null,
+      "sha256": "038650050c4efdf567601aabd2bfc0c194ad66d9b7b8afa585937e18dae57371",
+      "bytes": 3337
+    },
+    {
+      "path": "mobilebridge/workflow_save_retire_test.go",
+      "baseSHA256": null,
+      "sha256": "cb2186910afa0ee21a6b4a2eab7091876dbe2d7e75c6012c1096914f4fdc6d50",
+      "bytes": 4359
+    },
+    {
+      "path": "mobileworkflow/enrollment_v3.go",
+      "baseSHA256": "a45bd545997f7b82cd66a5f0b3ae0cd5d50e25b07b244aacfcf0a30423b3e306",
+      "sha256": "9f9a144b08efb15749c81fee7ba35fe41800139ac1e1d7f8f175c87ac28fd949",
+      "bytes": 13278
+    },
+    {
+      "path": "mobileworkflow/recovery.go",
+      "baseSHA256": "3a5862d39837f5f4898b84d43783cdedfd0d9b8800e90ea5ed73ace77571d574",
+      "sha256": "ec18287f7dd1b538055a23329a31f4b2619678638b3f777bb7bc23bc51ab4aee",
+      "bytes": 49280
+    },
+    {
+      "path": "mobileworkflow/recovery_dag_state.go",
+      "baseSHA256": null,
+      "sha256": "200ccba7079e6e5dec87f1209a6468cc5bf9f5edc30fbafd9d733730e5d98a3d",
+      "bytes": 9100
+    },
+    {
+      "path": "mobileworkflow/recovery_dag_state_test.go",
+      "baseSHA256": null,
+      "sha256": "2caabfdcc265b96145a7e80de025ef80b2db95556056cf4456a07e91853fd9d1",
+      "bytes": 13326
+    },
+    {
+      "path": "mobileworkflow/vaultworkflow.go",
+      "baseSHA256": "22ae357144415ce9e52e23118c1331c52c860a0fd690a5e954a8b5d7810de7d4",
+      "sha256": "70b4d4d18535fb5cfb3cb3377aa9394348e0ceb7511172d418ae005024976e72",
+      "bytes": 51617
+    },
+    {
+      "path": "syncclient/recovery_dag_checked_test.go",
+      "baseSHA256": null,
+      "sha256": "a933d140bf760a3dd306e57793b63b608d57f18ec2f7e0850985b562d4951fd7",
+      "bytes": 5789
+    },
+    {
+      "path": "syncclient/recovery_dag_journal.go",
+      "baseSHA256": "0243a08fcf9d3abcb6b3523a9f7eaaf5e80746592fd2973cedb2917b38393674",
+      "sha256": "110ccd3a3c97be33ae59c9841eba74577069ed2d75f2e2a701b6edb8628b5d42",
+      "bytes": 7668
+    },
+    {
+      "path": "syncclient/recovery_dag_vault_journal.go",
+      "baseSHA256": null,
+      "sha256": "305d59ccaf317b962e16b785ec78944c465b843e0acc64d6c3708002e904f42b",
+      "bytes": 1077
+    }
+  ],
+  "race": {
+    "status": "PASS",
+    "exitCode": 0,
+    "task": "mise run test-mobile-dag-s1",
+    "command": "go test -race ./syncclient ./localkeys ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json",
+    "firstEventUTC": "2026-10-03T21:31:32.732984+08:00",
+    "lastEventUTC": "2026-10-03T21:32:11.762387+08:00",
+    "topLevelPass": 170,
+    "subtestPass": 262,
+    "testPassEvents": 432,
+    "testFailEvents": 0,
+    "testSkipEvents": 0,
+    "packages": [
+      {
+        "package": "github.com/harmonia-vault/core-go/localkeys",
+        "status": "PASS",
+        "elapsedSeconds": 1.618
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+        "status": "PASS",
+        "elapsedSeconds": 1.169
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge",
+        "status": "PASS",
+        "elapsedSeconds": 15.68
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/syncclient",
+        "status": "PASS",
+        "elapsedSeconds": 29.164
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobileworkflow",
+        "status": "PASS",
+        "elapsedSeconds": 38.416
+      }
+    ],
+    "stdoutArtifact": "s1-final-schema-target-race.jsonl",
+    "stderrArtifact": "s1-final-schema-target-race.stderr"
+  },
+  "newTests": {
+    "topLevelPass": 12,
+    "subtestPass": 31,
+    "names": [
+      "TestCheckedDAGJournalConcurrentOwnersCannotOverwriteAcceptedRecord",
+      "TestCheckedDAGJournalSaveFailureReopenAndStrictMonotonicPacket",
+      "TestDAGJournalCASRejectsStaleSnapshotAndClosedOwner",
+      "TestInvalidateCancelsAndRejectsLeaseBeforeDeferredClose",
+      "TestMobileDAGIndependentWorkflowTombstoneRejectsOldWholeStateCAS",
+      "TestMobileDAGJournalAtomicFailureReopenAndMetadataNeverTrusts",
+      "TestMobileDAGJournalLogoutWinsAfterInflightSaveAndOldOwnerCannotRecreate",
+      "TestMobileDAGJournalRejectsEpochAndMutuallyExclusiveSchemasBeforeNetwork",
+      "TestMobileDAGRequiresAtomicNativeStoreAndCloseInvalidatesJournal",
+      "TestNativeDAGCASUnavailableForSaveOnlyProvider",
+      "TestNativeSealedCASRejectsIndependentWorkflowAfterLogout",
+      "TestWorkflowSaveFailureInvalidatesImmediatelyAndRetiresOutsideLocks"
+    ]
+  },
+  "schemaNegatives": {
+    "count": 22,
+    "nativeSnapshotCASExpectationMatched": true,
+    "targetValidatorCheckCallsPerCase": 1,
+    "expectedError": "mobileworkflow.ErrDAGProtectedState",
+    "persistenceFailureLatchMustRemainFalse": true,
+    "NewAlsoRejects": true,
+    "ordinaryLoginPullAndLegacyRecoveryNetworkCalls": 0
+  },
+  "consumerCompile": {
+    "status": "PASS",
+    "exitCode": 0,
+    "command": "go test ./... -run '^$' -count=1 -timeout=90s -json",
+    "packagesWithCompiledTestBinary": 13,
+    "packagesWithoutTestFiles": 5,
+    "executedTests": 0,
+    "stdoutArtifact": "s1-final-consumer-compile.jsonl",
+    "stderrArtifact": "s1-final-consumer-compile.stderr"
+  },
+  "priorRuns": [
+    {
+      "stdoutArtifact": "s1-affected-race.jsonl",
+      "status": "BLOCKED_BY_EXECUTION_SANDBOX",
+      "exitCode": 1,
+      "reason": "synthetic httptest loopback [::1]:0 bind denied; authorized localhost run subsequently passed"
+    },
+    {
+      "stdoutArtifact": "s1-final-task-race.jsonl",
+      "status": "PASS_WITH_LIMITED_SCHEMA_EVIDENCE",
+      "testPassEvents": 432,
+      "reason": "22 schema negatives could be rejected by native snapshot mismatch before target validator; preserved as prior evidence and not used as final schema proof"
+    }
+  ],
+  "artifacts": {
+    "s1-final-schema-target-race.jsonl": {
+      "sha256": "b3da757203932c5fcd5c394869d5353702c6158be6b726d2c547ca9bb6fd4b9b",
+      "bytes": 426215
+    },
+    "s1-final-schema-target-race.stderr": {
+      "sha256": "cd84b4c2ca8a392763b9d8720804ffca6543cdd7ed305b376f3265dcdd74505e",
+      "bytes": 83
+    },
+    "s1-final-consumer-compile.jsonl": {
+      "sha256": "637c6a2a226da4e9ad2fcde1ca3ae96b7d6f9865083f1c86a882962b032beb0d",
+      "bytes": 12867
+    },
+    "s1-final-consumer-compile.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "s1-final-task-race.jsonl": {
+      "sha256": "1ce1edf970a65fcf3dcdb45b2266e7beb3738c7d1d7bbfee8a891a34389558f5",
+      "bytes": 426227
+    },
+    "s1-final-task-race.stderr": {
+      "sha256": "cd84b4c2ca8a392763b9d8720804ffca6543cdd7ed305b376f3265dcdd74505e",
+      "bytes": 83
+    },
+    "s1-affected-race.jsonl": {
+      "sha256": "6eefbb09bd40a346f3422db7d1ba08cfddd0eebeab5fa16fd8616778e79c5e6d",
+      "bytes": 79946
+    },
+    "s1-affected-race.stderr": {
+      "sha256": "a8af45ff650698426d9096c6ee1b72d72f930a2f7e100398bdcaec1f2e8e8b66",
+      "bytes": 255
+    }
+  },
+  "rawLogsPublished": false,
+  "invariants": {
+    "originalPacketValidatorByteIdentical": true,
+    "originalPacketValidatorSHA256": "186ea68b392fc8af849c902744059e8bb0a7bde587f3da71e6ecebf6ed75fce9",
+    "noNativeDAGCommandAdded": true,
+    "noUICapabilityEnabled": true,
+    "trustedDeviceMetadataAlwaysFalse": true,
+    "accountClosedOldOwnerCannotRecreate": true,
+    "independentWorkflowWholeStateCASBarrierTest": true,
+    "ownerAliveChecksCurrentNativeSnapshot": true,
+    "failedSaveImmediatelyInvalidatesLeasesAndCancelsContext": true,
+    "ownerCloseDeferredUntilOuterUnlock": true,
+    "noAutomaticSchemaMigrationOrTrust": true
+  },
+  "notRun": [
+    "Android or iOS atomic store implementation",
+    "Gomobile AAR or XCFramework build",
+    "Apple/Android SDK authentication",
+    "Physical device authentication",
+    "BoringSSL-tagged PAKE2 tests",
+    "Mobile recovery end-to-end",
+    "S2 live recovery owner and original-query integration",
+    "P4 management/reanchor"
+  ],
+  "limitations": [
+    "Native persistence is a synthetic mutex-backed Go provider in these component tests.",
+    "Default build excludes native-tagged tests; testSkipEvents=0 does not mean those tests ran.",
+    "Save-only native providers cannot use DAG.",
+    "No local expired/not-accepted/abandoned fact or automatic replacement of an unresolved original operation is introduced.",
+    "Full repository command compiled consumers but ran no test cases."
+  ]
+}

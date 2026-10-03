@@ -143,6 +143,12 @@ func positiveDecimal(value string) bool {
 	return e == nil && n > 0 && strconv.FormatUint(n, 10) == value
 }
 func (w *Workflow) recoveryOnly() error {
+	if w.dagPersistenceFailed {
+		return ErrDAGPersistence
+	}
+	if w.state.RecoveryDAG != nil {
+		return ErrRecoveryRestricted
+	}
 	if w.closed {
 		return ErrClosed
 	}

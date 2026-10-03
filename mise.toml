@@ -16,3 +16,7 @@ run = "bash .mise/scripts/cross-compile.sh"
 [tasks.test-offline-local-logout]
 description = "验证受保护离线退出、既有材料与逐变量恢复"
 run = "go test -race -count=1 ./cmd/harmonia ./localkeys ./platform -run 'TestOfflineLogout|TestExistingOnly|TestClosedLogoutProvider|TestLogoutProviderUntracked'"
+
+[tasks.test-mobile-dag-s1]
+description = "手机 DAG 持久 journal/CAS、原生 owner 与既有恢复业务的有界 race 回归"
+run = "go test -race ./syncclient ./localkeys ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"

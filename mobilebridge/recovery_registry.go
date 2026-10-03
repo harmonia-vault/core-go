@@ -207,3 +207,26 @@ func (v *VaultWorkflow) clearRecoveryOwner() {
 		r.Clear()
 	}
 }
+
+// 保存回调不能在 session/业务锁内同步 Close owner。先撤销 lease，外层解锁后 Clear。
+func (r *RecoveryRegistry) invalidate() {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	reg := r.registry
+	r.handle = recoverysessions.Handle{}
+	r.binding = recoverysessions.Binding{}
+	r.mu.Unlock()
+	if reg != nil {
+		reg.Invalidate()
+	}
+}
+func (v *VaultWorkflow) invalidateRecoveryOwner() {
+	v.cancelMu.Lock()
+	r := v.recoveryRegistry
+	v.cancelMu.Unlock()
+	if r != nil {
+		r.invalidate()
+	}
+}

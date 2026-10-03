@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -37,6 +38,15 @@ const maxWorkflowCommand = 32768
 // SealedStateStore 只能由可信原生层实现；每次回调必须同步原子保存密文后返回。
 // 不接受 Dart/服务器实现，不返回解密后的状态、钥匙或随机 token。
 type SealedStateStore interface{ SaveSealed(packet []byte) error }
+
+// AtomicSealedStateStore 是 DAG 的额外 native-only 合同。必须在现有 OS/slot
+// owner 锁内比较当前完整密文与 expected，然后原子写入 next（包含同次 epoch）。
+// callback 内先读再无锁普通写不是 CAS；旧 SaveSealed provider 不满足本合同。
+type AtomicSealedStateStore interface {
+	SealedStateStore
+	CompareAndSwapSealed(expected, next []byte) error
+	CheckSealed(expected []byte) error
+}
 
 type stateBinding struct {
 	Namespace          string `json:"namespace"`
@@ -60,6 +70,9 @@ type VaultWorkflow struct {
 	binding          stateBinding
 	store            SealedStateStore
 	deleteDevice     bool
+	saveFailed       atomic.Bool
+	lastSealed       []byte
+	protectedSHA256  string
 	recoveryRegistry *RecoveryRegistry
 	cancelMu         sync.Mutex
 	cancel           context.CancelFunc
@@ -100,7 +113,10 @@ func (d *Device) OpenWorkflow(endpoint, namespace string, sealed, additionalCA [
 	if err != nil {
 		return nil, errInput
 	}
-	v := &VaultWorkflow{key: key, binding: binding, store: store}
+	v := &VaultWorkflow{key: key, binding: binding, store: store, lastSealed: bytes.Clone(sealed)}
+	if len(sealed) == 0 {
+		v.lastSealed = nil
+	}
 	var plain []byte
 	if len(sealed) > 0 {
 		plain, err = v.open(sealed)
@@ -115,7 +131,15 @@ func (d *Device) OpenWorkflow(endpoint, namespace string, sealed, additionalCA [
 		v.Close()
 		return nil, err
 	}
-	v.workflow, err = mobileworkflow.New(mobileworkflow.Config{Endpoint: endpoint, HTTPClient: client, SigningKey: d.signing, ReceivingPrivateKey: d.receiving, ProtectedState: plain, SaveProtectedState: v.save})
+	h := sha256.Sum256(plain)
+	v.protectedSHA256 = hex.EncodeToString(h[:])
+	var atomicSave func(string, []byte) error
+	var atomicCheck func(string) error
+	if _, ok := store.(AtomicSealedStateStore); ok {
+		atomicSave = v.saveCAS
+		atomicCheck = v.checkProtected
+	}
+	v.workflow, err = mobileworkflow.New(mobileworkflow.Config{Endpoint: endpoint, HTTPClient: client, SigningKey: d.signing, ReceivingPrivateKey: d.receiving, ProtectedState: plain, SaveProtectedState: v.save, SaveProtectedStateCAS: atomicSave, CheckProtectedState: atomicCheck})
 	if err != nil {
 		v.Close()
 		return nil, errors.New("protected workflow state rejected")
@@ -168,12 +192,46 @@ func (v *VaultWorkflow) aead() (cipher.AEAD, error) {
 	}
 	return cipher.NewGCM(b)
 }
-func (v *VaultWorkflow) save(plain []byte) (err error) {
+func (v *VaultWorkflow) save(plain []byte) error { return v.saveProtected(plain, nil) }
+func (v *VaultWorkflow) saveCAS(expected string, plain []byte) error {
+	return v.saveProtected(plain, &expected)
+}
+
+// 当前原生密文必须仍是本次认证解包的完整状态；旧对象不能只凭 RAM epoch 存活。
+func (v *VaultWorkflow) checkProtected(expected string) (err error) {
+	if v.saveFailed.Load() {
+		return errClosed
+	}
 	defer func() {
 		if err != nil {
-			v.clearRecoveryOwner()
+			v.saveFailed.Store(true)
+			v.invalidateRecoveryOwner()
+			v.cancelOperation()
 		}
 	}()
+	atomicStore, ok := v.store.(AtomicSealedStateStore)
+	if !ok {
+		return mobileworkflow.ErrDAGAtomicStoreRequired
+	}
+	if expected != v.protectedSHA256 {
+		return errInput
+	}
+	return atomicStore.CheckSealed(bytes.Clone(v.lastSealed))
+}
+func (v *VaultWorkflow) saveProtected(plain []byte, expected *string) (err error) {
+	if v.saveFailed.Load() {
+		return errClosed
+	}
+	defer func() {
+		if err != nil {
+			v.saveFailed.Store(true)
+			v.invalidateRecoveryOwner()
+			v.cancelOperation()
+		}
+	}()
+	if expected != nil && *expected != v.protectedSHA256 {
+		return errInput
+	}
 	b, err := projectedBinding(plain)
 	b.Namespace = v.binding.Namespace
 	if err != nil || !v.matches(b) {
@@ -200,10 +258,22 @@ func (v *VaultWorkflow) save(plain []byte) (err error) {
 	}
 	packet := append(bytes.Clone(aad), nonce...)
 	packet = gcm.Seal(packet, nonce, plain, aad)
-	if err = v.store.SaveSealed(packet); err != nil {
-		v.clearRecoveryOwner()
+	if expected != nil {
+		atomicStore, ok := v.store.(AtomicSealedStateStore)
+		if !ok {
+			return mobileworkflow.ErrDAGAtomicStoreRequired
+		}
+		err = atomicStore.CompareAndSwapSealed(bytes.Clone(v.lastSealed), packet)
+	} else {
+		err = v.store.SaveSealed(packet)
+	}
+	if err != nil {
 		return errors.New("native atomic protected save failed")
 	}
+	clear(v.lastSealed)
+	v.lastSealed = bytes.Clone(packet)
+	h := sha256.Sum256(plain)
+	v.protectedSHA256 = hex.EncodeToString(h[:])
 	v.binding = b
 	return nil
 }
@@ -259,7 +329,12 @@ func (v *VaultWorkflow) cancelOperation() {
 func (v *VaultWorkflow) Close() {
 	v.cancelOperation()
 	v.mu.Lock()
-	defer v.mu.Unlock()
+	defer func() {
+		v.mu.Unlock()
+		if v.saveFailed.Load() {
+			v.clearRecoveryOwner()
+		}
+	}()
 	// OpenWorkflow 错误路径没有锁；外部调用在原生串行 worker 中运行。
 	if v.workflow != nil {
 		v.workflow.Close()
@@ -268,6 +343,9 @@ func (v *VaultWorkflow) Close() {
 	clear(v.key)
 	v.key = nil
 	v.store = nil
+	clear(v.lastSealed)
+	v.lastSealed = nil
+	v.protectedSHA256 = ""
 }
 func (v *VaultWorkflow) RequiresDeviceDeletion() bool {
 	v.mu.Lock()
@@ -417,7 +495,15 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 		}
 	}
 	v.mu.Lock()
-	defer v.mu.Unlock()
+	defer func() {
+		v.mu.Unlock()
+		if v.saveFailed.Load() {
+			v.clearRecoveryOwner()
+		}
+	}()
+	if v.saveFailed.Load() {
+		return "", errClosed
+	}
 	if c.endpoint != v.binding.Endpoint {
 		return "", errInput
 	}
