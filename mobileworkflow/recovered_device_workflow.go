@@ -264,6 +264,14 @@ func (w *Workflow) RegisterRecoveredDevice(ctx context.Context, id string, selec
 		return w.recoveredDeviceInfo(), err
 	}
 	p.Enrollment = cryptox.RecoveredDeviceEnrollment{AccountID: r.AccountID, AccountGeneration: r.AccountGeneration, RecoveryGeneration: r.RecoveryGeneration, RecoveryTransitionHash: authority.HeadHash(), OperationID: id, ChallengeID: c.ChallengeID, Nonce: c.Nonce, ExpiresAt: strconv.FormatInt(c.ExpiresAt, 10), RestrictedSessionHash: r.SessionHash, ExpectedSequence: c.ExpectedSequence, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.state.SigningPublicKey, DeviceReceivingPublicKey: w.state.ReceivingPublicKey, SelectedRightsHash: rights, GrantsHash: grants, IssuerEvidenceHash: evidence, EnvelopesHash: envs}
+	// Validate the complete typed challenge before waiting. The original expiry,
+	// source evidence, selections and all key-version bindings stay unchanged.
+	if _, err = p.Enrollment.SigningBytes(); err != nil {
+		return w.recoveredDeviceInfo(), errors.Join(ErrRecoveryEvidence, err)
+	}
+	if err = w.waitRecoveredDeviceChallenge(ctx, c.ExpiresAt); err != nil {
+		return w.recoveredDeviceInfo(), err
+	}
 	p.RecoverySignature, err = w.recoverySession.signRecoveredDevice(authority, p, w.now())
 	if err != nil {
 		return w.recoveredDeviceInfo(), err
