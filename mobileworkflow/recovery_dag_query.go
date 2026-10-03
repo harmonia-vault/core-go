@@ -99,7 +99,7 @@ func (w *Workflow) QueryRecoveryDAGOriginal(parent context.Context, completeCurr
 	}
 	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	w.mu.Lock()
-	if w.dagQueryCancel != nil {
+	if w.dagQueryCancel != nil || w.dagOwnerCancel != nil {
 		w.mu.Unlock()
 		cancel()
 		return result, ErrDAGQueryBusy

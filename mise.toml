@@ -28,3 +28,11 @@ run = "go test -race -count=1 ./cmd/harmonia -run TestLocalEnrollmentCheck"
 [tasks.test-mobile-dag-query]
 description = "手机 DAG 原 ID 查询及受影响 Go 业务/owner 的有界 race 回归"
 run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"
+
+[tasks.test-mobile-dag-owner]
+description = "B1 typed RAM owner/lease 与受影响恢复路径的有界 race 回归"
+run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"
+
+[tasks.test-mobile-dag-owner-components]
+description = "B1 只读 owner/binding/lease 定向组件"
+run = "go test -race ./syncclient ./mobileworkflow -run 'TestDAGVerifiedBinding|TestDAGOwner' -count=1 -timeout=90s -json"

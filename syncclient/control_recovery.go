@@ -96,9 +96,8 @@ func (c *Client) requestEnvironmentControl(ctx context.Context, environment stri
 	return nil
 }
 func (c *Client) requestManagementControl(ctx context.Context, environment string, out *ManagementControl) error {
-	// P4设备管理属于后续切片，不能隐式选择P2/P3控制。
 	if c.dagControls() {
-		return ErrWritePermission
+		return c.requestDAGManagementControl(ctx, environment, out)
 	}
 	target := c.endpointFor("/grant-management")
 	query := target.Query()

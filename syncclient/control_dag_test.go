@@ -139,9 +139,6 @@ func TestDAGEnvironmentControlsExplicitProfileHistoryAndPause(t *testing.T) {
 	if _, e := client.PrepareEnvironmentChangeV3(context.Background(), cryptox.SignedEnvironmentChange{}, key); !errors.Is(e, ErrWritePermission) {
 		t.Fatal("P4 used P3 namespace")
 	}
-	if _, e := client.ManagementControl(context.Background(), env); !errors.Is(e, ErrWritePermission) {
-		t.Fatal("unfinished management used old profile")
-	}
 	check(t, engine.SetPaused(true))
 	if _, e := client.EnvironmentControl(context.Background(), env); !errors.Is(e, ErrPaused) {
 		t.Fatal("paused environment preparation allowed")

@@ -141,6 +141,7 @@ func clone[T any](value T) T {
 }
 
 type Workflow struct {
+	dagOwnerCancel       context.CancelFunc
 	dagQueryCancel       context.CancelFunc
 	dagPersistenceFailed bool
 	saveNativeCAS        func(string, []byte) error
@@ -360,6 +361,9 @@ func (w *Workflow) Close() {
 	defer w.mu.Unlock()
 	if w.dagQueryCancel != nil {
 		w.dagQueryCancel()
+	}
+	if w.dagOwnerCancel != nil {
+		w.dagOwnerCancel()
 	}
 	w.recoverySession = nil // native registry independently owns this process resource
 	if w.writer != nil {
@@ -940,6 +944,9 @@ func (w *Workflow) boot(ctx context.Context) error {
 func (w *Workflow) invalidateTrust() error {
 	if w.dagQueryCancel != nil {
 		w.dagQueryCancel()
+	}
+	if w.dagOwnerCancel != nil {
+		w.dagOwnerCancel()
 	}
 	w.state.RecoveryDAG = nil
 	if w.managementPending() {

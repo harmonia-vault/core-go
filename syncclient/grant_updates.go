@@ -93,23 +93,28 @@ type ManagementControl struct {
 	Subjects               []ManagementSubject          `json:"subjects"`
 	IssuerEvidence         cryptox.IssuerProofV2        `json:"issuerEvidence"`
 	IssuerRecoveryEvidence *cryptox.IssuerRecoveryProof `json:"issuerRecoveryEvidence,omitempty"`
+	IssuerDAGEvidence      *cryptox.IssuerRecoveryDAG   `json:"issuerDAGEvidence,omitempty"`
 }
 
 func (c *Client) verifyManagementControl(out ManagementControl, historical ...bool) (VerifiedControlEvidence, cryptox.SignedGrantWire, error) {
 	var own cryptox.SignedGrantWire
+	if len(historical) > 1 {
+		return nil, own, cryptox.ErrInvalidWire
+	}
+	past := len(historical) == 1 && historical[0]
 	v, ok := c.config.Verifier.(*PinnedVerifier)
 	if !ok || v.evidenceRoot == nil || c.config.Engine.State().SessionEpoch != c.epoch || c.config.Engine.State().AccountClosed {
 		return nil, own, ErrWritePermission
 	}
 	state := c.config.Engine.State()
-	if out.AccountID != c.config.AccountID || out.AccountGeneration != strconv.FormatUint(c.config.AccountGeneration, 10) || !enrollmentID.MatchString(out.EnvironmentID) || (len(historical) == 0 && (out.Sequence < state.Cloud.Sequence || out.Sequence < state.Cloud.AuthorizationSequence)) || out.Sequence > 9007199254740991 || len(out.Subjects) < 1 || len(out.Subjects) > 256 {
+	if out.AccountID != c.config.AccountID || out.AccountGeneration != strconv.FormatUint(c.config.AccountGeneration, 10) || !enrollmentID.MatchString(out.EnvironmentID) || (!past && (out.Sequence < state.Cloud.Sequence || out.Sequence < state.Cloud.AuthorizationSequence)) || out.Sequence > 9007199254740991 || len(out.Subjects) < 1 || len(out.Subjects) > 256 {
 		return nil, own, cryptox.ErrInvalidWire
 	}
 	version, e := parsePositive(out.KeyVersion)
 	if e != nil {
 		return nil, own, e
 	}
-	proof, e := c.verifyControlEvidence(out.IssuerEvidence, out.IssuerRecoveryEvidence, out.Sequence, len(historical) > 0)
+	proof, e := c.verifyManagementEvidence(out, past)
 	if e != nil {
 		return nil, own, e
 	}
@@ -123,7 +128,9 @@ func (c *Client) verifyManagementControl(out ManagementControl, historical ...bo
 	}
 	// Proof3 的已归档设备可以尚未获本环境授权；权源枚举不等于完整身份集合。
 	// 仅从已完整验证的恢复图读取原双签身份，不能从服务端 subjects 建立 pin。
-	if recovered, ok := proof.(*cryptox.VerifiedIssuerRecoveryProof); ok {
+	if recovered, ok := proof.(interface {
+		VerifiedIdentity(string) (cryptox.VerifiedIssuerIdentity, bool)
+	}); ok {
 		for _, subject := range out.Subjects {
 			id, known := recovered.VerifiedIdentity(subject.DeviceID)
 			if !known {
@@ -167,11 +174,11 @@ func (c *Client) verifyManagementControl(out ManagementControl, historical ...bo
 		return nil, own, ErrWritePermission
 	}
 	expiry, e := strconv.ParseInt(own.Grant.ExpiresAt, 10, 64)
-	if e != nil || (len(historical) == 0 && expiry != 0 && expiry <= c.config.Now().Unix()) {
+	if e != nil || (!past && expiry != 0 && expiry <= c.config.Now().Unix()) {
 		return nil, own, ErrWritePermission
 	}
 	cached, exists := state.Cloud.Environments[out.EnvironmentID]
-	if len(historical) == 0 && (!exists || cached.Role != localstate.Admin || cached.KeyVersion != version || own.Grant.GrantGeneration != strconv.FormatUint(cached.GrantGeneration, 10)) {
+	if !past && (!exists || cached.Role != localstate.Admin || cached.KeyVersion != version || own.Grant.GrantGeneration != strconv.FormatUint(cached.GrantGeneration, 10)) {
 		return nil, own, ErrFullPullRequired
 	}
 	return proof, own, nil
@@ -208,6 +215,7 @@ type GrantUpdateIntent struct {
 }
 type grantUpdateRecord struct {
 	Version      int                     `json:"version"`
+	Capability   string                  `json:"capability,omitempty"`
 	SessionEpoch uint64                  `json:"sessionEpoch"`
 	PreparedAt   int64                   `json:"preparedAt"`
 	Intent       GrantUpdateIntent       `json:"intent"`
@@ -309,6 +317,10 @@ func (c *Client) PrepareGrantUpdate(ctx context.Context, in GrantUpdateIntent, k
 		return nil, e
 	}
 	transaction := &GrantUpdateTransaction{client: c, record: grantUpdateRecord{Version: 1, SessionEpoch: c.epoch, PreparedAt: c.config.Now().Unix(), Intent: in, Control: control, Signed: cryptox.GrantToWire(signed)}}
+	if c.dagControls() {
+		transaction.record.Version = 2
+		transaction.record.Capability = cryptox.RecoveryDAGCapability
+	}
 	if e = transaction.validate(); e != nil {
 		return nil, e
 	}
@@ -334,7 +346,7 @@ func (c *Client) RestoreGrantUpdate(data []byte) (*GrantUpdateTransaction, error
 func (t *GrantUpdateTransaction) validate() error {
 	c, r := t.client, t.record
 	g, in := r.Signed.Grant, r.Intent
-	if r.Version != 1 || r.PreparedAt <= 0 || in.ExpiresAt < 0 || in.ExpiresAt > 253402300799 || c.config.Now().Unix() < r.PreparedAt-5 || r.SessionEpoch != c.epoch || c.config.Engine.State().SessionEpoch != c.epoch || c.config.Engine.State().AccountClosed || !enrollmentID.MatchString(in.ID) || len(in.ID) > 64 || g.EnvironmentID != in.EnvironmentID || g.SubjectDeviceID != in.SubjectDeviceID || g.IdempotencyKey != in.ID || g.Role != in.Role {
+	if (c.dagControls() && (r.Version != 2 || r.Capability != cryptox.RecoveryDAGCapability) || !c.dagControls() && (r.Version != 1 || r.Capability != "")) || r.PreparedAt <= 0 || in.ExpiresAt < 0 || in.ExpiresAt > 253402300799 || c.config.Now().Unix() < r.PreparedAt-5 || r.SessionEpoch != c.epoch || c.config.Engine.State().SessionEpoch != c.epoch || c.config.Engine.State().AccountClosed || !enrollmentID.MatchString(in.ID) || len(in.ID) > 64 || g.EnvironmentID != in.EnvironmentID || g.SubjectDeviceID != in.SubjectDeviceID || g.IdempotencyKey != in.ID || g.Role != in.Role {
 		return cryptox.ErrInvalidWire
 	}
 	if e := c.grantIdentity(r.Signed); e != nil {
@@ -400,6 +412,9 @@ func (t *GrantUpdateTransaction) SubmitWithBarrier(ctx context.Context, beforePo
 	return t.submit(ctx, beforePost)
 }
 func (t *GrantUpdateTransaction) submit(ctx context.Context, beforePost func() error) (Acceptance, error) {
+	if t.client.dagControls() && beforePost == nil {
+		return Acceptance{}, ErrWriteJournal
+	}
 	if e := t.validate(); e != nil {
 		return Acceptance{}, e
 	}
