@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+go test ./cryptox -run '^(TestRecoveryDAG|TestRecoverySource)' -count=1 -v

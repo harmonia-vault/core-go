@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# mise description="检查恢复依赖图静态分析和三平台源码编译"
+set -euo pipefail
+mise exec -- go vet ./cryptox
+mise run cross-compile
