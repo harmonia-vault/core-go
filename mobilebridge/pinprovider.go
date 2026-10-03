@@ -326,11 +326,23 @@ func (p *LocalPINCore) execute(pin, input, short, record, sealed, ca []byte, sto
 		return "", appsecurity.ErrBusy
 	}
 	defer p.mu.Unlock()
+	// Set only at Unlock, before importing a Device or opening a Workflow.
+	// Keep the original error until every synchronous owner retirement succeeds.
+	preflightPINRejected := false
 	defer func() {
-		if err != nil && p.lifecycle.RetireOwners() != nil {
-			p.closed = true
-			err = errPINLifecycle
-			out = ""
+		if err != nil {
+			if p.lifecycle.RetireOwners() != nil {
+				p.closed = true
+				err = errPINLifecycle
+				out = ""
+				return
+			}
+			// Direct equality intentionally excludes wrapped/joined persistence,
+			// cleanup, cancellation, and any error from the business workflow.
+			if preflightPINRejected && err == appsecurity.ErrPIN {
+				out, err = encode(map[string]any{"version": 1, "experimental": true, "realVaultReady": false,
+					"ok": false, "code": "PIN_AUTH_FAILED", "retrySameId": false})
+			}
 		}
 	}()
 	if p.closed || !p.created || store == nil {
@@ -377,6 +389,7 @@ func (p *LocalPINCore) execute(pin, input, short, record, sealed, ca []byte, sto
 			p.closed = true
 			return "", errPINLifecycle
 		}
+		preflightPINRejected = err == appsecurity.ErrPIN
 		return "", err
 	}
 	defer lease.Close()

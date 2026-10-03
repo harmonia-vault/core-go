@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,11 +21,12 @@ import (
 type pinNativeLife struct {
 	retired atomic.Int32
 	fail    atomic.Bool
+	failAt  atomic.Int32
 }
 
 func (l *pinNativeLife) RetireOwners() error {
-	l.retired.Add(1)
-	if l.fail.Load() {
+	n := l.retired.Add(1)
+	if l.fail.Load() || n == l.failAt.Load() {
 		return errors.New("synthetic retirement failure")
 	}
 	return nil
@@ -117,8 +121,12 @@ type nativePINFixture struct {
 
 func newNativePINFixture(t *testing.T) nativePINFixture {
 	t.Helper()
+	return newNativePINFixtureAt(t, "https://vault.example.invalid")
+}
+func newNativePINFixtureAt(t *testing.T, endpoint string) nativePINFixture {
+	t.Helper()
 	life := &pinNativeLife{}
-	setup, e := NewLocalPINSetup("org.harmonia.fixture.pin", "synthetic-pin/v1", "isolated-slot", "https://vault.example.invalid", life)
+	setup, e := NewLocalPINSetup("org.harmonia.fixture.pin", "synthetic-pin/v1", "isolated-slot", endpoint, life)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -157,7 +165,11 @@ func newNativePINFixture(t *testing.T) nativePINFixture {
 }
 func (f nativePINFixture) open(t *testing.T) *LocalPINCore {
 	t.Helper()
-	p, e := OpenLocalPINCore("org.harmonia.fixture.pin", "synthetic-pin/v1", "isolated-slot", "https://vault.example.invalid", f.scope, f.life)
+	var binding appsecurity.Binding
+	if e := json.Unmarshal([]byte(f.scope), &binding); e != nil {
+		t.Fatal(e)
+	}
+	p, e := OpenLocalPINCore("org.harmonia.fixture.pin", "synthetic-pin/v1", "isolated-slot", binding.Endpoint, f.scope, f.life)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -200,8 +212,10 @@ func TestNativePINCorrectAndWrongPINUseDurableCountersAcrossNewInstance(t *testi
 	f := newNativePINFixture(t)
 	s := &pinNativeStore{state: f.state}
 	p := f.open(t)
-	if out, e := p.Execute([]byte("246802"), pinCommand("view"), f.record, nil, nil, s); out != "" || !errors.Is(e, appsecurity.ErrPIN) {
-		t.Fatal("incorrect PIN accepted", e)
+	out, e := p.Execute([]byte("246802"), pinCommand("view"), f.record, nil, nil, s)
+	assertNativePINAuthFailure(t, out, e)
+	if s.saves != 0 || s.locked.Load() {
+		t.Fatal("incorrect PIN opened business or retained attempt lock")
 	}
 	if s.state.Total != 1 || s.state.Failures != 1 || s.state.PendingAttempt == "" || s.commits != 1 {
 		t.Fatal("failure was not charged before KDF")
@@ -213,6 +227,75 @@ func TestNativePINCorrectAndWrongPINUseDurableCountersAcrossNewInstance(t *testi
 	}
 	if s.state.Total != 2 || s.state.Revision != 4 || s.state.Failures != 0 || s.commits != 3 {
 		t.Fatal("restart reset counters")
+	}
+}
+func assertNativePINAuthFailure(t *testing.T, out string, err error) {
+	t.Helper()
+	var result map[string]any
+	if err != nil || json.Unmarshal([]byte(out), &result) != nil || len(result) != 6 || result["version"] != float64(1) || result["experimental"] != true || result["realVaultReady"] != false || result["ok"] != false || result["code"] != "PIN_AUTH_FAILED" || result["retrySameId"] != false {
+		t.Fatal("incorrect PIN did not return the exact preflight-only result", err)
+	}
+}
+func TestNativePINWrongPINNeverImportsWorkflowOrCallsHTTPS(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer server.Close()
+	f := newNativePINFixtureAt(t, server.URL)
+	p := f.open(t)
+	s := &pinNativeStore{state: f.state}
+	input, err := json.Marshal(map[string]any{"version": 1, "endpoint": server.URL, "operation": "loginAccount", "email": "pin-fixture@example.invalid", "password": "synthetic-login-password"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ca := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
+	// OpenWorkflow would reject this packet before any business call. Receiving
+	// the fixed authentication result therefore also proves that it was not opened.
+	out, err := p.Execute([]byte("246802"), input, f.record, []byte("synthetic-unopenable-workflow"), ca, s)
+	assertNativePINAuthFailure(t, out, err)
+	if requests.Load() != 0 || s.saves != 0 || s.commits != 1 || s.state.Total != 1 || s.state.Failures != 1 || s.state.PendingAttempt == "" {
+		t.Fatal("authentication rejection opened business, contacted HTTPS, or erased the durable charge")
+	}
+}
+func TestNativePINWrongPINPersistenceAndFinalRetirementAreNotAuthFailures(t *testing.T) {
+	f := newNativePINFixture(t)
+	for _, test := range []struct {
+		name            string
+		commit, release int
+		finalRetire     bool
+	}{
+		{"precharge-commit", 1, 0, false},
+		{"unlock-release", 0, 2, false},
+		{"final-retirement", 0, 0, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			p := f.open(t)
+			s := &pinNativeStore{state: f.state, failCommit: test.commit, failRelease: test.release}
+			if test.finalRetire {
+				// Unlock's first retirement succeeds. The wrapper's final retirement
+				// must succeed too, before converting an exact ErrPIN to public JSON.
+				f.life.failAt.Store(f.life.retired.Load() + 2)
+			}
+			out, err := p.Execute([]byte("246802"), pinCommand("logout"), f.record, nil, nil, s)
+			want := appsecurity.ErrPersistence
+			if test.finalRetire {
+				want = errPINLifecycle
+			}
+			if out != "" || err != want || s.saves != 0 || s.locked.Load() {
+				t.Fatal("uncertain persistence or cleanup downgraded to PIN_AUTH_FAILED", err)
+			}
+			if test.commit == 0 && (s.state.Total != 1 || s.state.Failures != 1 || s.state.PendingAttempt == "") {
+				t.Fatal("wrong PIN's precharged attempt was reset")
+			}
+			if test.finalRetire {
+				if _, err := p.ScopeJSON(); err != appsecurity.ErrClosed {
+					t.Fatal("failed final retirement revived the core")
+				}
+			}
+			f.life.failAt.Store(0)
+		})
 	}
 }
 func TestNativePINPersistenceFailureNeverReachesBusiness(t *testing.T) {

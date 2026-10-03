@@ -1,6 +1,6 @@
 # App PIN 私有 Go 包装器候选
 
-这是未接产品的实验性 native 接口。当前 Plugin、UI、Go AAR、WorkflowProfile 和能力开关均未改；不能据主机测试宣布 Android PIN 批准 CLI 已通过。Android 独立存储 5 项 PASS 是另一批证据，其无权限包读取到的 BLOCKED 不能作为 PIN 资格。
+这是实验性 native 接口。本文保留下方首批包装器的历史组件证据；后续 Android 实际 MainActivity 插件纵链证据独立记录在 mobile 仓库 `docs/PIN_PRODUCT_RUNTIME.md`。这些证据不能替代 Flutter PIN 输入验证；默认产品能力须按实测操作范围独立开放。无权限包读取到的 BLOCKED 不能作为 PIN 资格。
 
 固定原生 `PinNativeCore` 适配才可调用这些接口。pkg、namespace、slot、HTTPS endpoint 来自 native 固定配置；原生必须先用实际系统服务确认 NO_SYSTEM_AUTH、无旧系统钥/状态、未锁定升级 latch。系统取消、失败、临时 lockout、硬件暂不可用或未知状态不得走 PIN。系统后来 ready 必须先按既有 Keystore MAC 单包方案持久锁定升级；正确旧 PIN + 真正 CryptoObject 的迁移尚未实现，因此升级后普通 PIN 业务仍关闭。
 
@@ -27,7 +27,7 @@ native 实际 MAC snapshot → DecodeRecord 且原 bytes 必须等于 Record.Enc
 
 PIN不是 vault key。固定 Argon2/AES随机包封没有快速 PIN verifier，但低熵 PIN 的离线猜测仍可能发生；MAC/AtomicFile/noBackup 不抵抗 root 完整快照回放。Go/JVM/JNI复制、GoGC、Argon/AES内部内存不保证全部硬擦。fmt/JSON/Gob opaque 不抵抗 same-process reflection/unsafe/内存读取。平台生成软件 Ed/X 不宣称一直在硬件内。
 
-## 本轮实测
+## 首批组件实测（历史）
 
 固定 public core32b02936fe24de9e6b7d5da1100c158b7a89b3eb 归档，仅加入两 Go 候选；没有 live shared、GoMod、Plugin、Gradle 或现 AAR 改动。
 
@@ -35,3 +35,15 @@ PIN不是 vault key。固定 Argon2/AES随机包封没有快速 PIN verifier，�
 - 同一最终源码 vet PASS。此前完整 mobilebridge 普通回归 PASS1.646s；其后仅补两新文件的 canonical Record/必需 attempt 字段拒绝并重跑定向 race/vet。
 - 正确 PIN oneConsume 后成熟 View 仍 NOT_TRUSTED；wrongPIN/reopen 保留计数；precharge/settle/Release失败业务未触达；严格 intent/KDF/metadata/native整数；BUSY取消保留 durable charge；mature logout native-save 失败 okfalse，retire失败不伪称成功。
 - Kotlin私有适配、实际有权限 classifier/Keystore+Go合体、PIN审批CLI/恢复、gomobile候选AAR构建、Plugin/UI实际产品均 UNRUN/CLOSED，待父任务复核后单独推进。
+
+## 精确 PIN 失败结果修补（2026-10-03）
+
+Flutter 第五轮实际运行到可信环境页面，错误 PIN 在业务执行前被拒绝，却经 JNI Exception 被归类为保护不可用。该轮整体 FAIL 44.852s 保留；不将它改写为 UI 通过。
+
+`Execute` 系列现在仅在 `Provider.Unlock` 返回精确 `appsecurity.ErrPIN` 时设置本地 preflight 标记。该错误须已经通过 whole-attempt Release 和 Unlock 的同步 owner 退役；包装器退出时再次同步退役成功后，才返回固定成熟失败 JSON：`version:1`、`experimental:true`、`realVaultReady:false`、`ok:false`、`code:PIN_AUTH_FAILED`、`retrySameId:false`。这个分支尚未 ImportProtectedMaterial 或 OpenWorkflow，因此可明确拒绝本次业务而不制造云端 unknown。
+
+使用 sentinel 直接相等比较；包装/组合错误、Commit/Release/清理失败、取消及任何业务执行后的错误不能映射为认证失败。最后同步退役失败返回真实 native lifecycle 错误、关闭该实例且输出为空。原生 `NativePinOperation` 的 finally 仍须关闭 provider 并释放整个操作锁；其清理失败覆盖已有 JSON 为 PERSISTENCE，不能向 UI 声称清理成功。
+
+错误 PIN 保留已持久 precharge 的 `PendingAttempt`、total 和 failure 计数，不执行成功 settle 或发放 lease。没有新材料/lease 导出，没有新认证、恢复或能力入口，私有 ABI 签名未变。
+
+固定公开 core `c8b66ac7cc6ee8d10abc834d90ecc4d80be6d774` 独立归档，仅修改本包装器、测试及本文。Go 1.26.4 定向 race：8 主、6 子 PASS，package 16.129s、进程 23.511s；vet mobilebridge/appsecurity PASS 3.569s。真实 Argon2/AEAD，未 mock KDF。新增合成 HTTPS 零请求及不可解封 workflow 检查、错误 PIN 的 Commit/Release/最后退役失败不可降级检查。以上组件冻结时，新 AAR 与 Flutter 回归尚未运行；之后候选 AAR 单次构建 PASS 5.326s、实际 C Flutter 最小 PIN 用户流程 PASS 40.683s。错误 PIN 零写请求、正确 PIN 恰好一次接受并同 Pull 验值、正式 UI 忘记清本地与新身份 NOT_TRUSTED 均已验证。完整六轮历史（前五 FAIL）与本轮边界记录在 mobile 仓库 `docs/PIN_FLUTTER_RUNTIME.md`。新文档仅补结果，不改变 AAR 已冻结的 Go 源码。
