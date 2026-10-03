@@ -1,0 +1,221 @@
+{
+  "schema": "harmonia/macos-installer-root-validation/v1",
+  "base": "eef671302e4f51f75581384385e01107633423d0",
+  "results": [
+    {
+      "name": "race",
+      "exitCode": 0,
+      "seconds": 10.511,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 251432,
+        "sha256": "33754633eb588a8ee98e9d8b60aa3c38aeb944bd5324ad0605a83bc64ef332a9"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "testEvents": {
+        "pass": 258,
+        "fail": 0,
+        "skip": 0
+      },
+      "packages": {
+        "github.com/harmonia-vault/core-go/cmd/harmonia-macos-service": "pass",
+        "github.com/harmonia-vault/core-go/macosservice": "pass"
+      }
+    },
+    {
+      "name": "vet",
+      "exitCode": 0,
+      "seconds": 2.226,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "build",
+      "exitCode": 0,
+      "seconds": 2.066,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "consumer-compile",
+      "exitCode": 0,
+      "seconds": 3.114,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 14492,
+        "sha256": "1c291993fc489f5cf6a61cc4a0d2f3767b5d08f55a6178a1e51e1d18d25b7e0e"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "testEvents": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "packages": {
+        "github.com/harmonia-vault/core-go/appsecurity": "pass",
+        "github.com/harmonia-vault/core-go/cryptox/tools/issuer-vector": "skip",
+        "github.com/harmonia-vault/core-go/mobilebridge/cmd/androidfixture": "skip",
+        "github.com/harmonia-vault/core-go/mobilebridge/cmd/genericcontroller": "skip",
+        "github.com/harmonia-vault/core-go/mobilebridge/cmd/managementpeer": "skip",
+        "github.com/harmonia-vault/core-go/mobilebridge/cmd/recoverycontroller": "skip",
+        "github.com/harmonia-vault/core-go/localipc": "pass",
+        "github.com/harmonia-vault/core-go/cmd/harmonia": "pass",
+        "github.com/harmonia-vault/core-go/localkeys": "pass",
+        "github.com/harmonia-vault/core-go/cryptox": "pass",
+        "github.com/harmonia-vault/core-go/localstate": "pass",
+        "github.com/harmonia-vault/core-go/macosservice": "pass",
+        "github.com/harmonia-vault/core-go/cmd/harmonia-macos-service": "pass",
+        "github.com/harmonia-vault/core-go/mobilebridge": "pass",
+        "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions": "pass",
+        "github.com/harmonia-vault/core-go/mobilebridge/cmd/crosscontroller": "pass",
+        "github.com/harmonia-vault/core-go/pairing": "pass",
+        "github.com/harmonia-vault/core-go/platform": "pass",
+        "github.com/harmonia-vault/core-go/mobileworkflow": "pass",
+        "github.com/harmonia-vault/core-go/syncclient": "pass"
+      }
+    }
+  ],
+  "build": {
+    "sha256": "466acd837405faf9cd676ce5fd779fd88458cb000c3cd7e1937d5025888ca90e",
+    "bytes": 5612674
+  },
+  "productionReady": false,
+  "sourceFiles": [
+    {
+      "path": ".mise/scripts/build-macos-service.sh",
+      "sha256": "3fb6a104e64aa96e320af7b2b9182a732b8d7b558aa00b60dcc2bfa7a96600a9"
+    },
+    {
+      "path": "cmd/harmonia-macos-service/main.go",
+      "sha256": "74a4afb071d0d36a4e2fe5d6fa53ac8c83a79c00dcfbe5e9912cd8a8d32d41ff"
+    },
+    {
+      "path": "cmd/harmonia-macos-service/main_test.go",
+      "sha256": "3d26e09bfc15ee45ccf663d9f4ef247f2fafc139a90a12a7301ed6706ce459ea"
+    },
+    {
+      "path": "macosservice/README.md",
+      "sha256": "949aea79a3e7c49c5057d39de108b22b8a5ee2018d823a87de6413828dddb8f1"
+    },
+    {
+      "path": "macosservice/VALIDATION.md",
+      "sha256": "47d8a4da67198f2a115da3d979c2abf0e082fb9650be807e955f9e06b2454be7"
+    },
+    {
+      "path": "macosservice/absence_darwin.go",
+      "sha256": "3c75cb02c43bb97cd5632b80dbe7d77025c11400dde94cebcb52a0ab8ea9470a"
+    },
+    {
+      "path": "macosservice/absence_darwin_test.go",
+      "sha256": "45a92b31e8f1a1a50ba8a838f57bbe06935daad3c9e615d5b746fd941af09f47"
+    },
+    {
+      "path": "macosservice/absence_test.go",
+      "sha256": "4e9bebd35d1eef439039fcb9f1e59ec0a2c8b66098f431b9aeee895b65631df9"
+    },
+    {
+      "path": "macosservice/creation_darwin.go",
+      "sha256": "850f3148d82b38958cb3cac758b7eb29fd3755d3d73e8cb2c1856783102d3b59"
+    },
+    {
+      "path": "macosservice/creation_darwin_test.go",
+      "sha256": "4f47d4ac8800123902f88040e346587aff6aafc86d6e7f7857f38772e8d89d94"
+    },
+    {
+      "path": "macosservice/journal.go",
+      "sha256": "f05570d8c178ace770418fdf88e28fbc0bd7a66719db6cc67bbc0a24ea78383a"
+    },
+    {
+      "path": "macosservice/journal_darwin.go",
+      "sha256": "b418c10f5435fddc0904c17c337c193f27d3a188634155223bdb7f4782fe779e"
+    },
+    {
+      "path": "macosservice/journal_darwin_test.go",
+      "sha256": "72bbbc67c9c0135acc6966f4dc09b9bbb0b1466f8e48a98a962fc63f1cd1f8be"
+    },
+    {
+      "path": "macosservice/journal_test.go",
+      "sha256": "9eb48ddda79b1bf34bb25c67c1b4afc88db523f530fdf50267154a2287ce24ac"
+    },
+    {
+      "path": "macosservice/launch_control.go",
+      "sha256": "f3cf8c46a5d3d08d607b27757429765357b15450a7a0273fe6036866e1585e1e"
+    },
+    {
+      "path": "macosservice/launch_control_test.go",
+      "sha256": "ea934e323dfb4b65534b3e97713d658596602c3cc559b5c19043c0b759527c13"
+    },
+    {
+      "path": "macosservice/launch_darwin.go",
+      "sha256": "f70d5698024c88857285b0f5596ec2d5849899e82ebfa86734213bed874f9c54"
+    },
+    {
+      "path": "macosservice/launch_darwin_test.go",
+      "sha256": "188958259211f479dd06af602677d08afbc43dc7c845ddd170e3e1b41d6a8c34"
+    },
+    {
+      "path": "macosservice/launch_model_test.go",
+      "sha256": "8f363ab9be331b1c5427ef453146aa7bff1bd2d506d1281b762618ac3f994410"
+    },
+    {
+      "path": "macosservice/runtime_darwin.go",
+      "sha256": "9190efc941fbc2b2c3abd019f20c6a85f151e1d3a8e920ee7daf21a9084787ab"
+    },
+    {
+      "path": "macosservice/runtime_darwin_test.go",
+      "sha256": "d20599c272a27fa5e05cbb20089f33e50a9bf789d407bc39f3d918d0407e7690"
+    },
+    {
+      "path": "macosservice/runtime_other.go",
+      "sha256": "bc73a77b722df67cedcb902d3b7c45b1b1a8529b5794fd68b201d21d49a6117f"
+    },
+    {
+      "path": "macosservice/service.go",
+      "sha256": "4bf39a7b810154c402684976da21626ed1b607588208dbbdfb008dd43463a87f"
+    },
+    {
+      "path": "macosservice/service_test.go",
+      "sha256": "f224299a76e96151cca9c7d08aa28c3a552baa2f900c16ac40811c6e2523f8f6"
+    },
+    {
+      "path": "macosservice/uninstall.go",
+      "sha256": "f7d17388aa9f47f8566c1bee5188d0dc0b8870b619da887cc7b94e090a4e1176"
+    },
+    {
+      "path": "mise.toml",
+      "sha256": "50c7583c3dce542ada94624ee107418202bc16621a6e2d7dbe9b21081f0a9b2f"
+    },
+    {
+      "path": "macosservice/V7_ADAPTER_VALIDATION.md",
+      "sha256": "880c9a08c2171215789ed30681fe2a3277c84eac01e8965999b12c1a94604939"
+    },
+    {
+      "path": "macosservice/launch_v7_darwin_test.go",
+      "sha256": "5181de5aeab91f3993d645100839845b6f721d591ccd6411f98267341aed88bb"
+    }
+  ],
+  "limits": [
+    "编译检查不代表系统服务运行；只使用合成数据和隔离目录。",
+    "macOS VM 未跑；Linux 原生 VM 与外层失败另列，不将局部结果合成完整产品通过。"
+  ]
+}

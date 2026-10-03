@@ -44,3 +44,11 @@ run = "go test -race ./syncclient ./mobileworkflow -run 'Test(DAGPreparation|Mob
 [tasks.test-mobile-dag-transition]
 description = "B2 连续恢复有限接线与现有 S1/S2a/B1/cert4/registry 的受影响 race 回归"
 run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"
+
+[tasks.build-macos-service]
+description = "构建有限 macOS 安装入口，不安装、启动或发布"
+run = "sh .mise/scripts/build-macos-service.sh"
+
+[tasks.test-macos-service]
+description = "验证有限 macOS 安装协调器、精确清理与中断重试"
+run = "go test -race -count=1 ./macosservice ./cmd/harmonia-macos-service"

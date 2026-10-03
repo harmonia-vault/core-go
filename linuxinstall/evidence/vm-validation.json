@@ -1,0 +1,127 @@
+{
+  "schema": "harmonia/linux-installer-vm-mode-resume-result/v1",
+  "overallStatus": "FAIL",
+  "fixedFailure": "FAILED_EXACT_GROUP_CLEANUP",
+  "reviewedManifestSHA256": "f23fe36307bdb104d8f3f5e0ce9409caf66fa6fd1ed3663397930ad5eccfbd0f",
+  "sourcePublicBase": "6d8178ae3116e6eb9dc4c1a9197c885c6a7687b1",
+  "kernel": "6.8.0-142-generic",
+  "runtimeSeconds": 2.113,
+  "nativeComponents": {
+    "status": "PASS",
+    "passed": 10,
+    "failed": 0,
+    "skipped": 0,
+    "tests": [
+      {
+        "name": "TestLinuxRootJournalRealCASLockAndPersistence",
+        "status": "PASS",
+        "seconds": 0.01
+      },
+      {
+        "name": "TestLinuxRootStoreRejectsSymlinkHardlinkAndUnknownReplacement",
+        "status": "PASS",
+        "seconds": 0.0
+      },
+      {
+        "name": "TestLinuxAuthorityReadResyncFailureCannotAdvanceJournal",
+        "status": "PASS",
+        "seconds": 0.01
+      },
+      {
+        "name": "TestLinuxObservationRejectsFIFOReplacementWithoutBlocking",
+        "status": "PASS",
+        "seconds": 0.0
+      },
+      {
+        "name": "TestLinuxSharedCreationSetsExactModeAndPreservesExistingMismatch",
+        "status": "PASS",
+        "seconds": 0.0
+      },
+      {
+        "name": "TestLinuxCoordinatorStagesDisabledRefusesUnknownTrustAndRemovesEmpty",
+        "status": "PASS",
+        "seconds": 0.22
+      },
+      {
+        "name": "TestLinuxCoordinatorRecoversExactPublishedCreationAndNeverTwoLinks",
+        "status": "PASS",
+        "seconds": 0.19
+      },
+      {
+        "name": "TestLinuxCoordinatorBusyAndFreshAccountAfterLogoutPreserveEverything",
+        "status": "PASS",
+        "seconds": 0.11
+      },
+      {
+        "name": "TestLinuxCoordinatorResumesOnlyExactPersistedDeletionIntent",
+        "status": "PASS",
+        "seconds": 0.2
+      },
+      {
+        "name": "TestLinuxFrozenIPCBindingRejectsReplacedNamespace",
+        "status": "PASS",
+        "seconds": 0.07
+      }
+    ],
+    "rawLogSHA256": "50f6c4c62d8075ba3de992998ae8edcab02f3892eb6d80ac68e0595cdb8d6404"
+  },
+  "formalEmptyLifecycle": {
+    "status": "PASS",
+    "runnerExit": 0,
+    "install": {
+      "version": 1,
+      "uid": "31041",
+      "phase": "installed-disabled",
+      "complete": true
+    },
+    "stateOwnerModeAndEmptyVerified": true,
+    "serviceDisabledAndInactiveVerified": true,
+    "uninitializedStart": {
+      "status": "PASS",
+      "actualNonzeroExitVerified": true,
+      "actualStdoutBytes": 0,
+      "actualFixedFault": "linux_install_state_invalid",
+      "exactHelperRejectionReasonConfirmed": false,
+      "stateRemainedEmpty": true,
+      "enableLinkAbsent": true
+    },
+    "uninstall": {
+      "version": 1,
+      "uid": "31041",
+      "phase": "completed",
+      "complete": true
+    },
+    "finalFormalCleanupExit": 0,
+    "targetResourcesAbsentVerified": true
+  },
+  "outerCleanup": {
+    "status": "FAIL",
+    "accountAbsent": true,
+    "groupNameAndGIDAbsent": true,
+    "oldScopeUnchanged": true,
+    "reviewStagingRetained": true,
+    "rootGuardAndSharedParentsRetainedForReview": true,
+    "accountCreatedByThisRun": false,
+    "fixedFailure": "FAILED_EXACT_GROUP_CLEANUP",
+    "diagnosis": "userdel成功后脚本要求同名组仍存在；最终组name/GID实际均缺失，与userdel一并删私有组相容，但缺分阶段记录，不能断言唯一原因或追改整体FAIL"
+  },
+  "previousAttempt": {
+    "nativePassed": 4,
+    "nativeFailed": 5,
+    "formalLifecycle": "UNRUN",
+    "rawRecordPreserved": true
+  },
+  "notExecuted": [
+    "真实登录与PAKE入网后启服",
+    "完整guest重启无人登录Boot/Pull",
+    "同SSH活动shell逐key恢复",
+    "正常停服后有账号材料离线卸载",
+    "真实服务SIGKILL/中断及并发CLI卸载"
+  ],
+  "vmRebooted": false,
+  "cloudRequests": false,
+  "sshKeyContentsReadByWrapper": false,
+  "liveRepositoryMutated": false,
+  "automaticRetry": false,
+  "productionReady": false
+}

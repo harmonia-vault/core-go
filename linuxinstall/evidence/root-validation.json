@@ -1,0 +1,196 @@
+{
+  "schema": "harmonia/linux-installer-root-validation/v1",
+  "base": "eef671302e4f51f75581384385e01107633423d0",
+  "results": [
+    {
+      "name": "host-race",
+      "exitCode": 0,
+      "seconds": 5.524,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 68261,
+        "sha256": "4165634ead3bf7a0efd9302d3c9069b109e8f1fc3ebe5fd409bede024172b7b8"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "testEvents": {
+        "pass": 71,
+        "fail": 0,
+        "skip": 0
+      }
+    },
+    {
+      "name": "host-vet",
+      "exitCode": 0,
+      "seconds": 2.077,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "linux-build",
+      "exitCode": 0,
+      "seconds": 2.277,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "linux-consumer-build",
+      "exitCode": 0,
+      "seconds": 3.475,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "linux-vet",
+      "exitCode": 0,
+      "seconds": 0.698,
+      "status": "PASS",
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ],
+  "build": {
+    "sha256": "6f04c23418cda00af854ce3776444d543a708f9ee09dfa7764f6d4fe3e2e95c1",
+    "bytes": 6166370
+  },
+  "productionReady": false,
+  "sourceFiles": [
+    {
+      "path": "cmd/harmonia-linux-installer/main_linux.go",
+      "sha256": "ecfabdf5007f274a178d5f727f0532f496f9fb9d60c82dd65d652d148dcf27c1"
+    },
+    {
+      "path": "linuxinstall/README.md",
+      "sha256": "4d2b35837ccf443ad75ac58cd751f47614c0799b32ac0e72bb13ecccae51b9d0"
+    },
+    {
+      "path": "linuxinstall/actions.go",
+      "sha256": "13a266fc8e9321c95e09c7e1cbb163b0f1b649a4479fba5bf47c481d5b9c8f35"
+    },
+    {
+      "path": "linuxinstall/actions_linux.go",
+      "sha256": "7558fd883e11e3b4dfaac6fe8455e5018be0d4687b623eeca83903acac9184d4"
+    },
+    {
+      "path": "linuxinstall/actions_test.go",
+      "sha256": "c2e8c158b7626215c2c946dcd9681c64801ef9da884adcb071059b1bd20af155"
+    },
+    {
+      "path": "linuxinstall/cgroup_linux.go",
+      "sha256": "ce2ea297c74e7b07609a53bf7332fe3d8449672a88ec32aee64b98fc53276a26"
+    },
+    {
+      "path": "linuxinstall/cgroup_other.go",
+      "sha256": "77d19865369d58e3a718213a520a9b95cef1b214fcd0b809b9939baa6abcce37"
+    },
+    {
+      "path": "linuxinstall/creation.go",
+      "sha256": "28c19e2f857da6c469a3151657a0066c89ebf51eb243ae702411e7d75c944cd1"
+    },
+    {
+      "path": "linuxinstall/creation_test.go",
+      "sha256": "64cda3f935d32514da6058d8da206bd5052d6f49cae106d3355499f050404b33"
+    },
+    {
+      "path": "linuxinstall/enrollment.go",
+      "sha256": "20cfd97512e094f22eb0862f03b4e9200b0b870eb39d08890bf6e7757c5df4ed"
+    },
+    {
+      "path": "linuxinstall/files_linux.go",
+      "sha256": "ca7f23d349fd105f15aa265b6123ba35d2331edce62dfd53ab1d2afac58a5555"
+    },
+    {
+      "path": "linuxinstall/files_linux_test.go",
+      "sha256": "f7ebaf886fc8043172901952467c8cdfd7d3280c387dc93c93f4f591c3cbd199"
+    },
+    {
+      "path": "linuxinstall/files_other.go",
+      "sha256": "3ddf44979c0dd8f63f82ac1b64849a82eb7167df330eca01efdb875de33e201f"
+    },
+    {
+      "path": "linuxinstall/inspection_linux.go",
+      "sha256": "ba1e20fa0a02395e4b71b00a01a6d9c5ac3c417913b6389e166cacaeb8cf6541"
+    },
+    {
+      "path": "linuxinstall/layout_linux.go",
+      "sha256": "0e7cd16d6b2e6a57f4a44f9f8e3fdd61b45f047943f0256a89ddd9da1053c054"
+    },
+    {
+      "path": "linuxinstall/lifecycle_linux.go",
+      "sha256": "14a3cd1b9bf9b982c4611dcee93864f5b5f3f65749d3ff888cd44fc7b4c9f64f"
+    },
+    {
+      "path": "linuxinstall/lifecycle_linux_test.go",
+      "sha256": "cd7dce686c04fcd81cda7d523a3817c188a18f65fda70f1c517bd0d08f0add9e"
+    },
+    {
+      "path": "linuxinstall/native_runner_linux.go",
+      "sha256": "387de437dad52c360272530d46605333feba66ef3a4bee0403de28492e0ffcc8"
+    },
+    {
+      "path": "linuxinstall/plan.go",
+      "sha256": "206940e6eebb4436b52971f2aa2e12672e3b43e8022b8f76e46be1fb410d1838"
+    },
+    {
+      "path": "linuxinstall/plan_test.go",
+      "sha256": "7ee3beb36ca4c7a353d7bf4c376903e7ca872d0eba7731fee231aa9e0d5eadf6"
+    },
+    {
+      "path": "linuxinstall/record.go",
+      "sha256": "811ef577686f4ab40cf0fa5b68e14ca845feb1dd65fc903fc14e65d533850110"
+    },
+    {
+      "path": "linuxinstall/record_test.go",
+      "sha256": "38519e88ce632d39ace1159a9a1fea162c8af6cdcba2627527f9cdab91a64502"
+    },
+    {
+      "path": "linuxinstall/state_linux.go",
+      "sha256": "bd2b0204e72f94054438c7eba200331f45babd40195712ceaab9dad98e885451"
+    },
+    {
+      "path": "linuxinstall/systemd.go",
+      "sha256": "fe6711a5286b4b04e557866d1bcaac597cfa508b98d5febde79e1d0952bd13f4"
+    },
+    {
+      "path": "linuxinstall/systemd_test.go",
+      "sha256": "9ac7d7cfd752f44f7ee51900dcae83de0c76c40c785599ff53a69ae1aa35b4df"
+    },
+    {
+      "path": "linuxinstall/layout_linux_test.go",
+      "sha256": "f080cf3830170f3a155f536cd17eb6a5a080b6860d32f54f5da37b2f8fb871ae"
+    }
+  ],
+  "limits": [
+    "编译检查不代表系统服务运行；只使用合成数据和隔离目录。",
+    "macOS VM 未跑；Linux 原生 VM 与外层失败另列，不将局部结果合成完整产品通过。"
+  ]
+}
