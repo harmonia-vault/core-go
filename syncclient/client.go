@@ -41,15 +41,16 @@ type Event struct {
 	Authorization *SignedGrant   `json:"authorization,omitempty"`
 }
 type Pull struct {
-	Full              bool                   `json:"-"`
-	IssuerEvidence    *cryptox.IssuerProofV2 `json:"issuerEvidence,omitempty"`
-	Scope             string                 `json:"scope,omitempty"`
-	EnvironmentEvents []EnvironmentEvent     `json:"environmentEvents,omitempty"`
-	AccountID         string                 `json:"accountId"`
-	AccountGeneration string                 `json:"accountGeneration"`
-	Sequence          uint64                 `json:"sequence"`
-	Grants            []SignedGrant          `json:"grants"`
-	Events            []Event                `json:"events"`
+	Full                   bool                         `json:"-"`
+	IssuerEvidence         *cryptox.IssuerProofV2       `json:"issuerEvidence,omitempty"`
+	IssuerRecoveryEvidence *cryptox.IssuerRecoveryProof `json:"-"`
+	Scope                  string                       `json:"scope,omitempty"`
+	EnvironmentEvents      []EnvironmentEvent           `json:"environmentEvents,omitempty"`
+	AccountID              string                       `json:"accountId"`
+	AccountGeneration      string                       `json:"accountGeneration"`
+	Sequence               uint64                       `json:"sequence"`
+	Grants                 []SignedGrant                `json:"grants"`
+	Events                 []Event                      `json:"events"`
 }
 type Acceptance struct {
 	Sequence uint64 `json:"sequence"`
@@ -215,7 +216,7 @@ func (c *Client) pullWithHistory(ctx context.Context, previous localstate.CloudS
 	c.addEvidenceCapability(q)
 	u.RawQuery = q.Encode()
 	var result Pull
-	if err := c.request(ctx, http.MethodGet, u, nil, &result); err != nil {
+	if err := c.requestPull(ctx, u, &result); err != nil {
 		return Pull{}, err
 	}
 	if result.AccountID != c.config.AccountID || result.AccountGeneration != strconv.FormatUint(c.config.AccountGeneration, 10) || result.Sequence < previous.Sequence || result.Sequence > 9007199254740991 {

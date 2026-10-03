@@ -24,7 +24,7 @@ type EnvironmentControlView struct {
 
 func (c *Client) CurrentIssuerEvidence() (cryptox.IssuerProofV2, error) {
 	v, ok := c.config.Verifier.(*PinnedVerifier)
-	if !ok || v.evidenceRoot == nil || c.config.Engine.State().SessionEpoch != c.epoch {
+	if !ok || v.evidenceRoot == nil || v.initialEvidence == nil || c.config.Engine.State().SessionEpoch != c.epoch {
 		return cryptox.IssuerProofV2{}, localstate.ErrLocalSession
 	}
 	p := cloneEvidence(*v.initialEvidence)

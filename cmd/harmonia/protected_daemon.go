@@ -47,6 +47,19 @@ func verifiedStoredContextReceipt(trust localkeys.TrustContext, keys localkeys.D
 	if !trust.Accepted {
 		return nil, errors.New("待完成入网不能启动网络同步")
 	}
+	if trust.CertificateVersion == "4" {
+		if len(trust.Managers) != 0 {
+			return nil, errors.New("v4 不接受全局管理者名单")
+		}
+		receipt, e := syncclient.DecodeEnrollmentReceiptV4(trust.EnrollmentCertificate)
+		if e != nil {
+			return nil, e
+		}
+		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
+			return nil, errors.New("v4 受保护回执与本机身份不匹配")
+		}
+		return syncclient.NewPinnedVerifierV4(syncclient.IssuerRecoveryPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
+	}
 	if trust.CertificateVersion == "3" {
 		if len(trust.Managers) != 0 {
 			return nil, errors.New("v3 不接受全局管理者名单")

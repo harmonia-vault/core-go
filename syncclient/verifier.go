@@ -31,15 +31,16 @@ type PinnedTrust struct {
 	Now                    func() time.Time
 }
 type PinnedVerifier struct {
-	trust                 PinnedTrust
-	receivingPublicKey    string
-	issuerProof           *cryptox.VerifiedIssuerProof
-	issuerOriginProof     *cryptox.VerifiedIssuerProofV2
-	evidenceRoot          *cryptox.PinnedIssuerRoot
-	initialEvidence       *cryptox.IssuerProofV2
-	requireEvidence       bool
-	genesisAuthorities    []cryptox.SignedGrantWire
-	requireStoredEvidence bool
+	trust                   PinnedTrust
+	receivingPublicKey      string
+	issuerProof             *cryptox.VerifiedIssuerProof
+	issuerOriginProof       verifiedAuthorityGraph
+	initialRecoveryEvidence *cryptox.IssuerRecoveryProof
+	evidenceRoot            *cryptox.PinnedIssuerRoot
+	initialEvidence         *cryptox.IssuerProofV2
+	requireEvidence         bool
+	genesisAuthorities      []cryptox.SignedGrantWire
+	requireStoredEvidence   bool
 }
 
 func NewPinnedVerifier(trust PinnedTrust) (*PinnedVerifier, error) {

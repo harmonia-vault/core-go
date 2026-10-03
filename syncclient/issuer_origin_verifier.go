@@ -178,7 +178,11 @@ func NewRootPinnedVerifierWithOrigins(t OriginRootPinnedTrust) (*PinnedVerifier,
 }
 func (c *Client) addEvidenceCapability(q url.Values) {
 	if v, ok := c.config.Verifier.(*PinnedVerifier); ok && v.evidenceRoot != nil {
-		q.Set("capability", cryptox.EnvironmentOriginCapability)
+		if v.initialRecoveryEvidence != nil {
+			q.Set("capability", cryptox.RecoveryAuthorityCapability)
+		} else {
+			q.Set("capability", cryptox.EnvironmentOriginCapability)
+		}
 	}
 }
 func decodeEvidence(data []byte) (cryptox.IssuerProofV2, error) {
@@ -272,6 +276,12 @@ func mergeEvidence(old, candidate cryptox.IssuerProofV2) (cryptox.IssuerProofV2,
 	return normalizeEvidence(out), nil
 }
 func (v *PinnedVerifier) withIssuerEvidence(pull Pull, previous localstate.CloudSnapshot) (*PinnedVerifier, json.RawMessage, error) {
+	if v.initialRecoveryEvidence != nil {
+		return v.withIssuerRecoveryEvidence(pull, previous)
+	}
+	if pull.IssuerRecoveryEvidence != nil {
+		return nil, nil, cryptox.ErrInvalidWire
+	}
 	if v.evidenceRoot == nil {
 		if pull.IssuerEvidence != nil || len(previous.IssuerEvidence) > 0 {
 			return nil, nil, errors.New("issuer-origin capability requires a protected root pin")
@@ -382,6 +392,9 @@ func (v *PinnedVerifier) VerifyAuthorizationRefresh(ctx context.Context, pull Pu
 
 // ValidateStoredIssuerEvidence 在重启任何使用缓存/同步之前重新验受保护账本。
 func (v *PinnedVerifier) ValidateStoredIssuerEvidence(previous localstate.CloudSnapshot) error {
+	if v.initialRecoveryEvidence != nil {
+		return v.validateStoredRecoveryEvidence(previous)
+	}
 	if previous.AccountID != "" && (previous.AccountID != v.trust.AccountID || previous.AccountGeneration != v.trust.AccountGeneration) {
 		return cryptox.ErrInvalidWire
 	}

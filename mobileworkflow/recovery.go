@@ -155,6 +155,9 @@ func (w *Workflow) recoveryOnly() error {
 	return nil
 }
 func (w *Workflow) recoveryInfo() RecoveryInfo {
+	if w.state.RecoveryAuthority != nil {
+		return w.recoveryAuthorityInfo()
+	}
 	r := w.state.Recovery
 	if r == nil {
 		return RecoveryInfo{State: "none"}
@@ -236,6 +239,9 @@ func (w *Workflow) recoveryLive() error {
 func (w *Workflow) validateRecoveryState() error {
 	r := w.state.Recovery
 	if r == nil {
+		if w.state.RecoveryAuthority != nil {
+			return ErrRecoveryEvidence
+		}
 		return nil
 	}
 	if err := w.recoveryOnly(); err != nil {
@@ -269,6 +275,9 @@ func (w *Workflow) validateRecoveryState() error {
 	}
 	if _, err = cryptox.DecodeBase64(r.ReceivingPublicKey, 32, 32); err != nil {
 		return err
+	}
+	if w.state.RecoveryAuthority != nil {
+		return w.validateRecoveryAuthorityRecord()
 	}
 	if r.SessionClosed {
 		if err = w.validateClosedRecoveryVault(r); err != nil {
@@ -647,6 +656,12 @@ func (w *Workflow) verifyRecoveryVault(v recoveryVaultWire, root cryptox.TrustRo
 	if err := verifyRecoveryEnvelopes(v, root, originsRequired); err != nil {
 		return nil, err
 	}
+	return w.verifyRecoveryVaultData(v, root, keys, originsRequired, acceptedGrants)
+}
+
+// Both recovery profiles authenticate their own envelope commitments before
+// this shared signed mutation/AEAD projection. No caller can mark a device trusted.
+func (w *Workflow) verifyRecoveryVaultData(v recoveryVaultWire, root cryptox.TrustRoot, keys map[string]string, originsRequired bool, acceptedGrants map[string]bool) ([]RecoveredEnvironment, error) {
 	envs := map[string]*RecoveredEnvironment{}
 	for _, env := range v.Environments {
 		if !identifier.MatchString(env.EnvironmentID) || !positiveDecimal(env.KeyVersion) || envs[env.EnvironmentID] != nil {
@@ -739,6 +754,9 @@ func (w *Workflow) verifyRecoveryVault(v recoveryVaultWire, root cryptox.TrustRo
 func (w *Workflow) RecoveryView() (RecoveryView, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.state.RecoveryAuthority != nil {
+		return w.authorityRecoveryViewLocked()
+	}
 	if err := w.recoveryLive(); err != nil {
 		return RecoveryView{}, err
 	}
@@ -803,6 +821,9 @@ func (w *Workflow) refreshRecoveryVault(ctx context.Context) error {
 func (w *Workflow) BeginRecoveryRotation(ctx context.Context, id string) (string, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.state.RecoveryAuthority != nil {
+		return "", ErrRecoveryRestricted
+	}
 	if err := w.recoveryLive(); err != nil {
 		return "", err
 	}
@@ -940,6 +961,9 @@ func (w *Workflow) queryRecoveryRotation(ctx context.Context) (recoveryRotationW
 func (w *Workflow) CompleteRecoveryRotation(ctx context.Context, completeNewCode string) (RecoveryInfo, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.state.RecoveryAuthority != nil {
+		return w.recoveryInfo(), ErrRecoveryRestricted
+	}
 	if err := w.recoveryLive(); err != nil {
 		return w.recoveryInfo(), err
 	}
@@ -1073,6 +1097,9 @@ func (w *Workflow) CompleteRecoveryRotation(ctx context.Context, completeNewCode
 func (w *Workflow) QueryRecoveryRotation(ctx context.Context) (RecoveryInfo, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.state.RecoveryAuthority != nil {
+		return w.recoveryInfo(), ErrRecoveryRestricted
+	}
 	if err := w.recoveryLive(); err != nil {
 		return w.recoveryInfo(), err
 	}
@@ -1091,6 +1118,7 @@ func (w *Workflow) QueryRecoveryRotation(ctx context.Context) (RecoveryInfo, err
 	return info, nil
 }
 func (w *Workflow) clearRecovery() {
+	w.state.RecoveryAuthority = nil
 	if w.recoverySession != nil {
 		w.recoverySession.Close()
 		w.recoverySession = nil

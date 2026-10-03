@@ -14,13 +14,13 @@ import (
 // 缓存来源是旧数据的已验读授权；当前权限仍只取保护账本的精确 target。
 // 路径只引用全图已验的签授权，不能将服务端数组提示直接当授权。
 type cachedSourceLedger struct {
-	proof   *cryptox.VerifiedIssuerProofV2
+	proof   verifiedAuthorityGraph
 	rights  map[string]cryptox.IssuerAuthorityV2
 	origins map[string]cryptox.SignedEnvironmentOrigin
 	targets map[string]string
 }
 
-func newCachedSourceLedger(p cryptox.IssuerProofV2, proof *cryptox.VerifiedIssuerProofV2) (*cachedSourceLedger, error) {
+func newCachedSourceLedger(p cryptox.IssuerProofV2, proof verifiedAuthorityGraph) (*cachedSourceLedger, error) {
 	if proof == nil {
 		return nil, cryptox.ErrInvalidSignature
 	}
@@ -283,6 +283,9 @@ func (v *PinnedVerifier) sourceForPrevious(old localstate.Environment, previous 
 		s.AuthorizationPath = append([]string(nil), s.AuthorizationPath...)
 		return &s, nil
 	}
+	if v.initialRecoveryEvidence != nil {
+		return nil, cryptox.ErrInvalidWire
+	}
 	p := *v.initialEvidence
 	if len(previous.IssuerEvidence) > 0 {
 		var e error
@@ -320,11 +323,7 @@ func (v *PinnedVerifier) retainCachedEnvironment(ctx context.Context, old locals
 	if e := ctx.Err(); e != nil {
 		return old, e
 	}
-	p, e := decodeEvidence(evidence)
-	if e != nil {
-		return old, e
-	}
-	l, e := newCachedSourceLedger(p, v.issuerOriginProof)
+	l, e := v.cachedLedger(evidence)
 	if e != nil {
 		return old, e
 	}
@@ -371,11 +370,7 @@ func (v *PinnedVerifier) initializeCachedSources(out *localstate.CloudSnapshot, 
 	if v.evidenceRoot == nil {
 		return nil
 	}
-	p, e := decodeEvidence(evidence)
-	if e != nil {
-		return e
-	}
-	l, e := newCachedSourceLedger(p, v.issuerOriginProof)
+	l, e := v.cachedLedger(evidence)
 	if e != nil {
 		return e
 	}

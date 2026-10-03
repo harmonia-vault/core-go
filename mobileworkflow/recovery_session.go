@@ -20,6 +20,8 @@ var ErrRecoverySession = errors.New("process-only recovery owner unavailable; in
 // The proposal hash names the exact verified original initialization commitment,
 // not a guessed root self-grant or a new recovery authority.
 type RecoverySessionBinding struct {
+	SessionEpoch               uint64
+	AuthorityHeadHash          string
 	Endpoint                   string
 	DeviceID                   string
 	DeviceSigningPublicKey     string
@@ -110,7 +112,15 @@ func (w *Workflow) recoverySessionBinding() (RecoverySessionBinding, error) {
 	if _, err := recoveryOriginalAuthorities(r.Vault, r.Root); err != nil {
 		return RecoverySessionBinding{}, err
 	}
-	return RecoverySessionBinding{Endpoint: w.state.Endpoint, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.state.SigningPublicKey, DeviceReceivingPublicKey: w.state.ReceivingPublicKey, AccountID: r.AccountID, AccountGeneration: r.AccountGeneration, RecoveryGeneration: r.RecoveryGeneration, RootDeviceID: r.Root.RootDeviceID, RootSigningPublicKey: r.Root.RootSigningPublicKey, RootReceivingPublicKey: r.Root.RootReceivingPublicKey, RecoverySigningPublicKey: r.SigningPublicKey, RecoveryReceivingPublicKey: r.ReceivingPublicKey, InitializationProposalHash: r.Vault.OriginalInitialization.Proof.ProposalHash, SessionHash: r.SessionHash, ExpiresAt: r.SessionExpiresAt}, nil
+	b := RecoverySessionBinding{SessionEpoch: w.engine.State().SessionEpoch, Endpoint: w.state.Endpoint, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.state.SigningPublicKey, DeviceReceivingPublicKey: w.state.ReceivingPublicKey, AccountID: r.AccountID, AccountGeneration: r.AccountGeneration, RecoveryGeneration: r.RecoveryGeneration, RootDeviceID: r.Root.RootDeviceID, RootSigningPublicKey: r.Root.RootSigningPublicKey, RootReceivingPublicKey: r.Root.RootReceivingPublicKey, RecoverySigningPublicKey: r.SigningPublicKey, RecoveryReceivingPublicKey: r.ReceivingPublicKey, InitializationProposalHash: r.Vault.OriginalInitialization.Proof.ProposalHash, SessionHash: r.SessionHash, ExpiresAt: r.SessionExpiresAt}
+	if w.state.RecoveryAuthority != nil {
+		authority, err := verifyRecoveryAuthorityChain(w.state.RecoveryAuthority.Vault)
+		if err != nil {
+			return RecoverySessionBinding{}, err
+		}
+		b.AuthorityHeadHash = authority.HeadHash()
+	}
+	return b, nil
 }
 func (w *Workflow) newRecoverySession(key ed25519.PrivateKey) (*RecoverySession, error) {
 	b, err := w.recoverySessionBinding()
@@ -155,6 +165,30 @@ func (w *Workflow) bindRecoverySessionRotation(s *RecoverySession) error {
 	}
 	if !sameRecoverySessionIdentity(s.binding, b) || s.binding.ExpiresAt > b.ExpiresAt {
 		return ErrRecoverySession
+	}
+	if a := w.state.RecoveryAuthority; a != nil {
+		p := a.Pending
+		if p == nil || p.Applied {
+			if s.binding.TransitionID != "" {
+				return ErrRecoverySession
+			}
+			return nil
+		}
+		digest, err := authorityTransitionDigest(p.Packet)
+		if err != nil {
+			return err
+		}
+		if s.binding.TransitionID != "" && (s.binding.TransitionID != p.Packet.Transition.OperationID || s.binding.TransitionHash != digest) {
+			return ErrRecoverySession
+		}
+		s.binding.TransitionID = p.Packet.Transition.OperationID
+		s.binding.TransitionHash = digest
+		expires, err := strconv.ParseInt(p.Packet.Transition.ExpiresAt, 10, 64)
+		if err != nil {
+			return err
+		}
+		s.shortenLocked(expires, w.now().Unix())
+		return s.liveLocked()
 	}
 	q := w.state.Recovery.Rotation
 	if q == nil {
@@ -251,6 +285,9 @@ func (w *Workflow) ResumeRecoverySession(ctx context.Context, completeOldCode st
 		return nil, err
 	}
 	r := w.state.Recovery
+	if w.state.RecoveryAuthority != nil {
+		return nil, ErrRecoveryRestricted
+	}
 	if r == nil || !r.OriginsRequired || r.RotationCompleted {
 		return nil, ErrRecoverySession
 	}
@@ -281,4 +318,39 @@ func (w *Workflow) ResumeRecoverySession(ctx context.Context, completeOldCode st
 	}
 	w.recoverySession = owner
 	return owner, nil
+}
+
+func (s *RecoverySession) shortenLocked(expires, now int64) {
+	if expires >= s.binding.ExpiresAt {
+		return
+	}
+	s.binding.ExpiresAt = expires
+	deadline := time.Now().Add(time.Duration(expires-now) * time.Second)
+	if deadline.Before(s.deadline) {
+		s.deadline = deadline
+	}
+	if s.timer != nil {
+		s.timer.Stop()
+	}
+	s.timer = time.AfterFunc(time.Until(s.deadline), s.Close)
+}
+func (s *RecoverySession) signAuthorityTransition(v *cryptox.VerifiedRecoveryAuthority, p cryptox.RecoveryTransitionSubmission, now time.Time) (string, error) {
+	if s == nil {
+		return "", ErrRecoverySession
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.liveLocked(); err != nil {
+		return "", err
+	}
+	digest, err := authorityTransitionDigest(p)
+	if err != nil {
+		return "", err
+	}
+	t := p.Transition
+	b := s.binding
+	if b.AuthorityHeadHash != v.HeadHash() || b.TransitionID != t.OperationID || b.TransitionHash != digest || b.SessionHash != t.SessionHash || b.AccountID != t.AccountID || b.AccountGeneration != t.AccountGeneration || b.RecoveryGeneration != t.OldRecoveryGeneration || b.RecoverySigningPublicKey != t.OldRecoverySigningPublicKey || b.RecoveryReceivingPublicKey != t.OldRecoveryReceivingPublicKey {
+		return "", ErrRecoverySession
+	}
+	return cryptox.SignOldRecoveryTransition(v, p, s.signing, now)
 }

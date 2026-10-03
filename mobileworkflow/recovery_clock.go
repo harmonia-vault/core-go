@@ -21,6 +21,9 @@ func (w *Workflow) closeRecoverySessionForClock() error {
 	}
 	r.Keys = nil
 	r.Vault.Events = nil
+	if w.state.RecoveryAuthority != nil {
+		w.state.RecoveryAuthority.Vault.recoveryVaultWire = clone(r.Vault)
+	}
 	if w.recoverySession != nil {
 		w.recoverySession.Close()
 		w.recoverySession = nil

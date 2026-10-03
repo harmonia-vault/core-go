@@ -117,7 +117,7 @@ func (c *Client) RefreshAuthorizations(ctx context.Context) (Pull, error) {
 	c.addEvidenceCapability(query)
 	endpoint.RawQuery = query.Encode()
 	var pull Pull
-	if err := c.request(ctx, "GET", endpoint, nil, &pull); err != nil {
+	if err := c.requestPull(ctx, endpoint, &pull); err != nil {
 		return Pull{}, err
 	}
 	if pull.Sequence > 9007199254740991 {

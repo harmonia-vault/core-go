@@ -100,6 +100,8 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
+	RecoveredDevice    *recoveredDeviceRecord        `json:"recoveredDevice,omitempty"`
+	RecoveryAuthority  *recoveryAuthorityRecord      `json:"recoveryAuthority,omitempty"`
 	Management         *managementState              `json:"management,omitempty"`
 	Version            int                           `json:"version"`
 	Endpoint           string                        `json:"endpoint"`
@@ -252,7 +254,7 @@ func New(config Config) (*Workflow, error) {
 		if state.Root != nil {
 			root := state.Root
 			pub, e := cryptox.DecodeBase64(root.RecoverySigningPublicKey, 32, 32)
-			if e != nil || (state.EnrollmentV3 == nil && (root.RootDeviceID != state.DeviceID || root.RootSigningPublicKey != state.SigningPublicKey || root.RootReceivingPublicKey != state.ReceivingPublicKey)) || cryptox.VerifyTrustRoot(state.AccountID, state.AccountGeneration, *root, pub) != nil {
+			if e != nil || (state.EnrollmentV3 == nil && state.RecoveredDevice == nil && (root.RootDeviceID != state.DeviceID || root.RootSigningPublicKey != state.SigningPublicKey || root.RootReceivingPublicKey != state.ReceivingPublicKey)) || cryptox.VerifyTrustRoot(state.AccountID, state.AccountGeneration, *root, pub) != nil {
 				return nil, errors.New("protected root binding invalid")
 			}
 		}
@@ -300,6 +302,10 @@ func New(config Config) (*Workflow, error) {
 		return nil, err
 	}
 	if err := workflow.observeEnrollmentClock(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
+	if err := workflow.validateRecoveredDeviceRecord(); err != nil {
 		workflow.Close()
 		return nil, err
 	}
@@ -399,6 +405,9 @@ func (w *Workflow) checkWithoutManagement() error {
 	}
 	if w.state.Recovery != nil {
 		return ErrRecoveryRestricted
+	}
+	if w.recoveredDevicePending() {
+		return ErrRecoveryPending
 	}
 	if w.enrollmentPending() {
 		return ErrMobileEnrollmentPending
@@ -912,6 +921,7 @@ func (w *Workflow) invalidateTrust() error {
 		r.Login.Token = ""
 	}
 	w.state.EnrollmentV3 = nil
+	w.state.RecoveredDevice = nil
 	clear(w.state.SelfRevocation)
 	w.clearRecovery()
 	w.state.SelfRevocation = nil
@@ -943,6 +953,9 @@ func (w *Workflow) refresh(ctx context.Context) error {
 	}
 	if w.state.Recovery != nil {
 		return ErrRecoveryRestricted
+	}
+	if w.recoveredDevicePending() {
+		return ErrRecoveryPending
 	}
 	if w.enrollmentPending() {
 		return ErrMobileEnrollmentPending

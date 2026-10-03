@@ -44,7 +44,7 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	serverAddress := flags.String("server", "", "用户明确指定的自托管 HTTPS 地址")
 	email := flags.String("email", "", "邮箱登录账号")
 	approver := flags.String("approver", "", "既有可信管理手机的设备 ID")
-	certificateVersion := flags.String("certificate-version", "", "首次 pair 默认3；旧手机须明确2；待完成收据不能换版本")
+	certificateVersion := flags.String("certificate-version", "", "首次 pair 默认3；恢复来源手机须明确4，旧手机须明确2；待完成收据不能换版本")
 	importStdin := flags.Bool("import-stdin", false, "从标准输入读取候选JSON，只导入select选中项")
 	currentEnv := flags.Bool("current-env", false, "显式列出本进程变量名；import须select后才取值")
 	valueStdin := flags.Bool("value-stdin", false, "明确从标准输入读取完整UTF8值，不使用argv")

@@ -318,6 +318,9 @@ func (w *Workflow) originVerifier() (*syncclient.PinnedVerifier, error) {
 	if err != nil || generation == 0 || w.state.Root == nil {
 		return nil, ErrNotTrusted
 	}
+	if w.state.RecoveredDevice != nil {
+		return w.recoveredVerifier()
+	}
 	if r := w.state.EnrollmentV3; r != nil {
 		if r.Sequence == 0 {
 			return nil, ErrMobileEnrollmentPending
