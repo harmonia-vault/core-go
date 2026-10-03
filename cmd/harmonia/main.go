@@ -73,6 +73,18 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
 	}
+	if command == "local-enrollment-check" {
+		valid := len(flags.Args()) == 0
+		flags.Visit(func(f *flag.Flag) {
+			if f.Name != "local-directory" && f.Name != "local-user" {
+				valid = false
+			}
+		})
+		if !valid {
+			return errors.New("本机入网检查只接受local-directory/local-user")
+		}
+		return protectedEnrollmentCheck(ctx, *localDirectory, *localUser, out)
+	}
 	if *offlineLocal {
 		if command != "logout" || len(flags.Args()) != 0 {
 			return errors.New("--offline-local仅用于显式本机logout")

@@ -20,3 +20,7 @@ run = "go test -race -count=1 ./cmd/harmonia ./localkeys ./platform -run 'TestOf
 [tasks.test-mobile-dag-s1]
 description = "手机 DAG 持久 journal/CAS、原生 owner 与既有恢复业务的有界 race 回归"
 run = "go test -race ./syncclient ./localkeys ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"
+
+[tasks.test-local-enrollment-check]
+description = "验证只读本机入网材料、真实签名来源及零写入边界"
+run = "go test -race -count=1 ./cmd/harmonia -run TestLocalEnrollmentCheck"
