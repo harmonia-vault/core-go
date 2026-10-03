@@ -436,6 +436,14 @@ func (v *VerifiedRecoveryAuthority) validateTransition(s RecoveryTransitionSubmi
 			return nil, "", err
 		}
 	}
+	// 当前差异材料中的旧公钥也必须先退役，不能等接受后才记录。
+	// 仅构造候选集合，验证失败不改变先前受信链。
+	seenKeys := make(map[string]bool, len(v.usedRecoveryKeys)+2)
+	for pub, used := range v.usedRecoveryKeys {
+		seenKeys[pub] = used
+	}
+	seenKeys[v.pin.SigningPublicKey] = true
+	seenKeys[v.pin.ReceivingPublicKey] = true
 	if t.ChainMode == "continuous" {
 		if s.LegacyState != nil || t.OldRecoveryGeneration != v.recoveryGeneration || t.OldRecoverySigningPublicKey != v.signingPublic || t.OldRecoveryReceivingPublicKey != v.receivingPublic {
 			return nil, "", ErrInvalidSignature
@@ -458,13 +466,29 @@ func (v *VerifiedRecoveryAuthority) validateTransition(s RecoveryTransitionSubmi
 		if json.Unmarshal(bytes, &f) != nil || f[4] != v.recoveryGeneration || first.Sequence <= v.sequence || last.Sequence > expected {
 			return nil, "", ErrInvalidSignature
 		}
+		for _, row := range s.LegacyState.Rotations {
+			encoded, err := DecodeBase64(row.SigningBytes, 1, 4096)
+			if err != nil {
+				return nil, "", err
+			}
+			var fields []string
+			if json.Unmarshal(encoded, &fields) != nil || len(fields) != 13 {
+				return nil, "", ErrInvalidWire
+			}
+			for _, pub := range []string{fields[9], fields[10]} {
+				if seenKeys[pub] {
+					return nil, "", ErrInvalidSignature
+				}
+				seenKeys[pub] = true
+			}
+		}
 	}
 	r := s.NewTrustRoot
 	if !recoveryRootMatches(v.pin, r) || r.RecoveryGeneration != t.NewRecoveryGeneration || r.RecoverySigningPublicKey != t.NewRecoverySigningPublicKey || r.RecoveryReceivingPublicKey != t.NewRecoveryReceivingPublicKey {
 		return nil, "", ErrInvalidSignature
 	}
 	for _, pub := range []string{t.NewRecoverySigningPublicKey, t.NewRecoveryReceivingPublicKey} {
-		if v.usedRecoveryKeys[pub] || pub == v.pin.SigningPublicKey || pub == v.pin.ReceivingPublicKey {
+		if seenKeys[pub] {
 			return nil, "", ErrInvalidSignature
 		}
 	}
