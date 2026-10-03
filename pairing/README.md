@@ -29,3 +29,7 @@ mise run test-android-compile /path/to/ndk/28.2.13676358
 产物为忽略目录中的 `native/android-arm64/libcrypto.a` 和 `.cache/pairing-android-arm64.test`。固定参数为 `arm64-v8a`、API 21、PIC 和 `c++_static`；只构建静态库，不执行交叉编译的上游测试。Go 检查使用 `GOOS=android GOARCH=arm64 CGO_ENABLED=1`、`harmonia_boringssl` 标签以及 NDK Clang 的 `--target=aarch64-linux-android21`。Go 的 Android 目标同时满足 `linux` 构建约束，因此现有原生实现会被选中；候选 `android,arm64` 链接参数已通过真实完整链接。
 
 本轮实际结果：NDK r28c/Clang 19.0.1 构建通过，四个 SPAKE2 公共入口均使用 `HARMONIA_BSSL_` 前缀；静态库对象为 ELF64/AArch64，Go 测试文件完整链接为 ELF64/AArch64 动态类型。未在 Android 执行该文件，不能把这些结果称为 Android 配对运行通过。Flutter 桥接和设备负向测试仍待验收。参考 [NDK CMake 官方说明](https://developer.android.com/ndk/guides/cmake)、[NDK Clang 官方交叉编译说明](https://developer.android.com/ndk/guides/other_build_systems) 和 [Go 构建约束](https://pkg.go.dev/cmd/go#hdr-Build_constraints)。
+
+## Windows ARM64 原生配对
+
+Windows ARM64 固定 BoringSSL 库与项目配对包已取得真实运行结果；默认配对仍关闭，正式 CLI/专用系统服务链尚未验收。构建入口、固定 SHA、实际通过/失败记录和后续验收门槛见 [Windows 原生配对说明](WINDOWS_NATIVE.md)。

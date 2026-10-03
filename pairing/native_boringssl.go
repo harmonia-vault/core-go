@@ -1,4 +1,4 @@
-//go:build harmonia_boringssl && cgo && (darwin || linux)
+//go:build harmonia_boringssl && cgo && (darwin || linux || (windows && arm64))
 
 package pairing
 
@@ -13,6 +13,7 @@ package pairing
 #cgo linux,amd64,!android LDFLAGS: ${SRCDIR}/native/linux-amd64/libcrypto.a -lstdc++ -lpthread -ldl
 #cgo android,arm64 LDFLAGS: ${SRCDIR}/native/android-arm64/libcrypto.a -lc++_static -lc++abi
 #cgo android,amd64 LDFLAGS: ${SRCDIR}/native/android-amd64/libcrypto.a -lc++_static -lc++abi
+#cgo windows,arm64 LDFLAGS: ${SRCDIR}/native/windows-arm64/libcrypto.a -lws2_32 -static -lc++ -lc++abi -lwinpthread
 #include <openssl/curve25519.h>
 */
 import "C"

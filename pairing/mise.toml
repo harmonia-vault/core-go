@@ -35,3 +35,11 @@ run = "bash tools/build-native.sh --android-arm64"
 [tasks.test-android-compile]
 description = "交叉编译 Android arm64 配对测试，不在本机执行 Android 二进制"
 run = "bash tools/check-android-build.sh"
+
+[tasks.native-build-windows-arm64]
+description = "在 Linux ARM64 新临时目录构建固定 Windows ARM64 原生依赖，不执行 Windows 测试"
+run = "python3 tools/build-windows-arm64.py"
+
+[tasks.test-windows-compile]
+description = "交叉链接 Windows ARM64 原生配对测试，只记录编译，不代表 Windows 运行通过"
+run = "python3 tools/check-windows-build.py"

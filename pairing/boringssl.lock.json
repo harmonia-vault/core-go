@@ -12,5 +12,23 @@
     "api": 21,
     "stl": "c++_static",
     "positionIndependentCode": true
+  },
+  "windows": {
+    "target": "windows/arm64",
+    "buildHost": "linux/aarch64",
+    "llvmMingwRelease": "20260922",
+    "llvmVersion": "23.1.2",
+    "crt": "ucrt",
+    "asset": "llvm-mingw-20260922-ucrt-ubuntu-22.04-aarch64.tar.xz",
+    "assetSHA256": "07d21263c56bfe9a713db6fdb3f7434bf4c121a005e40397d3b4c0170fb06769",
+    "sourceArchiveSHA256": "0f0e21f670dd6c06a5ff9fc8a83748aeb959c6ca7ea4cb0ff8c62c9d88aa4002",
+    "staticRuntimeLibraries": [
+      "c++",
+      "c++abi",
+      "winpthread"
+    ],
+    "additionalSystemLibraries": [
+      "ws2_32"
+    ]
   }
 }

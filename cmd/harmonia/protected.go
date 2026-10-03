@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -114,6 +115,9 @@ func saveReceipt(vault *localkeys.Vault, session localkeys.LoginSession, keys lo
 	return vault.SaveTrustContext(localkeys.TrustContext{Endpoint: session.Endpoint, AccountID: session.AccountID, AccountGeneration: session.AccountGeneration, DeviceID: keys.DeviceID, SigningPublic: keys.SigningPublic, ReceivingPublic: keys.ReceivingPublic, Managers: map[string][]byte{receipt.Approval.Context.ApproverDeviceID: manager}, PairingProfile: pairing.Profile, EnrollmentCertificate: data, EnrollmentKey: receipt.IdempotencyKey, Accepted: accepted})
 }
 func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandRuntime, out, errOut io.Writer) error {
+	if runtime.GOOS == "windows" {
+		return errors.New("Windows 登录与配对须通过专用系统服务；当前用户账号 IPC 尚未验收，不能直接打开 Vault")
+	}
 	if o.command == "pair" && !pairing.NativeAvailable() {
 		return pairing.ErrUnavailable
 	}

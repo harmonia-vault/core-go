@@ -1,4 +1,4 @@
-//go:build !harmonia_boringssl || !cgo || (!darwin && !linux)
+//go:build !harmonia_boringssl || !cgo || (!darwin && !linux && (!windows || !arm64))
 
 package pairing
 
