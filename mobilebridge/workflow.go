@@ -70,7 +70,7 @@ func WorkflowProfile() (string, error) {
 		"profile": "origin-aware-native-v1", "systemAuthenticationPerOperation": true,
 		"approvalProfile": "explicit-certificate-version", "legacyApprovalProfile": "first-root-issuer-proof-v1",
 		"approvalV3Profile": "certificate3-issuer-origin-v1", "approvalV4Profile": "certificate4-continuous-recovery-v1", "enrollmentV3Profile": "certificate3-issuer-origin-v1", "environmentKeyRotation": true, "managementProfile": "authenticated-original-transaction-v1", "recoveryAuthorityProfile": "continuous-issuer-recovery-v1-process-owner",
-		"operations":  []string{"register", "verifyEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "approvePairing", "retryApproval", "approvalInfo", "cancelApproval", "approvePairingV3", "retryApprovalV3", "approvalInfoV3", "cancelApprovalV3", "approvePairingV4", "retryApprovalV4", "approvalInfoV4", "cancelApprovalV4", "enrollDeviceV3", "resumeEnrollmentV3", "enrollmentInfoV3", "rotateEnvironmentKey", "managementDevices", "prepareDeviceGrant", "prepareOtherDeviceRevocation", "managementInfo", "retryManagement", "cancelManagement", "beginRecoveryAuthority", "resumeRecoveryAuthority", "recoveryInfo", "recoveryView", "beginRecoveryTransition", "completeRecoveryTransition", "queryRecoveryTransition", "registerRecoveredDevice", "retryRecoveredDevice", "recoveredDeviceInfo", "logout"},
+		"operations":  []string{"loginAccount", "restoreSession", "businessPendingInfo", "retryBusinessOperation", "register", "verifyEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "approvePairing", "retryApproval", "approvalInfo", "cancelApproval", "approvePairingV3", "retryApprovalV3", "approvalInfoV3", "cancelApprovalV3", "approvePairingV4", "retryApprovalV4", "approvalInfoV4", "cancelApprovalV4", "enrollDeviceV3", "resumeEnrollmentV3", "enrollmentInfoV3", "rotateEnvironmentKey", "managementDevices", "prepareDeviceGrant", "prepareOtherDeviceRevocation", "managementInfo", "retryManagement", "cancelManagement", "beginRecoveryAuthority", "resumeRecoveryAuthority", "recoveryInfo", "recoveryView", "beginRecoveryTransition", "completeRecoveryTransition", "queryRecoveryTransition", "registerRecoveredDevice", "retryRecoveredDevice", "recoveredDeviceInfo", "logout"},
 		"unsupported": []string{"approveDevice", "recover", "rotateRecovery", "accountReset"}})
 }
 
@@ -354,6 +354,9 @@ func parseWorkflowCommand(raw string) (workflowCommand, error) {
 		fields, ok = managementFields[c.operation]
 		if !ok {
 			fields, ok = recoveryFields[c.operation]
+			if !ok {
+				fields, ok = businessIntentFields[c.operation]
+			}
 		}
 	}
 	if !ok || len(fields) != len(c.fields) {
@@ -514,6 +517,8 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 	default:
 		if recoveryOperation(c.operation) {
 			data, code, err = v.executeRecovery(ctx, c)
+		} else if businessIntentOperation(c.operation) {
+			data, err = v.executeBusinessIntent(ctx, c)
 		} else {
 			data, err = v.executeManagement(ctx, c)
 		}
@@ -522,7 +527,7 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 	if code != "" {
 		out["recoveryCode"] = code
 	}
-	if (c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "approvePairingV4" || c.operation == "retryApprovalV4" || c.operation == "retryManagement" || recoveryOperation(c.operation) && c.operation != "recoveryView") && data != nil {
+	if (c.operation == "retryBusinessOperation" || c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "approvePairingV4" || c.operation == "retryApprovalV4" || c.operation == "retryManagement" || recoveryOperation(c.operation) && c.operation != "recoveryView") && data != nil {
 		out["data"] = data
 	}
 	if err == nil {
@@ -568,7 +573,7 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 		case errors.Is(err, syncclient.ErrWriteConflict), errors.Is(err, mobileworkflow.ErrManagementConflict), errors.Is(err, syncclient.ErrGrantUpdateConflict):
 			status = "ID_CONFLICT"
 		}
-		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "approvePairingV4" || c.operation == "retryApprovalV4" || c.operation == "enrollDeviceV3" || c.operation == "resumeEnrollmentV3" || c.operation == "rotateEnvironmentKey" || c.operation == "prepareDeviceGrant" || c.operation == "prepareOtherDeviceRevocation" || c.operation == "retryManagement" {
+		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "approvePairingV4" || c.operation == "retryApprovalV4" || c.operation == "enrollDeviceV3" || c.operation == "resumeEnrollmentV3" || c.operation == "rotateEnvironmentKey" || c.operation == "prepareDeviceGrant" || c.operation == "prepareOtherDeviceRevocation" || c.operation == "retryManagement" || c.operation == "retryBusinessOperation" {
 			out["retrySameId"] = true
 		}
 		out["code"] = status

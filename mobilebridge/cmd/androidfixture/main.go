@@ -111,6 +111,10 @@ func run() error {
 	var lose atomic.Value
 	lose.Store("")
 	var submitted atomic.Uint64
+	var environmentChanges atomic.Uint64
+	var environmentAttempts atomic.Uint64
+	var environmentStatus atomic.Uint64
+	var environmentControlStatus atomic.Uint64
 	var approvals atomic.Uint64
 	var approvalsV3 atomic.Uint64
 	var grants atomic.Uint64
@@ -124,6 +128,14 @@ func run() error {
 	proxy := httputil.NewSingleHostReverseProxy(backend)
 	proxy.ModifyResponse = func(r *http.Response) error {
 		// 合成夹具仅公开固定路由类别/数值状态，不输出请求body/响应body/凭据。
+		path := r.Request.URL.Path
+		if r.Request.Method == "GET" && strings.HasSuffix(path, "/issuer-evidence") {
+			environmentControlStatus.Store(uint64(r.StatusCode))
+		}
+		if r.Request.Method == "POST" && (strings.HasSuffix(path, "/environment-changes") || strings.HasSuffix(path, "/environment-changes-v2") || strings.HasSuffix(path, "/environment-changes-v3")) {
+			environmentAttempts.Add(1)
+			environmentStatus.Store(uint64(r.StatusCode))
+		}
 		if r.Request.Method == "POST" && strings.HasSuffix(r.Request.URL.Path, "/recovered-device-challenges") {
 			recoveredChallengeStatus.Store(uint64(r.StatusCode))
 		}
@@ -162,8 +174,9 @@ func run() error {
 		} else if strings.HasSuffix(p, "/mutations") {
 			kind = "mutation"
 			submitted.Add(1)
-		} else if strings.HasSuffix(p, "/environment-changes") {
+		} else if strings.HasSuffix(p, "/environment-changes") || strings.HasSuffix(p, "/environment-changes-v2") || strings.HasSuffix(p, "/environment-changes-v3") {
 			kind = "environment"
+			environmentChanges.Add(1)
 		}
 		if kind != "" && lose.CompareAndSwap(kind, "") {
 			_ = r.Body.Close()
@@ -196,7 +209,7 @@ func run() error {
 	})
 	mux.HandleFunc("/test/counters", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]uint64{"mutations": submitted.Load(), "approvals": approvals.Load(), "approvalsV3": approvalsV3.Load(), "grants": grants.Load(), "revocations": revocations.Load(), "recoveryTransitions": recoveryTransitions.Load(), "recoveredDevices": recoveredDevices.Load(), "approvalsV4": approvalsV4.Load(), "recoveredChallengeStatus": recoveredChallengeStatus.Load(), "recoveredDeviceAttempts": recoveredDeviceAttempts.Load(), "recoveredDeviceStatus": recoveredDeviceStatus.Load()})
+		_ = json.NewEncoder(w).Encode(map[string]uint64{"mutations": submitted.Load(), "environmentChanges": environmentChanges.Load(), "environmentAttempts": environmentAttempts.Load(), "environmentStatus": environmentStatus.Load(), "environmentControlStatus": environmentControlStatus.Load(), "approvals": approvals.Load(), "approvalsV3": approvalsV3.Load(), "grants": grants.Load(), "revocations": revocations.Load(), "recoveryTransitions": recoveryTransitions.Load(), "recoveredDevices": recoveredDevices.Load(), "approvalsV4": approvalsV4.Load(), "recoveredChallengeStatus": recoveredChallengeStatus.Load(), "recoveredDeviceAttempts": recoveredDeviceAttempts.Load(), "recoveredDeviceStatus": recoveredDeviceStatus.Load()})
 	})
 	mux.Handle("/", proxy)
 	server := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%d", *port), Handler: mux, ReadHeaderTimeout: 5 * time.Second, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{{Certificate: [][]byte{leafDER, caDER}, PrivateKey: leafKey}}}}
