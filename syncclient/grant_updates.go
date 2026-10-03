@@ -85,16 +85,17 @@ type ManagementSubject struct {
 	HighestGrantGeneration string                   `json:"highestGrantGeneration"`
 }
 type ManagementControl struct {
-	AccountID         string                `json:"accountId"`
-	AccountGeneration string                `json:"accountGeneration"`
-	EnvironmentID     string                `json:"environmentId"`
-	Sequence          uint64                `json:"sequence"`
-	KeyVersion        string                `json:"keyVersion"`
-	Subjects          []ManagementSubject   `json:"subjects"`
-	IssuerEvidence    cryptox.IssuerProofV2 `json:"issuerEvidence"`
+	AccountID              string                       `json:"accountId"`
+	AccountGeneration      string                       `json:"accountGeneration"`
+	EnvironmentID          string                       `json:"environmentId"`
+	Sequence               uint64                       `json:"sequence"`
+	KeyVersion             string                       `json:"keyVersion"`
+	Subjects               []ManagementSubject          `json:"subjects"`
+	IssuerEvidence         cryptox.IssuerProofV2        `json:"issuerEvidence"`
+	IssuerRecoveryEvidence *cryptox.IssuerRecoveryProof `json:"issuerRecoveryEvidence,omitempty"`
 }
 
-func (c *Client) verifyManagementControl(out ManagementControl, historical ...bool) (*cryptox.VerifiedIssuerProofV2, cryptox.SignedGrantWire, error) {
+func (c *Client) verifyManagementControl(out ManagementControl, historical ...bool) (VerifiedControlEvidence, cryptox.SignedGrantWire, error) {
 	var own cryptox.SignedGrantWire
 	v, ok := c.config.Verifier.(*PinnedVerifier)
 	if !ok || v.evidenceRoot == nil || c.config.Engine.State().SessionEpoch != c.epoch || c.config.Engine.State().AccountClosed {
@@ -108,7 +109,7 @@ func (c *Client) verifyManagementControl(out ManagementControl, historical ...bo
 	if e != nil {
 		return nil, own, e
 	}
-	proof, e := cryptox.VerifyIssuerEvidenceV2(*v.evidenceRoot, out.IssuerEvidence, v.genesisAuthorities...)
+	proof, e := c.verifyControlEvidence(out.IssuerEvidence, out.IssuerRecoveryEvidence, out.Sequence, len(historical) > 0)
 	if e != nil {
 		return nil, own, e
 	}
@@ -119,6 +120,20 @@ func (c *Client) verifyManagementControl(out ManagementControl, historical ...bo
 			return nil, own, cryptox.ErrInvalidWire
 		}
 		identities[binding.DeviceID] = ManagementSubject{DeviceID: binding.DeviceID, SigningPublicKey: binding.SigningPublicKey, ReceivingPublicKey: binding.ReceivingPublicKey}
+	}
+	// Proof3 的已归档设备可以尚未获本环境授权；权源枚举不等于完整身份集合。
+	// 仅从已完整验证的恢复图读取原双签身份，不能从服务端 subjects 建立 pin。
+	if recovered, ok := proof.(*cryptox.VerifiedIssuerRecoveryProof); ok {
+		for _, subject := range out.Subjects {
+			id, known := recovered.VerifiedIdentity(subject.DeviceID)
+			if !known {
+				return nil, own, cryptox.ErrInvalidWire
+			}
+			if prior, exists := identities[id.DeviceID]; exists && (prior.SigningPublicKey != id.SigningPublicKey || prior.ReceivingPublicKey != id.ReceivingPublicKey) {
+				return nil, own, cryptox.ErrInvalidWire
+			}
+			identities[id.DeviceID] = ManagementSubject{DeviceID: id.DeviceID, SigningPublicKey: id.SigningPublicKey, ReceivingPublicKey: id.ReceivingPublicKey}
+		}
 	}
 	seen := map[string]bool{}
 	for _, subject := range out.Subjects {
@@ -169,12 +184,7 @@ func (c *Client) ManagementControl(ctx context.Context, environment string) (Man
 	if c.config.Engine.State().Paused {
 		return out, ErrPaused
 	}
-	target := c.endpointFor("/grant-management")
-	query := url.Values{}
-	query.Set("environmentId", environment)
-	query.Set("capability", cryptox.EnvironmentOriginCapability)
-	target.RawQuery = query.Encode()
-	if e := c.request(ctx, "GET", target, nil, &out); e != nil {
+	if e := c.requestManagementControl(ctx, environment, &out); e != nil {
 		return out, e
 	}
 	if out.EnvironmentID != environment {

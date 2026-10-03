@@ -17,9 +17,10 @@ type EnvironmentChangeStatusV2 struct {
 	ContentHash string `json:"contentHash,omitempty"`
 }
 type EnvironmentControlView struct {
-	Sequence       uint64                    `json:"sequence"`
-	Grants         []cryptox.SignedGrantWire `json:"grants"`
-	IssuerEvidence cryptox.IssuerProofV2     `json:"issuerEvidence"`
+	Sequence               uint64                       `json:"sequence"`
+	Grants                 []cryptox.SignedGrantWire    `json:"grants"`
+	IssuerEvidence         cryptox.IssuerProofV2        `json:"issuerEvidence"`
+	IssuerRecoveryEvidence *cryptox.IssuerRecoveryProof `json:"issuerRecoveryEvidence,omitempty"`
 }
 
 func (c *Client) CurrentIssuerEvidence() (cryptox.IssuerProofV2, error) {
@@ -93,21 +94,32 @@ func (c *Client) EnvironmentControl(ctx context.Context, environment string) (En
 	if c.config.Engine.State().Paused {
 		return out, ErrPaused
 	}
-	u := c.endpointFor("/issuer-evidence")
-	q := u.Query()
-	q.Set("environmentId", environment)
-	q.Set("capability", cryptox.EnvironmentOriginCapability)
-	u.RawQuery = q.Encode()
-	if e := c.request(ctx, "GET", u, nil, &out); e != nil {
+	if e := c.requestEnvironmentControl(ctx, environment, &out); e != nil {
 		return out, e
 	}
-	old := c.config.Engine.State().Cloud
-	if out.Sequence < old.Sequence || out.Sequence < old.AuthorizationSequence || out.Sequence > 9007199254740991 {
-		return EnvironmentControlView{}, cryptox.ErrInvalidWire
-	}
-	p, e := cryptox.VerifyIssuerEvidenceV2(*v.evidenceRoot, out.IssuerEvidence, v.genesisAuthorities...)
-	if e != nil {
+	if _, e := c.VerifyEnvironmentControl(out, environment); e != nil {
 		return EnvironmentControlView{}, e
+	}
+	return out, nil
+}
+
+// VerifyEnvironmentControl 可重验受保护历史 journal；历史来源不替代发送前在线检查。
+func (c *Client) VerifyEnvironmentControl(out EnvironmentControlView, environment string, historical ...bool) (VerifiedControlEvidence, error) {
+	if len(historical) > 1 {
+		return nil, cryptox.ErrInvalidWire
+	}
+	past := len(historical) == 1 && historical[0]
+	v, ok := c.config.Verifier.(*PinnedVerifier)
+	if !ok || v.evidenceRoot == nil || !enrollmentID.MatchString(environment) {
+		return nil, ErrWritePermission
+	}
+	old := c.config.Engine.State().Cloud
+	if (!past && (out.Sequence < old.Sequence || out.Sequence < old.AuthorizationSequence)) || out.Sequence > 9007199254740991 {
+		return nil, cryptox.ErrInvalidWire
+	}
+	p, e := c.verifyControlEvidence(out.IssuerEvidence, out.IssuerRecoveryEvidence, out.Sequence, past)
+	if e != nil {
+		return nil, e
 	}
 	var own *cryptox.SignedGrantWire
 	seen := map[string]bool{}
@@ -115,27 +127,39 @@ func (c *Client) EnvironmentControl(ctx context.Context, environment string) (En
 	for i, g := range out.Grants {
 		gg := g.Grant
 		expiry, er := strconv.ParseInt(gg.ExpiresAt, 10, 64)
-		if er != nil || (expiry != 0 && expiry <= c.config.Now().Unix()) || gg.Role == "none" || gg.EnvironmentID != environment || seen[gg.SubjectDeviceID] || gg.AccountID != c.config.AccountID || gg.AccountGeneration != strconv.FormatUint(c.config.AccountGeneration, 10) {
-			return EnvironmentControlView{}, cryptox.ErrInvalidWire
+		if er != nil || (!past && expiry != 0 && expiry <= c.config.Now().Unix()) || gg.Role == "none" || gg.EnvironmentID != environment || seen[gg.SubjectDeviceID] || gg.AccountID != c.config.AccountID || gg.AccountGeneration != strconv.FormatUint(c.config.AccountGeneration, 10) {
+			return nil, cryptox.ErrInvalidWire
 		}
 		seen[gg.SubjectDeviceID] = true
 		if kv != "" && kv != gg.KeyVersion {
-			return EnvironmentControlView{}, cryptox.ErrInvalidWire
+			return nil, cryptox.ErrInvalidWire
 		}
 		kv = gg.KeyVersion
 		if e = p.VerifyHistoricalGrant(g); e != nil {
-			return EnvironmentControlView{}, e
+			return nil, e
 		}
 		if gg.SubjectDeviceID == c.config.DeviceID {
 			own = &out.Grants[i]
 		}
 	}
 	if own == nil || own.Grant.Role != "admin" || p.VerifyTarget(*own, c.config.DeviceID, cryptox.EncodeBase64(v.trust.DeviceSigningPublicKey), v.receivingPublicKey) != nil {
-		return EnvironmentControlView{}, ErrWritePermission
+		return nil, ErrWritePermission
 	}
-	return out, nil
+	if c.recoveryControls() && !past {
+		cached, exists := old.Environments[environment]
+		if !exists || cached.Role != localstate.Admin || own.Grant.KeyVersion != strconv.FormatUint(cached.KeyVersion, 10) || own.Grant.GrantGeneration != strconv.FormatUint(cached.GrantGeneration, 10) {
+			return nil, ErrFullPullRequired
+		}
+	}
+	return p, nil
 }
 func (c *Client) PrepareEnvironmentChangeV2(ctx context.Context, signed cryptox.SignedEnvironmentChange, key ed25519.PrivateKey) (cryptox.EnvironmentChangeV2, error) {
+	if c.recoveryControls() {
+		return cryptox.EnvironmentChangeV2{}, ErrWritePermission
+	}
+	return c.prepareEnvironmentChangeOrigin(ctx, signed, key)
+}
+func (c *Client) prepareEnvironmentChangeOrigin(ctx context.Context, signed cryptox.SignedEnvironmentChange, key ed25519.PrivateKey) (cryptox.EnvironmentChangeV2, error) {
 	if e := c.validateEnvironmentChange(signed); e != nil {
 		return cryptox.EnvironmentChangeV2{}, e
 	}
@@ -159,11 +183,17 @@ func (c *Client) PrepareEnvironmentChangeV2(ctx context.Context, signed cryptox.
 	return cryptox.NewEnvironmentChangeV2(signed, actor, before, key)
 }
 func (c *Client) EnvironmentStatusV2(ctx context.Context, id string) (EnvironmentChangeStatusV2, error) {
+	if c.recoveryControls() {
+		return EnvironmentChangeStatusV2{}, ErrWritePermission
+	}
+	return c.environmentOriginStatus(ctx, id, "/environment-changes-v2/")
+}
+func (c *Client) environmentOriginStatus(ctx context.Context, id, route string) (EnvironmentChangeStatusV2, error) {
 	var s EnvironmentChangeStatusV2
 	if !enrollmentID.MatchString(id) {
 		return s, cryptox.ErrInvalidWire
 	}
-	if e := c.request(ctx, "GET", c.endpointFor("/environment-changes-v2/"+id), nil, &s); e != nil {
+	if e := c.request(ctx, "GET", c.endpointFor(route+id), nil, &s); e != nil {
 		return s, e
 	}
 	if s.State == "unknown" {
@@ -205,6 +235,9 @@ func (c *Client) validateEnvironmentChangeV2(s cryptox.EnvironmentChangeV2) erro
 }
 func (c *Client) ConfirmEnvironmentChangeV2(ctx context.Context, s cryptox.EnvironmentChangeV2, accepted Acceptance) (SubmitResult, error) {
 	result := SubmitResult{Accepted: accepted}
+	if c.recoveryControls() {
+		return result, ErrWritePermission
+	}
 	if e := c.validateEnvironmentChangeV2(s); e != nil {
 		return result, e
 	}
@@ -244,6 +277,9 @@ func (c *Client) ConfirmEnvironmentChangeV2(ctx context.Context, s cryptox.Envir
 	return result, nil
 }
 func (c *Client) SubmitEnvironmentChangeV2(ctx context.Context, s cryptox.EnvironmentChangeV2) (SubmitResult, error) {
+	if c.recoveryControls() {
+		return SubmitResult{}, ErrWritePermission
+	}
 	if e := c.validateEnvironmentChangeV2(s); e != nil {
 		return SubmitResult{}, e
 	}
