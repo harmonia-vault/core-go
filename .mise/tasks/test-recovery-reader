@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="验证恢复设备普通下发来源、RO 写拒和链检查点"
+set -euo pipefail
+mise exec -- go test -race ./cryptox -run 'RecoveryReader|RecoveryCheckpoint|RecoveredDeviceBuilder' -count=1 -v
