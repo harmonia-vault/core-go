@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "status": "PASS",
+  "sourceBase": "b06302c541ce36edf8828f651ae342c535428a77",
+  "candidateSourceFiles": 523,
+  "changedSource": [
+    {
+      "path": "linuxinstall/lifecycle_linux_test.go",
+      "bytes": 11893,
+      "sha256": "62d57df7431a185503da28478420cc4a2686eb910e526924cb82386ab4b74f23",
+      "gitBlob": "3f1b6c9ce19e407d244529ed447b478f36163bf6"
+    },
+    {
+      "path": "linuxinstall/unit_contract_linux_test.go",
+      "bytes": 8303,
+      "sha256": "9aff66e9b0c05571175308abe5f7cb6600419edb98ce2239ef1b95542be907a0",
+      "gitBlob": "9d9de357ef9bd0a2fc501412c4d0775e0eb969d4"
+    }
+  ],
+  "productionSourceChanged": false,
+  "testScope": "native Linux ARM64 root temporary filesystem, injected manager and helpers; no live service control",
+  "umask": "077",
+  "hostRace": {
+    "status": "PASS",
+    "mainAndSubEvents": 131,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 3.172
+  },
+  "linuxArm64Compile": {
+    "status": "PASS",
+    "seconds": 0.678,
+    "countsAsRuntimePASS": false
+  },
+  "native": {
+    "status": "PASS",
+    "main": 5,
+    "sub": 4,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 0.899,
+    "exitCode": 0,
+    "stderrEmpty": true,
+    "testNames": [
+      "TestLinuxLegacySimpleInterruptedInstallAndStopUninstall",
+      "TestLinuxHistoricalUnitStillRequiresActualExactBytes",
+      "TestLinuxStoppedLegacyPendingEnableUninstallKeepsMaterialsContract",
+      "TestLinuxUnsupportedExecPreservesReceiptAndAllowsUninstall",
+      "TestLinuxEnableReloadCannotChangeReadinessBeforeStart"
+    ],
+    "subtestNames": [
+      "TestLinuxLegacySimpleInterruptedInstallAndStopUninstall/installed-disabled",
+      "TestLinuxLegacySimpleInterruptedInstallAndStopUninstall/enabled",
+      "TestLinuxUnsupportedExecPreservesReceiptAndAllowsUninstall/install",
+      "TestLinuxUnsupportedExecPreservesReceiptAndAllowsUninstall/start"
+    ]
+  },
+  "wholeRun": {
+    "status": "PASS",
+    "seconds": 1.759,
+    "exitCode": 0
+  },
+  "stageChecks": {
+    "existing-scope-before-new-temp": true,
+    "authenticated-prior-temp-only-cleanup": true,
+    "exclusive-new-native-temp": true,
+    "authenticated-frozen-test-elf": true,
+    "five-native-root-temp-contracts": true,
+    "preserved-existing-scope-after-tests": true,
+    "only-new-temp-cleanup": true,
+    "final-preservation-after-cleanup": true
+  },
+  "priorTempCleanupCompleted": true,
+  "newTempAbsent": true,
+  "existingInstalledScopeStateReceiptEnableLinkUnchanged": true,
+  "actualSystemdStartup": "UNRUN",
+  "BootPull": "UNRUN",
+  "realLoginAttempted": false,
+  "serviceControlAttempted": false,
+  "privateStateContentsRead": false,
+  "testELFSHA256": "02e671175fb8a63148d3dddeee10ebe494ddcf3a1af03c86623c09a93604c088",
+  "runnerManifestSHA256": "b38082174dc9484ff39ed07dc8a13137de9a9df53b6a74d241622b4b39be2229",
+  "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "rawStdoutSHA256": "ca86656dd9e0cbf069ce9ff5be02ae61c857c58804cdcff3cfb26125b9e8f42b",
+  "history": [
+    {
+      "runnerManifestSHA256": "83ec1ed4ced0d41a66f1390950f77e83d60663874a556d419911b631be818197",
+      "status": "FAIL",
+      "stage": "host public-source metadata preflight",
+      "VMExecution": "UNRUN"
+    },
+    {
+      "runnerManifestSHA256": "7442096bd2789b397192a124018af4eb745e5316c842a96bb3f8d39bc67492ce",
+      "status": "FAIL",
+      "mainPass": 4,
+      "mainFail": 1,
+      "subPass": 3,
+      "subFail": 1,
+      "reason": "test demanded stop for never-started installed-disabled fixture; production contract stops only active service and always requires drain",
+      "incorrectFirstLocalProjectionPreserved": true,
+      "correctedProjectionSHA256": "00388450e27743febf1bf4419d54483c819b35af3f75924609bcc3401898948c"
+    },
+    {
+      "runnerManifestSHA256": "8e5afea33c54aa11e77312b3b81d1dc3444eedb3223e5c2e8d835551fc200d7e",
+      "status": "FAIL",
+      "stage": "host manifest loop read repeated two public test sources without source read policy",
+      "VMExecution": "UNRUN",
+      "failureEvidenceManifestSHA256": "2f3690dffd29b0ab61ae5f61273e2c48eaaaa0acf05743f12217ff46c1b70c49"
+    }
+  ],
+  "safety": "FAIL and UNKNOWN stop without retry or broad cleanup; all previous raw results remain preserved"
+}

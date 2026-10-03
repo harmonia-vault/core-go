@@ -28,6 +28,7 @@ type fixtureRuntime struct {
 	effectiveType string
 	enableType    string
 	unitTypeCalls int
+	drainCalls    int
 }
 
 func (r *fixtureRuntime) show(ctx context.Context, p Plan) (UnitState, error) {
@@ -99,6 +100,7 @@ func (r *fixtureRuntime) control(ctx context.Context, op string, p Plan) error {
 	return nil
 }
 func (r *fixtureRuntime) drained(ctx context.Context, p Plan) error {
+	r.drainCalls++
 	if r.drainErr != nil {
 		return r.drainErr
 	}

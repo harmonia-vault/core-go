@@ -59,6 +59,32 @@ func TestLinuxLegacySimpleInterruptedInstallAndStopUninstall(t *testing.T) {
 					t.Fatal("fixture start did not become active")
 				}
 			}
+			beforeDrains := runtime.drainCalls
+			beforeReceipt, err := c.lease.LoadReceipt()
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Stop follows actual active state; both inactive and active units
+			// must reject a live cgroup before any cleanup is authorized.
+			runtime.drainErr = ErrBusy
+			if got, err := c.uninstall(context.Background()); err != ErrBusy || got.Complete {
+				t.Fatal("legacy uninstall ignored live processes", err)
+			}
+			if runtime.drainCalls <= beforeDrains || runtime.logoutCalls != 0 {
+				t.Fatal("drain failure advanced cleanup")
+			}
+			kept, err := c.lease.LoadReceipt()
+			if err != nil || kept.UnitSHA256 != legacy.UnitSHA256 || kept.Revision != beforeReceipt.Revision || kept.Phase != beforeReceipt.Phase {
+				t.Fatal("drain failure lost frozen receipt", err)
+			}
+			if err = c.fs.verifyReceipt(kept); err != nil {
+				t.Fatal("drain failure removed or replaced creation objects", err)
+			}
+			journal, err := c.lease.LoadJournal()
+			if err != nil || journal.Phase != "uninstall-requested" || len(journal.Deletions) != 0 {
+				t.Fatal("drain failure authorized deletion", err)
+			}
+			runtime.drainErr = nil
 			if got, err := c.uninstall(context.Background()); err != nil || !got.Complete {
 				t.Fatal("legacy stop/uninstall", err)
 			}
@@ -68,8 +94,12 @@ func TestLinuxLegacySimpleInterruptedInstallAndStopUninstall(t *testing.T) {
 					count++
 				}
 			}
-			if count != 1 || runtime.active {
-				t.Fatal("legacy uninstall omitted exact stop")
+			wantStops := 0
+			if enabled {
+				wantStops = 1
+			}
+			if count != wantStops || runtime.active || runtime.drainCalls <= beforeDrains+1 {
+				t.Fatal("legacy uninstall violated active-only stop and required drain")
 			}
 			if _, err = c.lease.LoadReceipt(); !errors.Is(err, os.ErrNotExist) {
 				t.Fatal("legacy receipt remained after mock uninstall", err)
