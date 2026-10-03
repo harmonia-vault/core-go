@@ -1,6 +1,6 @@
-# Linux 单用户 systemd 安装器候选
+# Linux 单用户 systemd 安装器（实验性）
 
-本批在公开 `core-go 6d8178ae3116e6eb9dc4c1a9197c885c6a7687b1` 的独立归档实现 install、start、uninstall 全协调器。没有修改共享 CLI、密码学、手机、GoMod 或现有 VM。当前仍是私有实验性源码候选；host 测试和 Linux 交叉编译不能代替 Linux 文件系统、systemd 或真实重启验收，不宣称生产可用。
+本安装器最初在公开 `core-go 6d8178ae3116e6eb9dc4c1a9197c885c6a7687b1` 的独立归档实现 install、start、uninstall 协调器，未修改共享 CLI、密码学、手机或 GoMod。源码现已公开；隔离 Ubuntu 已验证原生10项和正式空生命周期，外层清理仍有保留的 FAIL，完整范围见文末与 [VM 记录](VM_VALIDATION.md)。真实入网后启服、重启和有材料卸载尚未验收，不宣称生产可用。
 
 独立 root 命令 `harmonia-linux-installer` 仅管理明确 UID 的固定目录。日常 CLI 始终由目标用户运行。安装不是登录，systemd active 不是设备可信，也不是服务器授权成功。
 
@@ -56,13 +56,13 @@ cleanup-authorized 保存原对象身份后，最终锁保持至结束。仅有�
 
 ## 检查与后续真实 VM
 
-host race 验 Plan、固定状态/JSON/CAS、创建 intent/身份不可替换、部分安装清理 snapshot、精确 helper DTO、systemd 正常停服与进程记录。Linux 专用测试只编译：在新 root temp layout 注入 system-manager/helper 回应，测试真实 FD/ACL/flock/fsync/rename 与协调器中断，不当成真实认证或 systemd。
+host race 验 Plan、固定状态/JSON/CAS、创建 intent/身份不可替换、部分安装清理 snapshot、精确 helper DTO、systemd 正常停服与进程记录。Linux 专用测试在新 root temp layout 注入 system-manager/helper 回应，验证真实 FD/ACL/flock/fsync/rename 与协调器中断；现已有10项实际内核通过，仍不当成真实认证或完整 systemd 产品链。
 
-实际四 VM 场景待 root 阅读冻结源码/ runner 后执行：空安装卸载；真实 native PAKE 入网启服完整重启一次且目标 UID 无登录；正常停止后离线卸载并同 SSH shell 逐 key 恢复；一次持久删除断点/并发 owner 拒绝与原事务重试。只新合成 UID、账号、明确变量，不碰旧 VM/其他 UID 或宿主 env；没有 CI/CD、Release 或线上部署。精确 PASS/FAIL/UNRUN 和 artifact SHA 在候选外层证据中，不把后续计划算测试通过。
+VM 验证分阶段进行：正式空安装/未入网 Start 非零/卸载已实际完成；真实 native PAKE 入网启服、完整重启且目标 UID 无登录、正常停止后有材料离线卸载与同 SSH shell 逐 key 恢复，以及真实持久删除断点/并发 owner 原事务重试仍未执行。只新合成 UID、账号、明确变量，不碰旧 VM/其他 UID 或宿主 env；没有 CI/CD、Release 或线上部署。精确 PASS/FAIL/UNRUN 和 artifact SHA 在候选外层证据中，不把后续计划算测试通过。
 
 固定 show 使用 properties 模式：systemd v255 源码对不存在 unit 仍输出属性并返回0；status 的未知服务退出码没有被挪作安装成功。参见 [systemctl-show.c](https://raw.githubusercontent.com/systemd/systemd/v255/src/systemctl/systemctl-show.c)，实际目标 systemd 行为仍由 VM 验证。
 
-本次最终精确检查：host race 14主/57子（71 PASS、0FAIL、0SKIP），package 1.539秒/process 2.094秒；host vet 0.109秒；LinuxARM64 test-compile 0.546秒、command build 0.446秒、Linux vet 0.247秒均PASS。目标8个原生测试/实际systemd/全部VM仍UNRUN。Phase1两FAIL和Phase2字段补丁编译FAIL均保留在私有证据，不删失败历史。
+早期冻结的检查历史（不覆盖文末最新结果）：host race 14主/57子（71 PASS、0FAIL、0SKIP），package 1.539秒/process 2.094秒；host vet 0.109秒；LinuxARM64 test-compile 0.546秒、command build 0.446秒、Linux vet 0.247秒均PASS。当时目标8个原生测试/实际systemd/全部VM为UNRUN。Phase1两FAIL和Phase2字段补丁编译FAIL均保留在私有证据，不删失败历史。
 
 ## 最新根复验快照
 
