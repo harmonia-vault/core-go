@@ -8,3 +8,7 @@ run = "go test . -run 'IssuerProof|EnrollmentV2' -count=1 -v"
 [tasks.generate-issuer-vector]
 description = "在显式路径生成公开合成 A→B→C 互操作向量"
 run = "go run ./tools/issuer-vector"
+
+[tasks.test-recovery-authority]
+description = "验证恢复连续链、显式恢复设备、来源图与严格负例"
+run = "go test . -run 'RecoveryAuthority|RecoveredDevice|IssuerRecovery|EnrollmentRecovery' -count=1 -v"
