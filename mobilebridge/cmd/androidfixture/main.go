@@ -113,6 +113,8 @@ func run() error {
 	var submitted atomic.Uint64
 	var approvals atomic.Uint64
 	var approvalsV3 atomic.Uint64
+	var grants atomic.Uint64
+	var revocations atomic.Uint64
 	proxy := httputil.NewSingleHostReverseProxy(backend)
 	proxy.ModifyResponse = func(r *http.Response) error {
 		if r.Request.Method != "POST" || r.StatusCode != 200 {
@@ -130,6 +132,10 @@ func run() error {
 			approvalsV3.Add(1)
 		} else if strings.HasSuffix(p, "/device-revocations/complete") {
 			kind = "revocation"
+			revocations.Add(1)
+		} else if strings.HasSuffix(p, "/grants") {
+			kind = "grant"
+			grants.Add(1)
 		} else if strings.HasSuffix(p, "/mutations") {
 			kind = "mutation"
 			submitted.Add(1)
@@ -157,7 +163,7 @@ func run() error {
 		}
 		d := json.NewDecoder(io.LimitReader(r.Body, 128))
 		d.DisallowUnknownFields()
-		if d.Decode(&body) != nil || (body.Lose != "init" && body.Lose != "mutation" && body.Lose != "environment" && body.Lose != "revocation" && body.Lose != "approval" && body.Lose != "approvalV3") {
+		if d.Decode(&body) != nil || (body.Lose != "init" && body.Lose != "mutation" && body.Lose != "environment" && body.Lose != "revocation" && body.Lose != "approval" && body.Lose != "approvalV3" && body.Lose != "grant") {
 			http.Error(w, "invalid", 400)
 			return
 		}
@@ -167,7 +173,7 @@ func run() error {
 	})
 	mux.HandleFunc("/test/counters", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]uint64{"mutations": submitted.Load(), "approvals": approvals.Load(), "approvalsV3": approvalsV3.Load()})
+		_ = json.NewEncoder(w).Encode(map[string]uint64{"mutations": submitted.Load(), "approvals": approvals.Load(), "approvalsV3": approvalsV3.Load(), "grants": grants.Load(), "revocations": revocations.Load()})
 	})
 	mux.Handle("/", proxy)
 	server := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%d", *port), Handler: mux, ReadHeaderTimeout: 5 * time.Second, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{{Certificate: [][]byte{leafDER, caDER}, PrivateKey: leafKey}}}}

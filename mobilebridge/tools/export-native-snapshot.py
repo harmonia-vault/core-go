@@ -17,6 +17,17 @@ MOBILE_FILES = [
     'tool/native-generic-test.py',
 ]
 
+MANAGEMENT_CORE_FILES = [
+    'mobilebridge/workflow.go', 'mobilebridge/management.go', 'mobilebridge/management_test.go',
+    'mobilebridge/cmd/androidfixture/main.go', 'mobilebridge/cmd/managementpeer/main.go',
+]
+MANAGEMENT_MOBILE_FILES = [
+    'lib/native/native_workflow_adapter.dart',
+    'android/app/src/androidTest/kotlin/org/harmoniavault/harmonia_mobile/nativebridge/NativeManagementIntegrationTest.kt',
+    'android/app/src/androidTest/kotlin/org/harmoniavault/harmonia_mobile/nativebridge/NativeManagementTestSocket.kt',
+    'tool/native-management-test.py',
+]
+
 def git(directory, *args):
     return subprocess.run(['git', '-C', str(directory), *args], check=True, capture_output=True).stdout
 
@@ -24,6 +35,7 @@ def git(directory, *args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--workspace', type=Path, required=True)
+    parser.add_argument('--slice', choices=['v3', 'management'], default='v3')
     parser.add_argument('--output', type=Path, required=True)
     for name in ('workspace', 'core', 'mobile', 'server', 'protocol'):
         parser.add_argument('--'+name+'-revision', required=True)
@@ -52,7 +64,7 @@ def main():
     output.mkdir(mode=0o700)
     manifest = {'version': 1, 'commits': commits, 'archiveSHA256': {}, 'candidateOverrides': {}, 'filesSHA256': {},
                 'scope': '公开源码归档加明确native候选文件，无VCS元数据；不声称整个当前working tree通过',
-                'excluded': ['RecoverySession/management未公开草稿', 'UI改动', 'ignored产物/钥/本机配置'],
+                'slice': args.slice, 'excluded': ['未列入候选覆盖的未公开草稿', 'UI改动', 'ignored产物/钥/本机配置'],
                 'bootstrap': ['固定BoringSSL源码构建host/Android static库与headers', '官方固定mise工具链', 'Node locked依赖缓存', 'Flutter pub locked依赖与explicit SDK本机配置']}
     for name, archive in archives.items():
         dest = output if name == 'workspace' else output / ('core-go' if name == 'core' else name)
@@ -60,7 +72,8 @@ def main():
         with tarfile.open(fileobj=io.BytesIO(archive)) as tree:
             tree.extractall(dest, filter='data')
         manifest['archiveSHA256'][name] = hashlib.sha256(archive).hexdigest()
-    for name, files in [('core-go', CORE_FILES), ('mobile', MOBILE_FILES)]:
+    selected = [('core-go', MANAGEMENT_CORE_FILES), ('mobile', MANAGEMENT_MOBILE_FILES)] if args.slice == 'management' else [('core-go', CORE_FILES), ('mobile', MOBILE_FILES)]
+    for name, files in selected:
         for filename in files:
             source = workspace/name/filename
             if not source.is_file() or source.is_symlink():

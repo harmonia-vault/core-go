@@ -68,9 +68,9 @@ func WorkflowProfile() (string, error) {
 	return encode(map[string]any{"version": 1, "realVaultReady": false, "experimental": true,
 		"profile": "origin-aware-native-v1", "systemAuthenticationPerOperation": true,
 		"approvalProfile": "explicit-certificate-version", "legacyApprovalProfile": "first-root-issuer-proof-v1",
-		"approvalV3Profile": "certificate3-issuer-origin-v1", "enrollmentV3Profile": "certificate3-issuer-origin-v1", "environmentKeyRotation": true,
-		"operations":  []string{"register", "verifyEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "approvePairing", "retryApproval", "approvalInfo", "cancelApproval", "approvePairingV3", "retryApprovalV3", "approvalInfoV3", "cancelApprovalV3", "enrollDeviceV3", "resumeEnrollmentV3", "enrollmentInfoV3", "rotateEnvironmentKey", "logout"},
-		"unsupported": []string{"approveDevice", "recover", "rotateRecovery", "roles", "accountReset"}})
+		"approvalV3Profile": "certificate3-issuer-origin-v1", "enrollmentV3Profile": "certificate3-issuer-origin-v1", "environmentKeyRotation": true, "managementProfile": "authenticated-original-transaction-v1",
+		"operations":  []string{"register", "verifyEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "approvePairing", "retryApproval", "approvalInfo", "cancelApproval", "approvePairingV3", "retryApprovalV3", "approvalInfoV3", "cancelApprovalV3", "enrollDeviceV3", "resumeEnrollmentV3", "enrollmentInfoV3", "rotateEnvironmentKey", "managementDevices", "prepareDeviceGrant", "prepareOtherDeviceRevocation", "managementInfo", "retryManagement", "cancelManagement", "logout"},
+		"unsupported": []string{"approveDevice", "recover", "rotateRecovery", "accountReset"}})
 }
 
 func (d *Device) OpenWorkflow(endpoint, namespace string, sealed, additionalCA []byte, store SealedStateStore) (*VaultWorkflow, error) {
@@ -338,6 +338,9 @@ func parseWorkflowCommand(raw string) (workflowCommand, error) {
 	c.endpoint = endpoint
 	delete(c.fields, "endpoint")
 	fields, ok := operationFields[c.operation]
+	if !ok {
+		fields, ok = managementFields[c.operation]
+	}
 	if !ok || len(fields) != len(c.fields) {
 		return c, errInput
 	}
@@ -484,12 +487,14 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 	case "logout":
 		v.deleteDevice = true
 		err = v.workflow.Logout()
+	default:
+		data, err = v.executeManagement(ctx, c)
 	}
 	out := map[string]any{"version": 1, "ok": err == nil, "experimental": true}
 	if code != "" {
 		out["recoveryCode"] = code
 	}
-	if (c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3") && data != nil {
+	if (c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "retryManagement") && data != nil {
 		out["data"] = data
 	}
 	if err == nil {
@@ -502,7 +507,7 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 		case errors.Is(err, syncclient.ErrTrustInvalidated):
 			status = "TRUST_INVALIDATED"
 			v.deleteDevice = true
-		case errors.Is(err, mobileworkflow.ErrPending), errors.Is(err, syncclient.ErrAcceptedNotApplied), errors.Is(err, syncclient.ErrWritePending), errors.Is(err, mobileworkflow.ErrSelfRevocationPending), errors.Is(err, mobileworkflow.ErrApprovalPending), errors.Is(err, mobileworkflow.ErrMobileEnrollmentPending):
+		case errors.Is(err, mobileworkflow.ErrPending), errors.Is(err, syncclient.ErrAcceptedNotApplied), errors.Is(err, syncclient.ErrWritePending), errors.Is(err, mobileworkflow.ErrSelfRevocationPending), errors.Is(err, mobileworkflow.ErrApprovalPending), errors.Is(err, mobileworkflow.ErrMobileEnrollmentPending), errors.Is(err, mobileworkflow.ErrManagementPending):
 			status = "PENDING"
 			out["retrySameId"] = true
 		case errors.Is(err, mobileworkflow.ErrMobileEnrollmentExpired):
@@ -513,14 +518,19 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 			status = "NOT_TRUSTED"
 		case errors.Is(err, syncclient.ErrSelfRevocationExpired):
 			status = "REVOCATION_EXPIRED_PENDING"
+			if managementOperation(c.operation) {
+				status = "MANAGEMENT_EXPIRED_PENDING"
+			}
 		case errors.Is(err, mobileworkflow.ErrClosed):
 			status = "CLOSED"
 		case errors.Is(err, localstate.ErrUnauthorized), errors.Is(err, syncclient.ErrWritePermission):
 			status = "UNAUTHORIZED"
-		case errors.Is(err, syncclient.ErrWriteConflict):
+		case errors.Is(err, mobileworkflow.ErrManagementLimit):
+			status = "MANAGEMENT_LIMIT"
+		case errors.Is(err, syncclient.ErrWriteConflict), errors.Is(err, mobileworkflow.ErrManagementConflict), errors.Is(err, syncclient.ErrGrantUpdateConflict):
 			status = "ID_CONFLICT"
 		}
-		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "enrollDeviceV3" || c.operation == "resumeEnrollmentV3" || c.operation == "rotateEnvironmentKey" {
+		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "enrollDeviceV3" || c.operation == "resumeEnrollmentV3" || c.operation == "rotateEnvironmentKey" || c.operation == "prepareDeviceGrant" || c.operation == "prepareOtherDeviceRevocation" || c.operation == "retryManagement" {
 			out["retrySameId"] = true
 		}
 		out["code"] = status

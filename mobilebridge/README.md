@@ -80,3 +80,7 @@ AndroidX `NativeWorkflowIntegrationTest` 的 `syntheticCA` runner 参数为夹�
 ## 首根手机批准 compiled CLI 的原生 v2 切片
 
 2026-10-02 UTC，独立 executeApproval 短码字节入口与 retryApproval/approvalInfo/cancelApproval 已接通。系统强认证后使用本机来源重建签包，两次真实密封完成才POST，unknown只查原id，approved与双签complete分开。正常AAR focused跨端1/1(59.074秒)与可复现入口1/1(58.733秒)通过，各21提示含1取消；known/accepted502、两保存失败门槛及compiledCLI持钥boot/Pull/隔离导出/rw写入均实际验证。上述通过使用当时默认v2的c4dec971编译基线；新CLI默认3后当前controller明确certificate-version2。origin-aware复测55.248/54.702秒失败后，服务器补历史mutation授权及写入者双签身份来源闭包；新正常AAR/当前CLI（1801392+dirty）仅一次fresh focused1/1 PASS59.634秒、21提示含1取消/四controller0，known/accepted502、两保存前置失败和同id确认均实际通过。以记录的实际产物哈希为界，不将后续Go改动算作该运行证据。详见 [APPROVAL_NATIVE.md](APPROVAL_NATIVE.md)。整体false；新Genesis恢复、cert3/非根/新环境来源和UI未算此证据。
+
+## 受保护设备管理原生切片（2026-10-03 UTC）
+
+六个显式管理操作及Dart业务adapter沿用每op CryptoObject/同步AES保存，不改UI/defaultgateway/整体false。固定公开core894f2ad等归档加9个native候选，正常AAR/Kotlin APK实际构建，独立管理focused1/1 PASS110.889秒、42次系统设备密码、真实Go peer exit0；prepared取消/退休id、保存前置失败0POST、accepted但末次seal失败Appliedfalse/View关闭、accepted502同id恢复、RO/RW/none及新keyVersion更高GG、跨New原token另一设备撤销和Logout均实际通过。对端属于合成Go workflow，不声明正式CLI/桌面OS认证。精确源/产物哈希、复现和未跑边界见[MANAGEMENT_NATIVE.md](MANAGEMENT_NATIVE.md)。本轮PIN/两fixture包/文件alias/forward/HTTPS已清，preview/AVD保留；Recovery仍unsupported。
