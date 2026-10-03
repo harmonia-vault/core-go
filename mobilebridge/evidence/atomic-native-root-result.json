@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "dateUTC": "2026-10-03",
+  "base": "69bc7c77eac4f7320741a4986d8bd6f17bb33704",
+  "scope": "Go atomic native opener integrated with latest published B2 and service source; no new SDK build or native product flow",
+  "results": [
+    {
+      "name": "bridge-race",
+      "status": "PASS",
+      "seconds": 16.856,
+      "testEvents": {
+        "pass": 48,
+        "fail": 0,
+        "skip": 0
+      },
+      "packages": 2,
+      "stdoutSHA256": "20fc73f63ef7d14b398bf71e317aca22ad73a760a747f311fb5d94ae29287e1c",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "bridge-vet",
+      "status": "PASS",
+      "seconds": 3.674,
+      "testEvents": null,
+      "packages": 0,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "consumer-compile",
+      "status": "PASS",
+      "seconds": 2.609,
+      "testEvents": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "packages": 22,
+      "stdoutSHA256": "3c700313b0196eb3f62c66cfb8485ba8a700cccf48d37b31f653f3d051a4b379",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "priorAttempt": {
+    "status": "FAIL",
+    "scope": "sandbox environment rejected local httptest listener",
+    "passedBeforePanic": 20,
+    "failedTestEvents": 1,
+    "productionFailureClaim": false
+  },
+  "nativeEvidence": "Android API34 JNI uses fixed earlier core/AAR recorded separately; iOS system authentication remains UNRUN for this current Go source"
+}
