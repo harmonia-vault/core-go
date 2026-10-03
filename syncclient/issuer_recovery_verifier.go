@@ -159,6 +159,9 @@ func NewRecoveredDevicePinnedVerifier(t RecoveredDevicePinnedTrust) (*PinnedVeri
 // 服务端同名 issuerEvidence 字段只按明确能力解码；旧 parser 不接新 profile。
 func (c *Client) requestPull(ctx context.Context, u *url.URL, out *Pull) error {
 	v, ok := c.config.Verifier.(*PinnedVerifier)
+	if ok && v.initialDAGEvidence != nil {
+		return c.requestDAGPull(ctx, u, out)
+	}
 	if !ok || v.initialRecoveryEvidence == nil {
 		return c.request(ctx, http.MethodGet, u, nil, out)
 	}
@@ -354,6 +357,9 @@ func (v *PinnedVerifier) withIssuerRecoveryEvidence(pull Pull, previous localsta
 	return &out, encoded, nil
 }
 func (v *PinnedVerifier) cachedLedger(data []byte) (*cachedSourceLedger, error) {
+	if v.initialDAGEvidence != nil {
+		return v.cachedDAGLedger(data)
+	}
 	if v.initialRecoveryEvidence == nil {
 		p, e := decodeEvidence(data)
 		if e != nil {

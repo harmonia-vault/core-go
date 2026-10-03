@@ -47,6 +47,19 @@ func verifiedStoredContextReceipt(trust localkeys.TrustContext, keys localkeys.D
 	if !trust.Accepted {
 		return nil, errors.New("待完成入网不能启动网络同步")
 	}
+	if trust.CertificateVersion == "5" {
+		if len(trust.Managers) != 0 {
+			return nil, errors.New("v5 不接受全局管理者名单")
+		}
+		receipt, e := syncclient.DecodeEnrollmentReceiptV5(trust.EnrollmentCertificate)
+		if e != nil {
+			return nil, e
+		}
+		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
+			return nil, errors.New("v5 受保护回执与本机身份不匹配")
+		}
+		return syncclient.NewPinnedVerifierV5(syncclient.IssuerDAGPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
+	}
 	if trust.CertificateVersion == "4" {
 		if len(trust.Managers) != 0 {
 			return nil, errors.New("v4 不接受全局管理者名单")
@@ -124,7 +137,7 @@ func verifiedStoredContextReceipt(trust localkeys.TrustContext, keys localkeys.D
 }
 func fmtUint(value uint64) string { return strconv.FormatUint(value, 10) }
 func wipeAccountSlots(vault *localkeys.Vault) error {
-	return errors.Join(vault.Delete("device-v1"), vault.Delete("session-v1"), vault.Delete("trust-v1"), vault.Delete("writes-v1"))
+	return errors.Join(vault.Delete("device-v1"), vault.Delete("session-v1"), vault.Delete("trust-v1"), vault.Delete("writes-v1"), vault.Delete("recovery-dag-v1"))
 }
 
 func protectedDaemon(ctx context.Context, o daemonOptions, r commandRuntime, out, errOut io.Writer) error {

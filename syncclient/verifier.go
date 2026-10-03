@@ -35,6 +35,7 @@ type PinnedVerifier struct {
 	receivingPublicKey      string
 	issuerProof             *cryptox.VerifiedIssuerProof
 	issuerOriginProof       verifiedAuthorityGraph
+	initialDAGEvidence      *cryptox.IssuerRecoveryDAG
 	initialRecoveryEvidence *cryptox.IssuerRecoveryProof
 	evidenceRoot            *cryptox.PinnedIssuerRoot
 	initialEvidence         *cryptox.IssuerProofV2

@@ -283,7 +283,7 @@ func (v *PinnedVerifier) sourceForPrevious(old localstate.Environment, previous 
 		s.AuthorizationPath = append([]string(nil), s.AuthorizationPath...)
 		return &s, nil
 	}
-	if v.initialRecoveryEvidence != nil {
+	if v.initialRecoveryEvidence != nil || v.initialDAGEvidence != nil {
 		return nil, cryptox.ErrInvalidWire
 	}
 	p := *v.initialEvidence

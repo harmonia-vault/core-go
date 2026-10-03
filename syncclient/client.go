@@ -43,6 +43,7 @@ type Event struct {
 type Pull struct {
 	Full                   bool                         `json:"-"`
 	IssuerEvidence         *cryptox.IssuerProofV2       `json:"issuerEvidence,omitempty"`
+	IssuerDAGEvidence      *cryptox.IssuerRecoveryDAG   `json:"-"`
 	IssuerRecoveryEvidence *cryptox.IssuerRecoveryProof `json:"-"`
 	Scope                  string                       `json:"scope,omitempty"`
 	EnvironmentEvents      []EnvironmentEvent           `json:"environmentEvents,omitempty"`
@@ -68,6 +69,7 @@ type Verifier interface {
 }
 type Config struct {
 	Endpoint          string
+	ProtocolMajor     uint8
 	HTTPClient        *http.Client
 	AccountID         string
 	AccountGeneration uint64
@@ -118,6 +120,15 @@ func newClient(config Config, requireToken bool) (*Client, error) {
 	if config.Now == nil {
 		config.Now = time.Now
 	}
+	if config.ProtocolMajor != 0 && config.ProtocolMajor != 1 && config.ProtocolMajor != 2 {
+		return nil, cryptox.ErrInvalidWire
+	}
+	if v, ok := config.Verifier.(*PinnedVerifier); ok && v.initialDAGEvidence != nil {
+		if config.ProtocolMajor == 1 {
+			return nil, cryptox.ErrInvalidWire
+		}
+		config.ProtocolMajor = 2
+	}
 	client, err := secureHTTP(config.HTTPClient)
 	if err != nil {
 		return nil, err
@@ -155,6 +166,9 @@ func (c *Client) request(ctx context.Context, method string, u *url.URL, body an
 	}
 	req.Header.Set("X-Harmonia-Device-Id", c.config.DeviceID)
 	req.Header.Set("X-Harmonia-Account-Generation", strconv.FormatUint(c.config.AccountGeneration, 10))
+	if c.config.ProtocolMajor == 2 {
+		req.Header.Set("Harmonia-Protocol-Major", "2")
+	}
 	req.Header.Set("Cache-Control", "no-store")
 	req.Header.Set("Accept", "application/json")
 	if body != nil {
@@ -167,6 +181,9 @@ func (c *Client) request(ctx context.Context, method string, u *url.URL, body an
 	defer response.Body.Close()
 	if c.config.Engine.State().SessionEpoch != c.epoch {
 		return localstate.ErrLocalSession
+	}
+	if c.config.ProtocolMajor == 2 && response.Header.Get("Harmonia-Protocol-Major") != "2" {
+		return errors.New("server protocol major mismatch")
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return c.rejection(response, bootRoute)

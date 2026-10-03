@@ -178,7 +178,9 @@ func NewRootPinnedVerifierWithOrigins(t OriginRootPinnedTrust) (*PinnedVerifier,
 }
 func (c *Client) addEvidenceCapability(q url.Values) {
 	if v, ok := c.config.Verifier.(*PinnedVerifier); ok && v.evidenceRoot != nil {
-		if v.initialRecoveryEvidence != nil {
+		if v.initialDAGEvidence != nil {
+			q.Set("capability", cryptox.RecoveryDAGCapability)
+		} else if v.initialRecoveryEvidence != nil {
 			q.Set("capability", cryptox.RecoveryAuthorityCapability)
 		} else {
 			q.Set("capability", cryptox.EnvironmentOriginCapability)
@@ -276,6 +278,12 @@ func mergeEvidence(old, candidate cryptox.IssuerProofV2) (cryptox.IssuerProofV2,
 	return normalizeEvidence(out), nil
 }
 func (v *PinnedVerifier) withIssuerEvidence(pull Pull, previous localstate.CloudSnapshot) (*PinnedVerifier, json.RawMessage, error) {
+	if v.initialDAGEvidence != nil {
+		return v.withIssuerDAGEvidence(pull, previous)
+	}
+	if pull.IssuerDAGEvidence != nil {
+		return nil, nil, cryptox.ErrInvalidWire
+	}
 	if v.initialRecoveryEvidence != nil {
 		return v.withIssuerRecoveryEvidence(pull, previous)
 	}
@@ -392,6 +400,9 @@ func (v *PinnedVerifier) VerifyAuthorizationRefresh(ctx context.Context, pull Pu
 
 // ValidateStoredIssuerEvidence 在重启任何使用缓存/同步之前重新验受保护账本。
 func (v *PinnedVerifier) ValidateStoredIssuerEvidence(previous localstate.CloudSnapshot) error {
+	if v.initialDAGEvidence != nil {
+		return v.validateStoredDAGEvidence(previous)
+	}
 	if v.initialRecoveryEvidence != nil {
 		return v.validateStoredRecoveryEvidence(previous)
 	}

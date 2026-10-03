@@ -49,7 +49,7 @@ func (t TrustContext) validate() error {
 		if len(t.Managers) < 1 || len(t.Managers) > 64 || len(t.EnrollmentCertificate) > maxEnrollmentCertificate {
 			return ErrCorrupt
 		}
-	case "4":
+	case "4", "5":
 		if len(t.Managers) != 0 || len(t.EnrollmentCertificate) > maxEnrollmentCertificateV4 {
 			return ErrCorrupt
 		}
