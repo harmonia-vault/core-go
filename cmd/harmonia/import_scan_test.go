@@ -219,19 +219,26 @@ func TestProcessImportSyntheticProcessHelper(t *testing.T) {
 }
 func TestProcessImportDefaultSourceUsesOnlySyntheticChildEnvironment(t *testing.T) {
 	command := exec.Command(os.Args[0], "-test.run=^TestProcessImportSyntheticProcessHelper$", "--", "harmonia-synthetic-import-helper")
-	// Windows 的 os/exec 会补缺省 SystemRoot；显式合成项防止继承宿主项。
-	command.Env = []string{"TOKEN=SYNTHETIC_SECRET_VALUE", "EMPTY=", "NOT_CHOSEN=SYNTHETIC_SECRET_OTHER", "__HaRmOnIa_internal=SYNTHETIC_RESERVED", "SYSTEMROOT=SYNTHETIC_SYSTEM_ROOT"}
+	// Windows 的 os/exec 会补缺省 SystemRoot；原生 ARM64 子进程还出现了
+	// PROCESSOR_ARCHITECTURE。两项均显式提供合成值，各平台使用同一 Env。
+	command.Env = []string{"TOKEN=SYNTHETIC_SECRET_VALUE", "EMPTY=", "NOT_CHOSEN=SYNTHETIC_SECRET_OTHER", "__HaRmOnIa_internal=SYNTHETIC_RESERVED", "SYSTEMROOT=SYNTHETIC_SYSTEM_ROOT", "PROCESSOR_ARCHITECTURE=SYNTHETIC_PROCESSOR_ARCHITECTURE"}
 	var out, errOut bytes.Buffer
 	command.Stdout = &out
 	command.Stderr = &errOut
 	if command.Run() != nil {
 		t.Fatal("合成Env子进程扫描失败")
 	}
-	var names []string
-	if json.Unmarshal(out.Bytes(), &names) != nil || !reflect.DeepEqual(names, []string{"EMPTY", "NOT_CHOSEN", "SYSTEMROOT", "TOKEN"}) {
-		t.Fatal("真实默认源未只输出合成名称")
-	}
-	if strings.Contains(out.String()+errOut.String(), "SYNTHETIC_SECRET") {
+	// 在名称诊断前检查所有合成值标记，避免错误实现将值伪装为名称时回显。
+	if strings.Contains(out.String()+errOut.String(), "SYNTHETIC_") {
 		t.Fatal("子进程名称扫描输出值")
+	}
+	var names []string
+	if err := json.Unmarshal(out.Bytes(), &names); err != nil {
+		// 不打印原 stdout/stderr；解析失败时其中可能含有变量值。
+		t.Fatal("合成Env子进程名称响应不是JSON数组")
+	}
+	if !reflect.DeepEqual(names, []string{"EMPTY", "NOT_CHOSEN", "PROCESSOR_ARCHITECTURE", "SYSTEMROOT", "TOKEN"}) {
+		// 仅打印已解析的名称，保留严格期望以定位平台差异，不输出值。
+		t.Fatalf("真实默认源未只输出合成名称：names=%q", names)
 	}
 }
