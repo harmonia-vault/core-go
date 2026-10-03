@@ -1,0 +1,27 @@
+# 原生进程内恢复会话生命周期骨架
+
+本包未被mobilebridge导出或接入gomobile、Kotlin、MethodChannel、Dart、UI及业务profile。它不是恢复实现，不认证、不签名、不发HTTP，不创建任何磁盘文件。已通过的v2审批59.634秒只覆盖原记录的1801392+dirty/AAR哈希，不覆盖本包或之后Go变更；本轮未重新构建AAR、CLI或跑Android恢复。
+
+## 接口边界
+
+环境代理正在提供独立mobileworkflow.RecoverySession：完整旧码只在Begin/显式Resume派生；对象仅持旧Ed签名私钥，Begin完成后清接收私钥/seed/code。完整恢复状态可保留已核验缓存、短时随机token和原签journal，但不得将旧Ed私钥加进JSON或AES文件。Session禁止marshal/raw-key/任意Sign，未来只提供已固定cert4用途的typed操作。
+
+本包只持其EdOwner adapter引用、公开Binding和一个进程内随机Handle。Handle的fmt固定为opaque、Marshal/Unmarshal拒绝；没有handle字符串返回Dart的接口。不能把随机handle作为认证凭据。每个固定native namespace/slot/endpoint/设备双pub只持一个owner，不持Device、完整Workflow、原生AES钥或恢复X私钥。
+
+每次操作必须由可信Android层先完成新的CryptoObject强认证和72B材料解包，用Go严格核验保护文件及恢复业务上下文后，从Go authoritative对象构造expected Binding，再同步调用Registry.Run。Registry的metadata比较只防止错账户/错会话/错transition，不证明Android认证；本包没有auth bool或模拟认证成功入口，未来adapter不得把Run直接暴露给Dart。端点完整校验、TLS及来源证据仍由现Go业务层完成，本包只做结构与固定scope匹配。
+
+Binding含固定native域/slot/HTTPS端点/device EdX pub、account/gen/recoverygen、root EdX pub、recovery EdX pub、精确已双签的InitializationProposalHash、随机sessionHash、Owner ExpiresAt及原transition ID/hash。除transition从none到原id/hash与ExpiresAt收紧，其余字段不可变化；新的public值必须由typed Session和已认证保护上下文交叉核验，不能信任Dart、文件header或服务器数组。
+
+Registry的本机monotonic deadline取旧deadline、5分钟上限与Owner ExpiresAt的较小值；绑定原挑战后最多125秒且只收紧，不允许换原id/hash、换token或回拨复活。到期计时器即使没有新调用也Cancel/Close owner；busy拒绝并行或替换。lease只在单次Run内有效，不能跨操作缓存；操作后仅释放lease，owner留进程内等待下一次独立强认证。Logout/失权用Clear，dispose用Close；两者都取消active context并幂等清owner，dispose不可再安装。owner.Cancel/Close必须并发安全，不回调registry；实际EdOwner清私钥义务属于Go Session，本包用合成内存资源验证生命周期。
+
+## 每操作关闭与恢复重启
+
+未来Go AttachRecoverySession须精确核对同保护record的全部绑定。临时Workflow.Close只detach并清本次device/AES材料，不隐式保留其完整对象或清session；原生registry独立拥有Session。取消本次认证不运行Go签操作，取消in-flight必须保留原id的unknown语义，不能生成新交易。typed业务完成/失权会关闭session，此时native也要Clear；该adapter尚未接入。
+
+App进程终止或TTL到期后，handle/owner都不能从AES文件重建。用户从现恢复入口重新输入完整旧码；Resume针对仍有效的同sealed原token/sessionHash/transition id/nonce验证，不换随机会话或延原挑战。正常连续的新码完整回填使用进程内同owner，不增加常态第三表单。旧token/挑战过期后仍不得伪报原操作完成或自动重POST。完整新码只在本次typed Go操作派生新钥，seed/code/新私钥同样不落盘，返回始终restricted/trustedDevice=false。
+
+## 已验证与待办
+
+仅标准库合成业务测试：单次lease及不可序列化/重用；10类身份绑定替换与取消context；无操作时TTL主动清owner；原transition/期限收紧和拒延长；busy/Logout/dispose取消in-flight且资源只清一次；无效Install清incoming owner；过大挑战时间拒绝及active TTL取消；新进程registry拒旧handle。测试没有模拟CryptoObject认证或claim真实Ed签名。
+
+复现：core-go目录执行mise exec -- go test -race ./mobilebridge/internal/recoverysessions -count=1。Go Session API、cert4 typed old/new签合同、真实native认证lease adapter、Android恢复/中断轮换验收尚未冻结或接通；Recovery默认操作继续关闭。本包源码不提交或推送，待rootreview。

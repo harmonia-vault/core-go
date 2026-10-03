@@ -59,7 +59,12 @@ func run() (resultErr error) {
 	nativeReady := flag.Bool("native-ready", false, "read bounded public fixture metadata from local Android test socket")
 	expectRejected := flag.Bool("expect-rejected", false, "expect native save gate to prevent approval POST; no enrollment claim")
 	transportOnly := flag.Bool("socket-test", false, "only verify local test socket transport, no enrollment claim")
+	version := flag.Int("certificate-version", 2, "explicit fixture path: 2 legacy CLI flag; 3 freshly compiled CLI default without downgrade")
+	deniedEnvironment := flag.String("deny-environment", "", "v3 fixture: known ungranted X must reject activation and write")
 	flag.Parse()
+	if *version != 2 && *version != 3 || *version == 2 && *deniedEnvironment != "" || *deniedEnvironment != "" && !publicID.MatchString(*deniedEnvironment) {
+		return errFixture
+	}
 	if *port < 1024 || *port > 65535 {
 		return errFixture
 	}
@@ -73,6 +78,9 @@ func run() (resultErr error) {
 		*approver = ready.Approver
 		*environment = ready.Environment
 		*expiry = ready.Expiry
+		if ready.DeniedEnvironment != "" {
+			*deniedEnvironment = ready.DeniedEnvironment
+		}
 		fmt.Println("local native public metadata validated")
 	}
 	if !publicID.MatchString(*environment) || *expiry <= uint64(time.Now().Unix()) || *expiry > uint64(time.Now().Add(24*time.Hour).Unix()) {
@@ -129,7 +137,12 @@ func run() (resultErr error) {
 		return errFixture
 	}
 	fmt.Println("compiled CLI synthetic login passed")
-	command := exec.CommandContext(ctx, *cli, "pair", "--local-directory", directory, "--approver", *approver, "--ca-file", *ca, "--certificate-version", "2")
+	pairArgs := []string{"pair", "--local-directory", directory, "--approver", *approver, "--ca-file", *ca}
+	if *version == 2 {
+		pairArgs = append(pairArgs, "--certificate-version", "2")
+	}
+	// v3 deliberately exercises the official CLI default. No version fallback.
+	command := exec.CommandContext(ctx, *cli, pairArgs...)
 	reader, err := command.StdoutPipe()
 	if err != nil {
 		return errFixture
@@ -186,15 +199,15 @@ func run() (resultErr error) {
 	if nativeRejected || scanErr != nil || waitErr != nil || !sent {
 		return errFixture
 	}
-	fmt.Println("compiled CLI v2 pairing process passed")
-	if err = verifyDaemon(ctx, *cli, directory, *ca, *environment); err != nil {
+	fmt.Println("compiled CLI certificate path", *version, "pairing process passed")
+	if err = verifyDaemon(ctx, *cli, directory, *ca, *environment, *deniedEnvironment); err != nil {
 		return err
 	}
 	if err = notifyStage(*port, true); err != nil {
 		return err
 	}
 	stageNotified = true
-	fmt.Println("compiled CLI v2 dual-signature completion, device-key boot, verified pull and isolated export passed")
+	fmt.Println("compiled CLI dual-signature completion, device-key boot, verified pull and isolated export passed")
 	return nil
 }
 func quietCLI(ctx context.Context, path string, input []byte, args ...string) error {
@@ -316,10 +329,11 @@ func relay(ctx context.Context, port int, message intent) (string, error) {
 
 // 元数据全部公开且只来自本轮合成Android测试。短码不在元数据JSON中。
 type nativeMetadata struct {
-	Email       string `json:"email"`
-	Approver    string `json:"approver"`
-	Environment string `json:"environment"`
-	Expiry      uint64 `json:"expiry"`
+	Email             string `json:"email"`
+	Approver          string `json:"approver"`
+	Environment       string `json:"environment"`
+	Expiry            uint64 `json:"expiry"`
+	DeniedEnvironment string `json:"deniedEnvironment,omitempty"`
 }
 
 func readReady(port int) (nativeMetadata, error) {
@@ -382,7 +396,7 @@ func captureCLI(ctx context.Context, path string, args ...string) ([]byte, error
 	}
 	return out.Bytes(), nil
 }
-func verifyDaemon(ctx context.Context, path, directory, ca, environment string) error {
+func verifyDaemon(ctx context.Context, path, directory, ca, environment, deniedEnvironment string) error {
 	// 只写本次新建目录下的独立fragment，不source、不安装服务、不修改宿主环境。
 	d := exec.CommandContext(ctx, path, "daemon", "--local-directory", directory, "--ca-file", ca, "--platform-fragment", filepath.Join(directory, "environment.sh"), "--interval", "100ms", "--sync-interval", "1s")
 	d.Stdout = io.Discard
@@ -450,16 +464,35 @@ func verifyDaemon(ctx context.Context, path, directory, ca, environment string) 
 	fmt.Println("compiled environment activation passed")
 	raw, e := captureCLI(ctx, path, "export", "--local-directory", directory)
 	defer clear(raw)
-	if e != nil || !bytes.Contains(raw, []byte("SYNTHETIC_CROSS")) || !bytes.Contains(raw, []byte("synthetic-cross-value")) {
+	if e != nil || deniedEnvironment != "" && bytes.Contains(raw, []byte("SYNTHETIC_X_ONLY")) || !bytes.Contains(raw, []byte("SYNTHETIC_CROSS")) || !bytes.Contains(raw, []byte("synthetic-cross-value")) {
 		return errFixture
 	}
 	fmt.Println("compiled synthetic export passed")
+	if deniedEnvironment != "" {
+		if deniedEnvironment == environment || !publicID.MatchString(deniedEnvironment) || rejectedCLI(ctx, path, "activate", "--local-directory", directory, "--environment", deniedEnvironment, "--priority", "20") != nil || rejectedCLI(ctx, path, "put", "--local-directory", directory, "--environment", deniedEnvironment, "--name", "SYNTHETIC_FORBIDDEN", "--request-id", "cross-forbidden-put", "--value-stdin") != nil {
+			return errFixture
+		}
+		fmt.Println("compiled CLI ungranted X activation and write rejected while verified daemon is active")
+	}
 	if quietCLI(ctx, path, []byte("synthetic-cli-write"), "put", "--local-directory", directory, "--environment", environment, "--name", "SYNTHETIC_CLI", "--request-id", "cross-cli-put", "--value-stdin") != nil {
 		return errFixture
 	}
 	raw, e = captureCLI(ctx, path, "export", "--local-directory", directory)
 	defer clear(raw)
 	if e != nil || !bytes.Contains(raw, []byte("synthetic-cli-write")) {
+		return errFixture
+	}
+	return nil
+}
+
+func rejectedCLI(ctx context.Context, path string, args ...string) error {
+	command := exec.CommandContext(ctx, path, args...)
+	command.Stdin = strings.NewReader("synthetic-forbidden-only")
+	command.Stdout = io.Discard
+	command.Stderr = io.Discard
+	err := command.Run()
+	var exit *exec.ExitError
+	if ctx.Err() != nil || !errors.As(err, &exit) || exit.ExitCode() == 0 {
 		return errFixture
 	}
 	return nil
