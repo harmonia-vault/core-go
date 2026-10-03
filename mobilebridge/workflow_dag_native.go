@@ -19,6 +19,7 @@ type NativeDAGRegistry struct {
 	scope     mobileworkflow.DAGOwnerScope
 	domain    *mobileworkflow.DAGRecoveryRegistry
 	device    nativeDAGDeviceBinding
+	opened    atomic.Bool
 	dead      atomic.Bool
 	active    map[uint64]context.CancelFunc
 	next      uint64
@@ -96,6 +97,8 @@ func (v *VaultWorkflow) AttachDAGRegistry(r *NativeDAGRegistry) error {
 	if _, ok := v.store.(AtomicSealedStateStore); !ok {
 		return mobileworkflow.ErrDAGAtomicStoreRequired
 	}
+	v.cancelMu.Lock()
+	defer v.cancelMu.Unlock()
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.dead.Load() || r.domain == nil {
@@ -112,8 +115,6 @@ func (v *VaultWorkflow) AttachDAGRegistry(r *NativeDAGRegistry) error {
 		r.dead.Store(true)
 		return errInput
 	}
-	v.cancelMu.Lock()
-	defer v.cancelMu.Unlock()
 	if v.dagRegistry != nil && v.dagRegistry != r {
 		return errInput
 	}
@@ -170,4 +171,12 @@ func (r *NativeDAGRegistry) finish(id uint64) {
 	}
 	r.cond.Broadcast()
 	r.mu.Unlock()
+}
+
+func (r *NativeDAGRegistry) cancelRecorded(id uint64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if cancel := r.active[id]; cancel != nil {
+		cancel()
+	}
 }
