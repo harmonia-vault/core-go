@@ -201,12 +201,12 @@ func TestServicesSafeBindings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{"User=harmonia-test", "NoNewPrivileges=true", "ProtectHome=true", "CapabilityBoundingSet=", "--local-user", "--local-directory"} {
+	for _, required := range []string{"Type=exec\n", "User=harmonia-test", "NoNewPrivileges=true", "ProtectHome=true", "CapabilityBoundingSet=", "--local-user", "--local-directory"} {
 		if !strings.Contains(string(linux.Content), required) {
 			t.Fatal("missing " + required)
 		}
 	}
-	for _, forbidden := range []string{"--state", "--platform-fragment", "--fixture"} {
+	for _, forbidden := range []string{"Type=simple\n", "--state", "--platform-fragment", "--fixture"} {
 		if strings.Contains(string(linux.Content), forbidden) {
 			t.Fatal("正式服务包含fixture/旧明文参数", forbidden)
 		}

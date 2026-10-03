@@ -123,7 +123,7 @@ func Systemd(c ServiceConfig) (ServiceTemplate, error) {
 	for i := range args {
 		args[i] = systemdQuote(args[i])
 	}
-	content := "[Unit]\nDescription=Harmonia 本地用户环境同步\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=simple\nUser=" + c.UserName + "\nUMask=0077\nExecStart=" + strings.Join(args, " ") + "\nRestart=on-failure\nRestartSec=3s\nNoNewPrivileges=true\nPrivateTmp=true\nPrivateDevices=true\nProtectSystem=strict\nProtectHome=true\nProtectKernelTunables=true\nProtectKernelModules=true\nProtectControlGroups=true\nRestrictSUIDSGID=true\nLockPersonality=true\nCapabilityBoundingSet=\nAmbientCapabilities=\nRestrictAddressFamilies=AF_UNIX AF_INET AF_INET6\nReadWritePaths=" + systemdQuote(c.StateDirectory) + "\nWorkingDirectory=" + c.StateDirectory + "\n\n[Install]\nWantedBy=multi-user.target\n"
+	content := "[Unit]\nDescription=Harmonia 本地用户环境同步\nWants=network-online.target\nAfter=network-online.target\n\n[Service]\nType=exec\nUser=" + c.UserName + "\nUMask=0077\nExecStart=" + strings.Join(args, " ") + "\nRestart=on-failure\nRestartSec=3s\nNoNewPrivileges=true\nPrivateTmp=true\nPrivateDevices=true\nProtectSystem=strict\nProtectHome=true\nProtectKernelTunables=true\nProtectKernelModules=true\nProtectControlGroups=true\nRestrictSUIDSGID=true\nLockPersonality=true\nCapabilityBoundingSet=\nAmbientCapabilities=\nRestrictAddressFamilies=AF_UNIX AF_INET AF_INET6\nReadWritePaths=" + systemdQuote(c.StateDirectory) + "\nWorkingDirectory=" + c.StateDirectory + "\n\n[Install]\nWantedBy=multi-user.target\n"
 	return ServiceTemplate{Name: "harmonia-user-" + c.UserID + ".service", Content: []byte(content)}, nil
 }
 

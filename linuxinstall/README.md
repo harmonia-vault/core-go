@@ -30,6 +30,16 @@ harmonia local-enrollment-check --local-directory /var/lib/harmonia/<UID> --loca
 
 只有 exit0 与严格 `{ "version": 1, "localEnrollmentVerified": true }` 才能持久 enable intent，再 enable/start 本 unit。该检查无 HTTP/worker，只验证受保护入网回执和来源 ledger。服务随后实际 Boot/Pull 才逐次检查当前云端授权。启服检查实际 PID 的公开 UID/GID、零有效 capability 和 NoNewPrivs，不读进程 env。启服后 receipt 保存失败保留原 intent/link，同 unit 已 active 时可安全收敛 receipt；不假称重新完成在线授权。
 
+## systemd 执行就绪与旧模板兼容
+
+新生成的 unit 使用 `Type=exec`，让 `systemctl start` 等服务进程的准备与 `execve` 成功后再返回。原 `Type=simple` 可在进程属性设置前返回，随后立即核 UID/GID/NoNewPrivs/capability 存在就绪竞态；这不等于已确认某次历史失败的原因。`exec` 仍不证明应用初始化、IPC 或云端 Boot/Pull 成功，严格进程权限与在线授权检查均保留。参见[官方 systemd v255 手册](https://github.com/systemd/systemd/blob/v255/man/systemd.service.xml)。
+
+`Type=exec` 从 systemd 240 起提供，依据[官方240 NEWS](https://raw.githubusercontent.com/systemd/systemd/v240/NEWS)，没有据此假定当前 VM 版本。Install 在 reload 后、Start 在现回执核验后读取有效 `Type` 并与回执选定的完整模板精确比对。`enable` 会隐式 reload，因此 Start 在 enable 身份保存后、真正 start 前再次核完整回执、有效 `Type` 与停止状态/namespace，依据[官方 systemctl v255 手册](https://raw.githubusercontent.com/systemd/systemd/v255/man/systemctl.xml)；不支持或不匹配会拒绝，不静默退回 `simple`。失败保留原 receipt 和对象，Uninstall 不引入这一新启动能力依赖，仍能依严格原字节/身份和正常 drain 回收。
+
+root receipt 的 `UnitSHA256` 始终不可变。解码只认可同合法固定 Plan 的完整新 `exec` 模板或仅 Type 行不同的完整历史 `simple` 模板，不认可任意附加行、参数或未知摘要。已安装旧 unit 的实际字节、inode、mode/owner 和 namespace 仍逐次严格核验；其停止/卸载 journal 不因生成器升级而失效。旧 `install-planned` 中断重试按原摘要继续原 `simple` 字节，不自动改回执或覆盖已有 unit。全新安装只生成 `exec`；旧安装要换模板须显式完成安全卸载后再新安装。本修复不修改既有 VM 或 unit。
+
+本切片的 host 合同测试与 Linux 专用测试编译不等于 Linux root 原生执行，更不等于已重新验收真实 systemd/PAKE/Boot/Pull。具体执行结果在独立冻结证据中报告。
+
 ## 卸载、并发与中断
 
 root 管理 lock 非阻塞；持久 journal+guard 先于 stop。只停止本 unit；不使用 systemctl disable 的宽泛链接清除，也不 reset-failed。stop 命令超时、SIGKILL、非正常退出、未知属性均保留资料并拒绝。即使 PID0，也要核整个 cgroup v2 后代为空；v1 或异常读取拒绝。systemd show 使用固定属性与 --all，避免省略必要空属性；与系统路径检查均有界、拒 alias/drop-in/触发单位；未知 enable link 不删除。

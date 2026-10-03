@@ -1,13 +1,15 @@
 [Unit]
+RequiresMountsFor=/var/lib/harmonia/10001
+ConditionPathExists=!/var/lib/harmonia-installer/10001.uninstalling
 Description=Harmonia 本地用户环境同步
 Wants=network-online.target
 After=network-online.target
 
 [Service]
-Type=exec
-User=harmonia-test
+Type=simple
+User=harmonia_lab
 UMask=0077
-ExecStart="/usr/local/bin/harmonia" "daemon" "--local-directory" "/var/lib/harmonia/10001" "--local-user" "10001" "--interval" "2s"
+ExecStart="/usr/local/lib/harmonia/10001/harmonia" "daemon" "--local-directory" "/var/lib/harmonia/10001" "--local-user" "10001" "--interval" "2s"
 Restart=on-failure
 RestartSec=3s
 NoNewPrivileges=true

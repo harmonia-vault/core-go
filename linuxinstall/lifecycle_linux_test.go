@@ -3,6 +3,7 @@
 package linuxinstall
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -17,13 +18,16 @@ import (
 // These tests require isolated Linux root, use a new temporary layout, and inject
 // only system-manager/helper responses. They do NOT prove real enrollment/systemd.
 type fixtureRuntime struct {
-	fs          layout
-	active      bool
-	enrollErr   error
-	drainErr    error
-	logoutHook  func(Plan) error
-	controls    []string
-	logoutCalls int
+	fs            layout
+	active        bool
+	enrollErr     error
+	drainErr      error
+	logoutHook    func(Plan) error
+	controls      []string
+	logoutCalls   int
+	effectiveType string
+	enableType    string
+	unitTypeCalls int
 }
 
 func (r *fixtureRuntime) show(ctx context.Context, p Plan) (UnitState, error) {
@@ -53,6 +57,26 @@ func (r *fixtureRuntime) show(ctx context.Context, p Plan) (UnitState, error) {
 	}
 	return s, nil
 }
+func (r *fixtureRuntime) unitType(ctx context.Context, p Plan, expected string) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	r.unitTypeCalls++
+	actual := r.effectiveType
+	if actual == "" {
+		body, err := os.ReadFile(r.fs.path(p.UnitPath))
+		if err != nil {
+			return err
+		}
+		if bytes.Contains(body, []byte("\nType=exec\n")) {
+			actual = "exec"
+		} else if bytes.Contains(body, []byte("\nType=simple\n")) {
+			actual = "simple"
+		}
+	}
+	return decodeUnitType([]byte("Type="+actual+"\n"), expected)
+}
+
 func (r *fixtureRuntime) control(ctx context.Context, op string, p Plan) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
@@ -67,6 +91,9 @@ func (r *fixtureRuntime) control(ctx context.Context, op string, p Plan) error {
 		path := r.fs.path(p.EnableLink)
 		if e := os.Symlink(p.UnitPath, path); e != nil && !errors.Is(e, os.ErrExist) {
 			return e
+		}
+		if r.enableType != "" {
+			r.effectiveType = r.enableType
 		}
 	}
 	return nil

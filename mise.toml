@@ -76,3 +76,7 @@ run = "go test -race ./syncclient ./mobileworkflow -run '^Test(B3b|ConfirmedReco
 [tasks.test-mobile-dag-closure-components]
 description = "恢复原ID终态wire、whole-state CAS与冷历史的有限组件race"
 run = "go test -race -p 2 ./cryptox ./syncclient ./mobileworkflow -run '^(Test(RecoveryOperation|DAGResolution)|TestDAGVerifiedBinding)' -count=1 -timeout=180s -json"
+
+[tasks.test-systemd-unit-contract]
+description = "验证新 exec 模板、历史 simple receipt/journal 与不可变完整摘要"
+run = "go test -race -count=1 ./platform ./linuxinstall"

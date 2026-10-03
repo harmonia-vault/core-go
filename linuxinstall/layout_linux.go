@@ -329,7 +329,10 @@ func (l layout) create(p Plan, c Creation, r Receipt) error {
 	mode := uint32(0644)
 	switch c.Area {
 	case "unit":
-		u, _ := p.Unit()
+		u, unitErr := r.unitTemplate()
+		if unitErr != nil {
+			return unitErr
+		}
 		source = strings.NewReader(string(u.Content))
 	case "program":
 		if c.Name == "harmonia" {

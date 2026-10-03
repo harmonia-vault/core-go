@@ -2,8 +2,6 @@ package linuxinstall
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"path/filepath"
@@ -33,12 +31,7 @@ func (r Receipt) Validate() error {
 	if r.Schema != ReceiptSchema || !installationID.MatchString(r.InstallationID) || r.Plan.Validate() != nil || !digest.MatchString(r.UnitSHA256) {
 		return ErrState
 	}
-	u, err := r.Plan.Unit()
-	if err != nil {
-		return ErrState
-	}
-	h := sha256.Sum256([]byte(u.Content))
-	if r.UnitSHA256 != hex.EncodeToString(h[:]) {
+	if _, err := r.unitTemplate(); err != nil {
 		return ErrState
 	}
 	if err := validateCreationRecord(r); err != nil {

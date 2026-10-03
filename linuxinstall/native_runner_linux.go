@@ -17,6 +17,7 @@ import (
 type runtimeActions interface {
 	show(context.Context, Plan) (UnitState, error)
 	control(context.Context, string, Plan) error
+	unitType(context.Context, Plan, string) error
 	drained(context.Context, Plan) error
 	enrollment(context.Context, Plan) error
 	logout(context.Context, Plan) error
@@ -30,6 +31,33 @@ func (n nativeActions) show(ctx context.Context, p Plan) (UnitState, error) {
 	}
 	return s, e
 }
+func (n nativeActions) unitType(ctx context.Context, p Plan, expected string) error {
+	if n.lease.guard() != nil {
+		return ErrPermission
+	}
+	if expected != "exec" && expected != "simple" || p.Validate() != nil {
+		return ErrState
+	}
+	cmd := exec.CommandContext(ctx, "/usr/bin/systemctl", "--system", "--no-pager", "show", "--all", "--property=Type", p.UnitName)
+	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "LC_ALL=C"}
+	out := boundedOutput{limit: maxSystemctlOutput}
+	discard := boundedOutput{limit: maxSystemctlOutput}
+	cmd.Stdout, cmd.Stderr = &out, &discard
+	if cmd.Run() != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return ErrState
+	}
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	if n.lease.guard() != nil {
+		return ErrPermission
+	}
+	return decodeUnitTypeResponse(out.b.Bytes(), discard.b.Bytes(), expected)
+}
+
 func (n nativeActions) drained(ctx context.Context, p Plan) error { return CheckDrained(ctx, p) }
 func (n nativeActions) control(ctx context.Context, op string, p Plan) error {
 	if n.lease.guard() != nil {

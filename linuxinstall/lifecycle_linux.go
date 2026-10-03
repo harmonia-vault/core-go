@@ -116,6 +116,17 @@ func (c *coordinator) advance(j *Journal, phase string) error {
 	n.Phase = phase
 	return c.saveJournal(j, n)
 }
+
+// Only install/start require this execution readiness capability. Uninstall
+// must remain available for an old manager or a rejected exec installation.
+func (c *coordinator) checkUnitType(ctx context.Context, r Receipt) error {
+	expected, err := r.executionType()
+	if err != nil {
+		return err
+	}
+	return c.runtime.unitType(ctx, r.Plan, expected)
+}
+
 func (c *coordinator) install(ctx context.Context, p Plan) (Result, error) {
 	if e := ctx.Err(); e != nil {
 		return Result{}, e
@@ -183,6 +194,9 @@ func (c *coordinator) install(ctx context.Context, p Plan) (Result, error) {
 		if e = c.fs.verifyReceipt(r); e != nil {
 			return Result{}, e
 		}
+		if e = c.checkUnitType(ctx, r); e != nil {
+			return Result{}, e
+		}
 		return Result{1, p.Input.UID, r.Phase, true}, nil
 	}
 	if e = c.fs.checkSystemdNamespace(p, creationIntended(r, "unit"), false); e != nil {
@@ -236,6 +250,9 @@ func (c *coordinator) install(ctx context.Context, p Plan) (Result, error) {
 		return Result{}, e
 	}
 	if e = c.runtime.control(ctx, "daemon-reload", p); e != nil {
+		return Result{}, e
+	}
+	if e = c.checkUnitType(ctx, r); e != nil {
 		return Result{}, e
 	}
 	s, e := c.runtime.show(ctx, p)
@@ -321,6 +338,9 @@ func (c *coordinator) start(ctx context.Context) (Result, error) {
 	if e = c.fs.verifyReceipt(r); e != nil {
 		return Result{}, e
 	}
+	if e = c.checkUnitType(ctx, r); e != nil {
+		return Result{}, e
+	}
 	s, e := c.runtime.show(ctx, p)
 	if e != nil {
 		return Result{}, e
@@ -384,6 +404,21 @@ func (c *coordinator) start(ctx context.Context) (Result, error) {
 			return Result{}, e
 		}
 	} else if i != *r.EnableIdentity {
+		return Result{}, ErrConflict
+	}
+	// enable implicitly reloads the manager: bind the final readiness check to
+	// the configuration that will be started, while preserving the early gate.
+	if e = c.fs.verifyReceipt(r); e != nil {
+		return Result{}, e
+	}
+	if e = c.checkUnitType(ctx, r); e != nil {
+		return Result{}, e
+	}
+	s, e = c.runtime.show(ctx, p)
+	if e != nil {
+		return Result{}, e
+	}
+	if !s.NormalStop() || s.UnitFileState != "enabled" {
 		return Result{}, ErrConflict
 	}
 	if e = c.runtime.control(ctx, "start", p); e != nil {
