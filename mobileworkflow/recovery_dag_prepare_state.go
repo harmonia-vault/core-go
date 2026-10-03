@@ -36,6 +36,12 @@ type RecoveryDAGPreparationInfo struct {
 
 func (w *Workflow) validateDAGPreparationLocked(b syncclient.DAGJournalBinding, old *syncclient.ProtectedDAGOperation) error {
 	r := w.state.RecoveryDAGPreparation
+	if w.state.RecoveryDAGRecoveredPreparation != nil {
+		if r != nil {
+			return ErrDAGProtectedState
+		}
+		return w.validateDAGRecoveredPreparationLocked(b, old)
+	}
 	if r == nil {
 		return nil
 	}
@@ -88,6 +94,9 @@ func (s mobileDAGStore) SaveTransitionPreparation(p syncclient.DAGTransitionPrep
 	defer w.mu.Unlock()
 	if err := s.ownerLocked(s.binding); err != nil {
 		return err
+	}
+	if w.state.RecoveryDAGRecoveredPreparation != nil {
+		return ErrDAGProtectedState
 	}
 	if err := syncclient.ValidateDAGTransitionPreparation(p); err != nil {
 		return err
@@ -175,6 +184,9 @@ func (w *Workflow) RecoveryDAGPreparationInfo() (RecoveryDAGPreparationInfo, err
 	}
 	if w.dagPersistenceFailed {
 		return out, ErrDAGPersistence
+	}
+	if w.state.RecoveryDAGRecoveredPreparation != nil {
+		return out, ErrDAGPreparationInterrupted
 	}
 	if w.state.RecoveryDAGPreparation == nil {
 		return out, nil

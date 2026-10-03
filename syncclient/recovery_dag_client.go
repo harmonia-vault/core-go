@@ -20,14 +20,15 @@ import (
 var ErrDAGRecoveryState = errors.New("restricted DAG recovery state unavailable")
 
 type DAGRecoveryConfig struct {
-	Preparation       DAGTransitionPreparationStore
-	Endpoint          string
-	HTTPClient        *http.Client
-	AccountID         string
-	AccountGeneration uint64
-	Pin               *cryptox.PinnedIssuerRoot
-	Now               func() time.Time
-	Journal           DAGRecoveryJournal
+	Preparation          DAGTransitionPreparationStore
+	RecoveredPreparation DAGRecoveredPreparationStore
+	Endpoint             string
+	HTTPClient           *http.Client
+	AccountID            string
+	AccountGeneration    uint64
+	Pin                  *cryptox.PinnedIssuerRoot
+	Now                  func() time.Time
+	Journal              DAGRecoveryJournal
 }
 type DAGRecoveryInfo struct {
 	RecoveryGeneration string

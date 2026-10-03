@@ -1,0 +1,4058 @@
+{
+  "version": 2,
+  "scope": "B3a Go-only certificate-5 recovered-device explicit enrollment original transaction; no Boot/Pull trust promotion",
+  "publicBases": {
+    "workspace": "e4c304feab094e7d784a26f0aa8508e94477ff63",
+    "core-go": "eef671302e4f51f75581384385e01107633423d0",
+    "server": "2f15b94ce5023357320b415e5f3a4aebb29c2856",
+    "protocol": "1c0b24180e7fabfcd9109dbabb2afbf6195f22d8"
+  },
+  "capabilities": {
+    "trustedDevice": false,
+    "nativeABIAdded": false,
+    "uiAdded": false,
+    "SDKRun": false,
+    "bootPullPromotionImplemented": false,
+    "serverClosureImplemented": false,
+    "serverProtocolChanged": false
+  },
+  "componentRace": {
+    "testEvents": {
+      "pass": 147
+    },
+    "packages": [
+      {
+        "package": "github.com/harmonia-vault/core-go/syncclient",
+        "result": "pass",
+        "elapsedSeconds": 47.448
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobileworkflow",
+        "result": "pass",
+        "elapsedSeconds": 62.451
+      }
+    ],
+    "startUTC": "2026-10-03T17:42:06.072232+00:00",
+    "endUTC": "2026-10-03T17:43:08.523640+00:00",
+    "logSHA256": "a1f4de6cdb94561390302ec2ea9f6f31d0420a94e8ecc65af1cfa97ba7833614",
+    "command": "go test -race ./syncclient ./mobileworkflow -run 'Test(DAGRecovered|MobileDAGRecovered)' -count=1 -timeout=90s -json"
+  },
+  "affectedRace": {
+    "testEvents": {
+      "pass": 723
+    },
+    "packages": [
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+        "result": "pass",
+        "elapsedSeconds": 1.301
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge",
+        "result": "pass",
+        "elapsedSeconds": 16.165
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobileworkflow",
+        "result": "pass",
+        "elapsedSeconds": 146.329
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/syncclient",
+        "result": "pass",
+        "elapsedSeconds": 158.414
+      }
+    ],
+    "startUTC": "2026-10-03T17:44:09.669707+00:00",
+    "endUTC": "2026-10-03T17:46:48.084385+00:00",
+    "logSHA256": "b51eb2dfdd2ad3b5286229113321585e0abd002a8df726e4736f5ac80a4b0840",
+    "command": "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=240s -json"
+  },
+  "consumerCompileOnly": {
+    "testEvents": {},
+    "packages": [
+      {
+        "package": "github.com/harmonia-vault/core-go/appsecurity",
+        "result": "pass",
+        "elapsedSeconds": 0.388
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/cryptox/tools/issuer-vector",
+        "result": "skip",
+        "elapsedSeconds": 0
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/internal/dagrecoveredfixture",
+        "result": "skip",
+        "elapsedSeconds": 0
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/androidfixture",
+        "result": "skip",
+        "elapsedSeconds": 0
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/genericcontroller",
+        "result": "skip",
+        "elapsedSeconds": 0
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/managementpeer",
+        "result": "skip",
+        "elapsedSeconds": 0
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/recoverycontroller",
+        "result": "skip",
+        "elapsedSeconds": 0
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/localstate",
+        "result": "pass",
+        "elapsedSeconds": 0.362
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/localipc",
+        "result": "pass",
+        "elapsedSeconds": 0.376
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/localkeys",
+        "result": "pass",
+        "elapsedSeconds": 0.394
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/cmd/harmonia",
+        "result": "pass",
+        "elapsedSeconds": 0.555
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge",
+        "result": "pass",
+        "elapsedSeconds": 0.379
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/crosscontroller",
+        "result": "pass",
+        "elapsedSeconds": 0.389
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+        "result": "pass",
+        "elapsedSeconds": 0.398
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/pairing",
+        "result": "pass",
+        "elapsedSeconds": 0.293
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/mobileworkflow",
+        "result": "pass",
+        "elapsedSeconds": 0.318
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/platform",
+        "result": "pass",
+        "elapsedSeconds": 0.318
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/cryptox",
+        "result": "pass",
+        "elapsedSeconds": 0.808
+      },
+      {
+        "package": "github.com/harmonia-vault/core-go/syncclient",
+        "result": "pass",
+        "elapsedSeconds": 0.401
+      }
+    ],
+    "startUTC": "2026-10-03T17:43:03.523928+00:00",
+    "endUTC": "2026-10-03T17:43:05.092600+00:00",
+    "logSHA256": "bd340f6867a47f886b024f05d102876db271922cab815b2bdd519851bf70b7dc",
+    "command": "go test ./... -run '^$' -count=1 -json",
+    "testsRun": 0,
+    "packageCount": 19
+  },
+  "vet": {
+    "exitCode": 0,
+    "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "packages": [
+      "syncclient",
+      "mobileworkflow",
+      "mobilebridge",
+      "mobilebridge/internal/recoverysessions"
+    ]
+  },
+  "https": {
+    "testEvents": {
+      "pass": 4
+    },
+    "packages": [
+      {
+        "package": "github.com/harmonia-vault/workspace/acceptance",
+        "result": "pass",
+        "elapsedSeconds": 30.711
+      }
+    ],
+    "startUTC": "2026-10-03T17:38:11.356433+00:00",
+    "endUTC": "2026-10-03T17:38:42.067343+00:00",
+    "logSHA256": "c8aa7476e4b534d16e5012806394de8e5c560b26f5d2cfb241539697665c3caf",
+    "command": "go test -race ./acceptance -run '^TestMobileDAGRecoveredHTTPS$' -count=1 -timeout=150s -json",
+    "distinctScenarios": 3,
+    "routeCountScope": "Starts at recovery owner-open; includes B2 transition prerequisites and B3a actions. Existing fixture bootstrap registration/email/initialization/first-value write happens before this meter and is not counted; it uses its existing initialization/sync path.",
+    "measuredRecoveryPathBootRequests": 0,
+    "measuredRecoveryPathPullRequests": 0,
+    "stages": {
+      "explicit-rights-original-seal-confirmed-still-restricted": {
+        "choices": {
+          "GET recovery-vault-v2": 1
+        },
+        "original-query-submit-confirm": {
+          "GET recovered-devices-v2/original": 1,
+          "GET recovery-vault-v2": 1,
+          "POST recovered-devices-v2": 1
+        },
+        "owner-open": {
+          "GET protocol-info": 1,
+          "GET recovery-vault-v2": 1,
+          "POST recovery-challenges": 1,
+          "POST recovery-sessions": 1
+        },
+        "preparation-transition-challenge": {
+          "GET recovery-vault-v2": 1,
+          "POST recovery-authority-challenges-v2": 1
+        },
+        "preparation-transition-submit": {
+          "GET recovery-authority-transitions-v2/original": 1,
+          "GET recovery-vault-v2": 1,
+          "POST recovery-authority-transitions-v2": 1
+        },
+        "recovered-intent-challenge-seal": {
+          "GET recovery-vault-v2": 1,
+          "POST recovered-device-challenges-v2": 1
+        },
+        "same-original-accepted-query": {
+          "GET recovered-devices-v2/original": 1,
+          "GET recovery-vault-v2": 1
+        }
+      },
+      "accepted-loss-CAS-failure-cold-current-code-original-query": {
+        "accepted-query-CAS-fails": {
+          "GET recovered-devices-v2/original": 1
+        },
+        "choices": {
+          "GET recovery-vault-v2": 1
+        },
+        "cold-fresh-session-original-query": {
+          "GET protocol-info": 1,
+          "GET recovered-devices-v2/original": 2,
+          "GET recovery-vault-v2": 2,
+          "POST recovery-challenges": 1,
+          "POST recovery-sessions": 1
+        },
+        "owner-open": {
+          "GET protocol-info": 1,
+          "GET recovery-vault-v2": 1,
+          "POST recovery-challenges": 1,
+          "POST recovery-sessions": 1
+        },
+        "preparation-transition-challenge": {
+          "GET recovery-vault-v2": 1,
+          "POST recovery-authority-challenges-v2": 1
+        },
+        "preparation-transition-submit": {
+          "GET recovery-authority-transitions-v2/original": 1,
+          "GET recovery-vault-v2": 1,
+          "POST recovery-authority-transitions-v2": 1
+        },
+        "recovered-seal": {
+          "GET recovery-vault-v2": 1,
+          "POST recovered-device-challenges-v2": 1
+        },
+        "submit-response-lost": {
+          "GET recovered-devices-v2/original": 1,
+          "POST recovered-devices-v2": 1
+        }
+      },
+      "lost-challenge-same-ID-cold-unaccepted-original-preserved": {
+        "challenge-response-lost": {
+          "GET recovery-vault-v2": 1,
+          "POST recovered-device-challenges-v2": 1
+        },
+        "choices": {
+          "GET recovery-vault-v2": 1
+        },
+        "cold-unaccepted-query": {
+          "GET protocol-info": 1,
+          "GET recovered-devices-v2/original": 1,
+          "GET recovery-vault-v2": 1,
+          "POST recovery-challenges": 1,
+          "POST recovery-sessions": 1
+        },
+        "owner-open": {
+          "GET protocol-info": 1,
+          "GET recovery-vault-v2": 1,
+          "POST recovery-challenges": 1,
+          "POST recovery-sessions": 1
+        },
+        "preparation-transition-challenge": {
+          "GET recovery-vault-v2": 1,
+          "POST recovery-authority-challenges-v2": 1
+        },
+        "preparation-transition-submit": {
+          "GET recovery-authority-transitions-v2/original": 1,
+          "GET recovery-vault-v2": 1,
+          "POST recovery-authority-transitions-v2": 1
+        },
+        "same-original-challenge-retry": {
+          "GET recovery-vault-v2": 1,
+          "POST recovered-device-challenges-v2": 1
+        }
+      }
+    }
+  },
+  "sourceInventory": {
+    "core": {
+      "version": 1,
+      "scope": "v1 affected Go coverage inventory; may include uncompiled files, not compiler-input tracing. Original file hashes retained.",
+      "files": [
+        {
+          "path": "core-go/appsecurity/attempts.go",
+          "sha256": "a8fb04f842f10458e531387eb539b6d01f238a1789390ae94619ce84d88abcf1",
+          "bytes": 6188
+        },
+        {
+          "path": "core-go/appsecurity/lease.go",
+          "sha256": "e92921ba082ede71e902d0586795436f21d823615567364224bd0447b898e497",
+          "bytes": 4446
+        },
+        {
+          "path": "core-go/appsecurity/pin.go",
+          "sha256": "f656eb8267b5b419ab46feeae7561c29e752c6de6149da678db0d44d7dc36a58",
+          "bytes": 3536
+        },
+        {
+          "path": "core-go/appsecurity/record.go",
+          "sha256": "70a4d6e1c5fed3739ba2c9524d679e5fe0c5d399a974e5e5409cd8c8402ac428",
+          "bytes": 6504
+        },
+        {
+          "path": "core-go/cryptox/approval_history.go",
+          "sha256": "55583661b47a665008557b1b1d41da2fecb650a62016e75edd83cf9f24852c4f",
+          "bytes": 424
+        },
+        {
+          "path": "core-go/cryptox/boot.go",
+          "sha256": "72dfc2e6f2f47f1b84b655d30e2cbacef3ae4f2bf4fea7e1f49891e7fbb9340c",
+          "bytes": 2624
+        },
+        {
+          "path": "core-go/cryptox/crypto.go",
+          "sha256": "c2496c71a313740f7ccf40dcc247545737e9082e85a376d3fe19ddeccbf1087e",
+          "bytes": 5617
+        },
+        {
+          "path": "core-go/cryptox/device_session.go",
+          "sha256": "86bc8d2834c0a15bf35a2d6793e14e30612289fae94e290fe2a2a28ca8c40cac",
+          "bytes": 2311
+        },
+        {
+          "path": "core-go/cryptox/doc.go",
+          "sha256": "52985ede624786ad26ef697c3c23829588434d5c150c61c0c203609105accf13",
+          "bytes": 267
+        },
+        {
+          "path": "core-go/cryptox/enrollment.go",
+          "sha256": "f7c030d00fc3991ed2a140b2825e029be8bb761025ad58c9ef629ec840c30b5f",
+          "bytes": 13636
+        },
+        {
+          "path": "core-go/cryptox/enrollment_transport.go",
+          "sha256": "920d4719a11b6525346ff17cd9a0ee84ad8241a18a68c4677d348e788542225c",
+          "bytes": 2568
+        },
+        {
+          "path": "core-go/cryptox/environment.go",
+          "sha256": "17bd91be7ea4968d23a976256b829b517d02d653b2900d56616fb8b54c899e54",
+          "bytes": 11148
+        },
+        {
+          "path": "core-go/cryptox/environment_origin.go",
+          "sha256": "a3ba176bc399051f6ee7e494ee32ef7ca2e8c998d50114e342e2f8cb71d0e568",
+          "bytes": 12446
+        },
+        {
+          "path": "core-go/cryptox/issuer_proof.go",
+          "sha256": "711fc6b464f7ff58c14178347c5e9170830c36c4c546d216fec8845dc91d3ab4",
+          "bytes": 22394
+        },
+        {
+          "path": "core-go/cryptox/issuer_proof_v2.go",
+          "sha256": "beee72ec73d2b2434cfc8b861a82eda34217354155fd606fb1ee601e11ddf93f",
+          "bytes": 28180
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_access.go",
+          "sha256": "0ac2e033a0b2da65362b88d9f31b0e13ce366593615fb1ef8c7959c9240ba541",
+          "bytes": 7747
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_graph.go",
+          "sha256": "af188154e4cb04f14a9fe9426ebad7320e46f34285c788baa44090d154c4b649",
+          "bytes": 10459
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_proof.go",
+          "sha256": "db90793f628a0e6140e6718ff5765a1145f1139d91eba1df920d97a5a8e3573a",
+          "bytes": 19618
+        },
+        {
+          "path": "core-go/cryptox/lifecycle.go",
+          "sha256": "b0f3c954efb95273b4845b86b5894de276b3745be27dc9b30975e20e6e2a6d8e",
+          "bytes": 7878
+        },
+        {
+          "path": "core-go/cryptox/pairing_relay.go",
+          "sha256": "40a5986903959340ebed09b5d965b5c686f78a80d5685f679b93a4819e2eb724",
+          "bytes": 1601
+        },
+        {
+          "path": "core-go/cryptox/recovered_device.go",
+          "sha256": "80bf44506c35c6ac5e3fad02d3566315da404052f1fa60cdbdd4f08bfde6ae70",
+          "bytes": 14103
+        },
+        {
+          "path": "core-go/cryptox/recovery.go",
+          "sha256": "21721b4f8e8bb31b3ace4a56fd73e9867db2e18a4d967b9e9685e4837b3387f0",
+          "bytes": 2247
+        },
+        {
+          "path": "core-go/cryptox/recovery_authority.go",
+          "sha256": "047828516f8005d2d5459027c14f54917ace46ec737c3dea5b8ee6912516d313",
+          "bytes": 29511
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag.go",
+          "sha256": "36ddf8ec4c694a105a226bdc44c8578d9a236e9b8d14ae5d26eaf9a466343500",
+          "bytes": 20062
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_canonical.go",
+          "sha256": "f1cf55f6e6990524c3282f2174ddef97e206dd5274ad27d1b263584fe4975533",
+          "bytes": 5118
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_decode.go",
+          "sha256": "0abb9e335c61d1e4a26c42ec886447dec545d3739058d1bf670df0846faaa5c6",
+          "bytes": 2736
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_enrollment.go",
+          "sha256": "62e324faaace3ccc18df92a653c30fa8c14c7ea7096c817435eadf17efaec741",
+          "bytes": 6778
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_validation.go",
+          "sha256": "ab3220fa5c264d787ba068d228a42ab569e896f6cc4814994dcf8b5f027fdac8",
+          "bytes": 16047
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_wire.go",
+          "sha256": "5a028091f1964124324bd0684de8bd3c6cf496bac681d4cb645018679be5a2ac",
+          "bytes": 16032
+        },
+        {
+          "path": "core-go/cryptox/recovery_schema.go",
+          "sha256": "4ec9c4c9c0a0b81cf14b231bb734804f2a5114c2779ccd7a5cdf16fba947f2ce",
+          "bytes": 2340
+        },
+        {
+          "path": "core-go/cryptox/strict_json.go",
+          "sha256": "ee9a5aa56d4c9aee59603228528baa6d2d38ae5956378b9d574b54f5f451b59b",
+          "bytes": 1854
+        },
+        {
+          "path": "core-go/cryptox/wire.go",
+          "sha256": "652be79a4da5b6c503ad7267250186383eb4f4c3d872e35b3e98fbd7714d3522",
+          "bytes": 6719
+        },
+        {
+          "path": "core-go/go.mod",
+          "sha256": "2e838079c045a55937ca4bc688e2f644da89c0ceefb16810a874fe533bdb6c0d",
+          "bytes": 245
+        },
+        {
+          "path": "core-go/go.sum",
+          "sha256": "8dbf052d842aec5593e3217e27d9e95defd46aa263baae104007b5981feab55f",
+          "bytes": 817
+        },
+        {
+          "path": "core-go/internal/dagrecoveredfixture/fixture.go",
+          "sha256": "93f6ca657dd11cff342fbc759ca69e5421584d16a7f6ee2835694dbaea56d0d8",
+          "bytes": 3975
+        },
+        {
+          "path": "core-go/localkeys/acl_darwin.go",
+          "sha256": "b70d628c11de5ba8d627fafd564b14b027b874d78cd15c1e0bae0c56be16d065",
+          "bytes": 1379
+        },
+        {
+          "path": "core-go/localkeys/existing_unix.go",
+          "sha256": "b1852fc21fdda48be30c0d8d2d1a860d81a3c884ef3732ef148b9d1cb594c767",
+          "bytes": 313
+        },
+        {
+          "path": "core-go/localkeys/fragment.go",
+          "sha256": "768c1d79756e12abcc1323012cee7df6305a7981c0c19a3520510eb0963873c7",
+          "bytes": 1305
+        },
+        {
+          "path": "core-go/localkeys/fs.go",
+          "sha256": "e1148d74dfcf943bcd4ac77b0bd1d9bf2bbb1f7096ac4fd90f6ffaa1fa45404e",
+          "bytes": 273
+        },
+        {
+          "path": "core-go/localkeys/fs_unix.go",
+          "sha256": "30da6c5301a071233a72becf6e5b3629fc8fa2cb700d486d14815fb39f5e2cf2",
+          "bytes": 6774
+        },
+        {
+          "path": "core-go/localkeys/material.go",
+          "sha256": "c69e86a0d8a4704f1a160f3f5a5376d605dc776c072d1ebbcef04a1cdebf3631",
+          "bytes": 4021
+        },
+        {
+          "path": "core-go/localkeys/recovery_dag.go",
+          "sha256": "799b03d4ace86ae173fc7a60e6c64a23d7a265caeb940e4982f37440adb641d8",
+          "bytes": 2617
+        },
+        {
+          "path": "core-go/localkeys/state.go",
+          "sha256": "bb341b2ea9724069d01fb1e376251d753fd455c664c2ca1cbb9afd1df337bb48",
+          "bytes": 2354
+        },
+        {
+          "path": "core-go/localkeys/trust.go",
+          "sha256": "13dfec7090393282a196a8bcefbbd5b695dc40d1317b4578e72c674a64e517f2",
+          "bytes": 6583
+        },
+        {
+          "path": "core-go/localkeys/vault.go",
+          "sha256": "8e4c652716d79646d35c67ee8a81fde3d0b94f5e038bec6ae9c19881d585d6a4",
+          "bytes": 8098
+        },
+        {
+          "path": "core-go/localstate/engine.go",
+          "sha256": "1d8b4ba49c333c8aa482ef43cc6a7aa2f228d7705193eb9ed38d621a1134bb35",
+          "bytes": 26619
+        },
+        {
+          "path": "core-go/localstate/files.go",
+          "sha256": "e9b856ac4f9a28c7e8a24a9e5a7f8b40a9da0ed3d0cf979d29b50b6be930ac42",
+          "bytes": 5111
+        },
+        {
+          "path": "core-go/localstate/files_unix.go",
+          "sha256": "f9e60c1a83d08b22815dd4215d0b449073d6430a70e12267a1d94d6d3399aae0",
+          "bytes": 907
+        },
+        {
+          "path": "core-go/mobilebridge/approval.go",
+          "sha256": "67ec07a298b4a24a0ee431df8b0d65d3aa83836aa10f8bb6a6869ac8ed71dd78",
+          "bytes": 1892
+        },
+        {
+          "path": "core-go/mobilebridge/approval_test.go",
+          "sha256": "a8d3695a87970e6381c415e480a53a1e3bf9d3baef1ad111330450277c76b502",
+          "bytes": 2553
+        },
+        {
+          "path": "core-go/mobilebridge/bridge.go",
+          "sha256": "dd9cc30f85ca8ef13222989e54652cbd5b29f76e7d3fb2787bdd03ea6f127470",
+          "bytes": 10297
+        },
+        {
+          "path": "core-go/mobilebridge/bridge_test.go",
+          "sha256": "aea227ca6355a66ed3aa7b83c9c728448ea067a4e1b112c10224acf1ebfe7423",
+          "bytes": 3993
+        },
+        {
+          "path": "core-go/mobilebridge/business_intents.go",
+          "sha256": "ddb83904374f1227c8aeebaab911ddccc24ff77a1752691e120fa865d56fab7a",
+          "bytes": 2553
+        },
+        {
+          "path": "core-go/mobilebridge/business_intents_test.go",
+          "sha256": "8bd772f7f43adcb9acfcbd37f8b9c0af49d522d696ac3c1d8fccfd364ba98d98",
+          "bytes": 6037
+        },
+        {
+          "path": "core-go/mobilebridge/internal/recoverysessions/binding.go",
+          "sha256": "b9186400ad0fa19e413f4d0919004adba7355adc864eb5c7cb6a1de31b5d8197",
+          "bytes": 2231
+        },
+        {
+          "path": "core-go/mobilebridge/internal/recoverysessions/registry.go",
+          "sha256": "0e78f34220bb195e6818f601214046db45b80436c86a2209cd4c7b83f8fbd4f1",
+          "bytes": 9536
+        },
+        {
+          "path": "core-go/mobilebridge/internal/recoverysessions/registry_test.go",
+          "sha256": "c339433568f435da21742266f62e97ba805c9ca4d29f56d0b40a79f8153456d9",
+          "bytes": 13057
+        },
+        {
+          "path": "core-go/mobilebridge/management.go",
+          "sha256": "ec7a75956925096de8da9df42ee73580b76aea0b9c9b2ec2a05b80bdb26892b2",
+          "bytes": 1871
+        },
+        {
+          "path": "core-go/mobilebridge/management_test.go",
+          "sha256": "a95505e3d4056abc62839cc357dbb93fd04d3765da578624f29a7d09e1b6042f",
+          "bytes": 1438
+        },
+        {
+          "path": "core-go/mobilebridge/pinprovider.go",
+          "sha256": "39b171d47473392b0488fbd01588c8e92f21f96a064ca35c622b0ae43e791172",
+          "bytes": 16459
+        },
+        {
+          "path": "core-go/mobilebridge/pinprovider_test.go",
+          "sha256": "5d0691a793e54b93143ac3b0810fefbab1832877997a6a4d926ff6b5f63e544c",
+          "bytes": 14640
+        },
+        {
+          "path": "core-go/mobilebridge/recovery.go",
+          "sha256": "7cb96800225f310798cc59950aa443cbe5d06bbeb102f3c1a3abec3ef29f78f7",
+          "bytes": 3786
+        },
+        {
+          "path": "core-go/mobilebridge/recovery_registry.go",
+          "sha256": "5ff7794f1be6280517308aeaae9d4c260f414cf7976fd2cd7f0710af2708ef6e",
+          "bytes": 7159
+        },
+        {
+          "path": "core-go/mobilebridge/recovery_test.go",
+          "sha256": "f8b4846f0735da052b9d032d17660a17a4e820be5cb511119678bd0ee4e55516",
+          "bytes": 2355
+        },
+        {
+          "path": "core-go/mobilebridge/selftest.go",
+          "sha256": "04c4afc75b0f6dfec82bb829a5767b426edadd3cdfc4865837597bc4baf16148",
+          "bytes": 3132
+        },
+        {
+          "path": "core-go/mobilebridge/v3_test.go",
+          "sha256": "8ed4f5bd8d8e4fa1861e2edc874047db706e10f3483c471ef47d6677b42d32be",
+          "bytes": 2710
+        },
+        {
+          "path": "core-go/mobilebridge/workflow.go",
+          "sha256": "12d0097aca2b2ba861dcc4b9820cf1c63b03fcd2efcf31f9eecc4317e3d5e8b3",
+          "bytes": 25843
+        },
+        {
+          "path": "core-go/mobilebridge/workflow_cas_test.go",
+          "sha256": "038650050c4efdf567601aabd2bfc0c194ad66d9b7b8afa585937e18dae57371",
+          "bytes": 3337
+        },
+        {
+          "path": "core-go/mobilebridge/workflow_save_retire_test.go",
+          "sha256": "cb2186910afa0ee21a6b4a2eab7091876dbe2d7e75c6012c1096914f4fdc6d50",
+          "bytes": 4359
+        },
+        {
+          "path": "core-go/mobilebridge/workflow_test.go",
+          "sha256": "503a0acc11e43e104cdab2f8e8c46ba7c110325c6251ea2d6cc3d533bcd13f6a",
+          "bytes": 3640
+        },
+        {
+          "path": "core-go/mobileworkflow/approval.go",
+          "sha256": "147bf0886cbc7444b5b7f52e7c209c36aeb44ec5217d1994d1076e3f38d6f1f2",
+          "bytes": 20877
+        },
+        {
+          "path": "core-go/mobileworkflow/approval_test.go",
+          "sha256": "d674a632e6f47150c65416caa1908ce86de8a9a58e31fe47bcead5e78711b879",
+          "bytes": 2364
+        },
+        {
+          "path": "core-go/mobileworkflow/approval_v3.go",
+          "sha256": "e1aa6bd334d785ef14681f605ef0d534a447bc2554ead3cfeedc16aadda79097",
+          "bytes": 15929
+        },
+        {
+          "path": "core-go/mobileworkflow/approval_v4.go",
+          "sha256": "53592c043cbbaed68ce0057fc2bf3fea2e33f502b2d39a93d6650eb73b9b7ca2",
+          "bytes": 16118
+        },
+        {
+          "path": "core-go/mobileworkflow/enrollment_v3.go",
+          "sha256": "76f769d2c5e9ff432a80e09618f877a8014544e5e0e0a7f501cdb55a1b791eb1",
+          "bytes": 13369
+        },
+        {
+          "path": "core-go/mobileworkflow/environment_recovery.go",
+          "sha256": "bb3cc4cc00f6e59a6dd904d84e4852c686c893257bf49edb3a76c69e24d03316",
+          "bytes": 2059
+        },
+        {
+          "path": "core-go/mobileworkflow/environments_v2.go",
+          "sha256": "46d55e40d33fac5f59e4b078745b364504a83993b42c5b8e6a23d993dbe81ce6",
+          "bytes": 12797
+        },
+        {
+          "path": "core-go/mobileworkflow/errors_test.go",
+          "sha256": "0e95bf15ebdfe67ea15b7063b0bc5189988404423e7752b3b442f3d5e6788964",
+          "bytes": 1368
+        },
+        {
+          "path": "core-go/mobileworkflow/management.go",
+          "sha256": "b8443c4be5fe81d290cee3a35c79a9db11a6f56efc9140b9b1662816b3feb18c",
+          "bytes": 17426
+        },
+        {
+          "path": "core-go/mobileworkflow/management_test.go",
+          "sha256": "db793f20ebc75be037ca59eba717d99624a40058bf192efd0cefdf564420ad08",
+          "bytes": 5071
+        },
+        {
+          "path": "core-go/mobileworkflow/pending_write.go",
+          "sha256": "ec8e7154fd69761d92bc18294c34be366a69617acf94ee5ace327f82021a4bc3",
+          "bytes": 5401
+        },
+        {
+          "path": "core-go/mobileworkflow/recovered_device_workflow.go",
+          "sha256": "5e0c6b190fbc1b640f09e4ca86f409d89873afdee6be2914a11d036912837286",
+          "bytes": 20343
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery.go",
+          "sha256": "4bc0ab7bcf072e6a3db4c0cb2984916f3ce5fab07f35fda04748dd7867b5a222",
+          "bytes": 49371
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_state.go",
+          "sha256": "b05d35937b326020b62816c9381b46415c582252798af108569111a0b54897bd",
+          "bytes": 15579
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_state_test.go",
+          "sha256": "3e87b312f11aea79fa2c1e65b003654471d45c5926ed8d9b0f66a4b65a01058f",
+          "bytes": 5323
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_transition.go",
+          "sha256": "ce5c302d3f3e0c634ca4131e04027514f7835bc962ae48b130fc40a305ad61d1",
+          "bytes": 13962
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_workflow.go",
+          "sha256": "a2c53272ceb43dfde6c6249f7e6d61aa9176d3db4578e485061e86d89154044f",
+          "bytes": 9625
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_challenge_wait.go",
+          "sha256": "478b51e8054df35f454f4a350ea0652a4ed841d2ffa7a0ca5a6de2f6b38c99f1",
+          "bytes": 1869
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_challenge_wait_test.go",
+          "sha256": "a39cbbfaadcaf65165b8e93cc8e692d3041b10e11717e70e0e95182e76dee4b0",
+          "bytes": 3301
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_clock.go",
+          "sha256": "023bf7d3c4231fa00fa76c81b5d956bbc2b1bc74bd588a8e7c47bebcf99ec309",
+          "bytes": 1824
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_clock_test.go",
+          "sha256": "c5612962e34cd3d1770b6e82e94a3ba2f3385c231a3be0a34f6b35f20dae9b0a",
+          "bytes": 1774
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_lease.go",
+          "sha256": "666b113fcc9f152eb5256b4adacfbc1680abbe3cf1245231a8ee8a9540f7d994",
+          "bytes": 5178
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_lease_test.go",
+          "sha256": "6f4c164e22c96ee306c357e4f08d6bfea7728127c4fa8fbfd8a1f48b0dac7c73",
+          "bytes": 2751
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_owner.go",
+          "sha256": "d0ad21dec6847c5a18be60ff379c892b0e57a71389b398f9cfb0e0e3fb0069da",
+          "bytes": 10139
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_owner_test.go",
+          "sha256": "6954e0885438a47e108307a23cb93b80b1d807e6a257623b3730be1eeb2a05e3",
+          "bytes": 11219
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_prepare_gates_test.go",
+          "sha256": "8523336068a27b4a3ffb4e9f51f571cd861837c1e9a44dbfc7d13603c93d5b39",
+          "bytes": 6107
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_prepare_state.go",
+          "sha256": "7653a66af2a92a2eb00c555b611be6e528b0571cdead4878c73be075e4c3caec",
+          "bytes": 7411
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_prepare_state_test.go",
+          "sha256": "41324247749a05bddb2f68dad1cfe0abd8bc1e662c2962efaff4bd1138777970",
+          "bytes": 14430
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_query.go",
+          "sha256": "6e74729d44133622a3c317b63e0defcd965f79189fd93c7d5fff905ba5159233",
+          "bytes": 6409
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_query_test.go",
+          "sha256": "37ebf904f53c0506aad3776cc7c05abe33057dd8d42b466cab4928c8cc1360a2",
+          "bytes": 4610
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered.go",
+          "sha256": "0b5625427a1cacd50bbcbffc8fc097cb2a94917bf58c7afc4e62a1a2f0506aca",
+          "bytes": 9252
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_fixture_test.go",
+          "sha256": "8fca723b931b0a2ca1238403dceb0561d38458a22f0c1a4158b68addb06ed6f1",
+          "bytes": 4531
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_gates_test.go",
+          "sha256": "2dcb035cdba258280c06b5cdeed6ea4e67e5420c25aa3189723b18d5e1061ef3",
+          "bytes": 6785
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_lease_test.go",
+          "sha256": "aa01c44f148b48f4da55dd4ac5d48eb692b8bb6d9c55292af6be5673e0629458",
+          "bytes": 3521
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_state.go",
+          "sha256": "d27a8b99ab5457579a975336988d8c691091a44dc4b7e4ff3479991421a04174",
+          "bytes": 6221
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_state_test.go",
+          "sha256": "773b9799e27692a3f8157942b99022b20e6f7ea44b61e3b4af702fcb83c12538",
+          "bytes": 9649
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_state.go",
+          "sha256": "2d06df7a92e6fbb2d66c0aa7ae23ba41783f0c94c98b7ce01ad1fbbc6beb50bb",
+          "bytes": 9622
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_state_test.go",
+          "sha256": "2caabfdcc265b96145a7e80de025ef80b2db95556056cf4456a07e91853fd9d1",
+          "bytes": 13326
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_transition.go",
+          "sha256": "fcf72746c37b5a991e81c22ad4c88d533ae0130abaaa8e9ecbeea8d51d8aefaa",
+          "bytes": 12381
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_transition_test.go",
+          "sha256": "41d35150276ec5af6ee5e909a5d51f75298f5989a85dba367852f74eaac9dbf1",
+          "bytes": 5877
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_envelopes.go",
+          "sha256": "986ecd9d45f57b3a904372ef9a07ba174b874b6fb1c9189fd774f1de9a72e398",
+          "bytes": 6239
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_envelopes_test.go",
+          "sha256": "227c178e20f06a273a8f4df62ea79d462478e9c1815a9609c2e2a2a87baf65d2",
+          "bytes": 6126
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_origin.go",
+          "sha256": "d836ba130076b7ce5d6ed77913912633c6e2b4dd23c083fb113e3e5a7933829a",
+          "bytes": 5400
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_session.go",
+          "sha256": "bbe649f4feabf00fa8eb197094857eb14af714dbd96e4fd86558b17e93282b74",
+          "bytes": 11576
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_session_test.go",
+          "sha256": "db278d2dd49a95291190b77a5d6a85dc0882d7aeb482af7cca9437ca37d7b5ff",
+          "bytes": 5045
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_test.go",
+          "sha256": "48dc3cb66277c03bba7a1974d4c116d24fa565e12db7fa6b653be51383db973d",
+          "bytes": 12072
+        },
+        {
+          "path": "core-go/mobileworkflow/selfrevoke.go",
+          "sha256": "1fbb47eada3f98bc84ce8b40882942668bd234aca8d45cf6e24a8a478c3534d1",
+          "bytes": 6868
+        },
+        {
+          "path": "core-go/mobileworkflow/selfrevoke_test.go",
+          "sha256": "7c882c8cdbbd9f6944bcc3da1b6a01f222353fae8bad32492c55b6144b3d3469",
+          "bytes": 15922
+        },
+        {
+          "path": "core-go/mobileworkflow/source_projection.go",
+          "sha256": "6c8eb6a15aa27da748b0889b9b92703d30b2d6d89e0abee7b602558b6fd9a1c7",
+          "bytes": 6696
+        },
+        {
+          "path": "core-go/mobileworkflow/source_projection_test.go",
+          "sha256": "e12c9a5063113596ee5026923536bdf11988be967ad7c6bfcaab1c077d9dc17e",
+          "bytes": 18051
+        },
+        {
+          "path": "core-go/mobileworkflow/vaultworkflow.go",
+          "sha256": "ba4a028148421997532f0c0d63d60e41691f76edce758e4d731246fe32b9cf06",
+          "bytes": 52635
+        },
+        {
+          "path": "core-go/mobileworkflow/vaultworkflow_test.go",
+          "sha256": "135e57d068f4b27e4d292c672c13bfd92907a05cc61dc8f6096d344ad89bb59f",
+          "bytes": 5816
+        },
+        {
+          "path": "core-go/pairing/confirmation.go",
+          "sha256": "97f073acfd15b6842567f0dcefee71d4710fbd029034498997e79dbdd4e004a0",
+          "bytes": 1937
+        },
+        {
+          "path": "core-go/pairing/context.go",
+          "sha256": "cbfdfac7224d624c566c408c1ee405e59dd47709ad5bdcdf04b2afcda86c59e6",
+          "bytes": 5429
+        },
+        {
+          "path": "core-go/pairing/native_unavailable.go",
+          "sha256": "2f637f440e447cd5cee0a750af974fc564701d2ce305892cfd0ab7d81952b003",
+          "bytes": 274
+        },
+        {
+          "path": "core-go/pairing/session.go",
+          "sha256": "ed9811d3f41941f68c615a6149d99933ae075aa69a477b900a2ea1307fb6821b",
+          "bytes": 4806
+        },
+        {
+          "path": "core-go/syncclient/approver_v2.go",
+          "sha256": "3c10f7fc7861dd5960eb5920d000364de10365e23fd5c0a486692702bc991f29",
+          "bytes": 10133
+        },
+        {
+          "path": "core-go/syncclient/approver_v3.go",
+          "sha256": "a0ade5e9e0c7da58406e9df5022b37b64798ba41c536970879e9b7ab6b3976c5",
+          "bytes": 10419
+        },
+        {
+          "path": "core-go/syncclient/approver_v4.go",
+          "sha256": "32f95f64c3262cf406c2fc062992c2241b04dc51514ffcf575698273fccc4ac4",
+          "bytes": 12247
+        },
+        {
+          "path": "core-go/syncclient/approver_v5.go",
+          "sha256": "83df60f7a07d94079b868941e9ad809a7a16f91705033faf9faa69eda49e1f1b",
+          "bytes": 12207
+        },
+        {
+          "path": "core-go/syncclient/authorizations.go",
+          "sha256": "a3b4e44e9a0e12275a177fa8b656e02632182c86c671951510d4c8ea3137a0aa",
+          "bytes": 5243
+        },
+        {
+          "path": "core-go/syncclient/authorizations_test.go",
+          "sha256": "455d0b87421e54382645207a2439004c2fa26046912221553af5867ba7000a08",
+          "bytes": 6296
+        },
+        {
+          "path": "core-go/syncclient/boot.go",
+          "sha256": "89e5a343d25bc9947f82fb2ff1e43871be46fde041f6e701d8d05e0cae546479",
+          "bytes": 3405
+        },
+        {
+          "path": "core-go/syncclient/boot_test.go",
+          "sha256": "72ac1d3bbe60e9ebe5d1a918b3d88584b36b0e20cd223248086c9d0ad4f8ab75",
+          "bytes": 5524
+        },
+        {
+          "path": "core-go/syncclient/cached_sources.go",
+          "sha256": "2d3b1129831226b220a6c7d1c1b0582a4df78bff3a03fe1f90e19745e970bcd2",
+          "bytes": 13247
+        },
+        {
+          "path": "core-go/syncclient/cached_sources_test.go",
+          "sha256": "942a04e13b2edddf74e49ca66a444765fcf36c244d3176a59f43c39843ac0776",
+          "bytes": 13415
+        },
+        {
+          "path": "core-go/syncclient/client.go",
+          "sha256": "c19f3163047b98c54539de9c85fd40ebd6c8affe531205c6e6aaef31e16b4057",
+          "bytes": 11546
+        },
+        {
+          "path": "core-go/syncclient/client_test.go",
+          "sha256": "7f32dcd7e25e6cebc905a3f17283f09f068a9d0dab26b49321229c7432d42a44",
+          "bytes": 9948
+        },
+        {
+          "path": "core-go/syncclient/control_dag.go",
+          "sha256": "eb64c7ef004dc9dfa9e834fa3dc98a893f95c3f429d0ba484629811a80f7c20a",
+          "bytes": 2911
+        },
+        {
+          "path": "core-go/syncclient/control_dag_test.go",
+          "sha256": "7e33964f0ceb39d228fe12e74e1f9f49231c4a947fff6c1c1fa97b031d1fc544",
+          "bytes": 5701
+        },
+        {
+          "path": "core-go/syncclient/control_recovery.go",
+          "sha256": "cbbeca137f67271c5a6925c7988136e108df2349e27369ca51220ad95377870f",
+          "bytes": 4575
+        },
+        {
+          "path": "core-go/syncclient/control_recovery_test.go",
+          "sha256": "7afbd27eb83fc6562df6f04da24829a8eff5a11f9ad82fc219427fa5561632fd",
+          "bytes": 5821
+        },
+        {
+          "path": "core-go/syncclient/dag_protocol.go",
+          "sha256": "729a1ede79d0106e48fb64fd8e1f16a654ad084b1ea69da856d4525e9eb49bb3",
+          "bytes": 1878
+        },
+        {
+          "path": "core-go/syncclient/device_session.go",
+          "sha256": "bef2f5ba13162b01b87c2fdab077befe1e0f3e599162d3af6a18961965a4e00e",
+          "bytes": 3230
+        },
+        {
+          "path": "core-go/syncclient/enrollment.go",
+          "sha256": "f197e80a889014f1130edb1760bcb3c6fe50dc41b2f917f7e1f608f21f450ef2",
+          "bytes": 18720
+        },
+        {
+          "path": "core-go/syncclient/enrollment_test.go",
+          "sha256": "c5b78780d09f98265cba9ef91533090b266050c0663ebe1319dff3301274173e",
+          "bytes": 3841
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v2.go",
+          "sha256": "01cdebc8f083818c4f15c81fd807c223cbd422b49369213acd21ec6dd49dad09",
+          "bytes": 18174
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v3.go",
+          "sha256": "22c572e0e5dfbff25bfee88f994b7dd0e8981eaa6f844cd44f19bc56382ac0f4",
+          "bytes": 18380
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v4.go",
+          "sha256": "2b213018d6ede8312d6770d93ce20834ba1d7d2069170693cfcdfa9e063584ee",
+          "bytes": 18375
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v5.go",
+          "sha256": "167a1eb2a77e606c6feaf87947b8880eb6e042a615dbca3b365c8cd5acbdb773",
+          "bytes": 18363
+        },
+        {
+          "path": "core-go/syncclient/environment_batch_test.go",
+          "sha256": "99b34ac8fc40235ee7b15f558f05fb479f7f9e2beac53f11187f72d5541429a6",
+          "bytes": 3969
+        },
+        {
+          "path": "core-go/syncclient/environment_checkpoint.go",
+          "sha256": "f95e0693f143c1c2449ae4c5e443754d58f9c0e19265c7222815ca3d76e2c584",
+          "bytes": 1785
+        },
+        {
+          "path": "core-go/syncclient/environment_dag_writes.go",
+          "sha256": "43a1ad4298008cc0920a6b4bcb55e4c8c16675572b4952b8ef6ca9a208b85213",
+          "bytes": 2803
+        },
+        {
+          "path": "core-go/syncclient/environment_origin_writes.go",
+          "sha256": "edd808e69a50e392d510ee4890603dd065ce26278513de4bc9f27fef182beb67",
+          "bytes": 11824
+        },
+        {
+          "path": "core-go/syncclient/environment_recovery_writes.go",
+          "sha256": "6688af8df9fbd279f57095f69d85b23c5ca1de7fea13f554c04e5d4ec3e41c12",
+          "bytes": 2816
+        },
+        {
+          "path": "core-go/syncclient/environment_writes.go",
+          "sha256": "e705babfd9445e04398aa774d455a1a9c0ac09632cdcfae77785852001dba70d",
+          "bytes": 2887
+        },
+        {
+          "path": "core-go/syncclient/environment_writes_test.go",
+          "sha256": "916fca33c427bf40e1733c52482d802e933889fdf3395ab03196622e420b5c0a",
+          "bytes": 5727
+        },
+        {
+          "path": "core-go/syncclient/environments.go",
+          "sha256": "fdcb2f7fa48b58c363c1e9cafa4878f9767c6056a746b71df11eb75e55c02306",
+          "bytes": 5840
+        },
+        {
+          "path": "core-go/syncclient/errors.go",
+          "sha256": "d9f15f341b08487e9d3b02bc5faa1674be4bea4c4a0f3d1ddf45d2e1ed8a0df2",
+          "bytes": 2295
+        },
+        {
+          "path": "core-go/syncclient/errors_test.go",
+          "sha256": "a2ca7455a42fb8748eb5225783f79e28e43f6a4da435cdc263486a89d6bd0372",
+          "bytes": 3553
+        },
+        {
+          "path": "core-go/syncclient/fault_codes.go",
+          "sha256": "3cf7b74d8d20d09c3eb01aef25cab4f7bbb126663564a738cde50926e4cd3f44",
+          "bytes": 8752
+        },
+        {
+          "path": "core-go/syncclient/grant_updates.go",
+          "sha256": "396171e80a9d718836298282ae79d4ba7d5bc78e4518e5e53eed07bf43c82766",
+          "bytes": 21259
+        },
+        {
+          "path": "core-go/syncclient/grant_updates_test.go",
+          "sha256": "824b898d1434eecbdce7c85885e187a3e6456930bb230be19fc244daf308d4d5",
+          "bytes": 11951
+        },
+        {
+          "path": "core-go/syncclient/issuer_dag_verifier.go",
+          "sha256": "fbe06a376b927f1719317989dd183ec69fe23667fcf08eb7bccdfe81b8820e18",
+          "bytes": 21921
+        },
+        {
+          "path": "core-go/syncclient/issuer_origin_verifier.go",
+          "sha256": "18a9fab56676de3e7239d040e9dc32447dceca5faca526918f526650d0e66598",
+          "bytes": 22888
+        },
+        {
+          "path": "core-go/syncclient/issuer_origin_verifier_test.go",
+          "sha256": "12f686b4c05768ec2a16d4d64f4692a2721be31bba2bfbbab0527f255bfe73af",
+          "bytes": 20561
+        },
+        {
+          "path": "core-go/syncclient/issuer_recovery_verifier.go",
+          "sha256": "2d6e03b5dabe79cdd807c231246b74af2080bc00a6cb92b9b900f02432738774",
+          "bytes": 21159
+        },
+        {
+          "path": "core-go/syncclient/issuer_recovery_verifier_test.go",
+          "sha256": "0f5bb731a47c0f98844f345f8de7a96942cc9e0c8fa585e8071d3f48b9fb06c1",
+          "bytes": 10621
+        },
+        {
+          "path": "core-go/syncclient/issuer_verifier.go",
+          "sha256": "75e55cae26add86aef75a5891048479d0f119e2894125e240a91016bfec80ae4",
+          "bytes": 2642
+        },
+        {
+          "path": "core-go/syncclient/issuer_verifier_test.go",
+          "sha256": "bb0a89c639384320105104df6b01b111a432fd842e195c4637ab7b9a779c1cbf",
+          "bytes": 10556
+        },
+        {
+          "path": "core-go/syncclient/login.go",
+          "sha256": "359e3481594b0043d8a93a976dd157c43719920e24ccfc4adc803e68668058fb",
+          "bytes": 3899
+        },
+        {
+          "path": "core-go/syncclient/management_dag.go",
+          "sha256": "0ee627f525526f301462fced30cca9bfb206a204661cf209dfb97a63713bedd3",
+          "bytes": 3807
+        },
+        {
+          "path": "core-go/syncclient/management_dag_test.go",
+          "sha256": "b4e30eb56ac1c1429c6717a052c7a967002257989a73df786d5620b5334cfd7b",
+          "bytes": 10038
+        },
+        {
+          "path": "core-go/syncclient/notifications.go",
+          "sha256": "ea3003a02a5f9cb936dc9cea7fa67380ed960a7d69278e9c8f689ff17a53a5b2",
+          "bytes": 7219
+        },
+        {
+          "path": "core-go/syncclient/notifications_test.go",
+          "sha256": "c25a650ac36ea32000a526e9ceb340f98170bafc7cf4476de5ab86e7f6209df4",
+          "bytes": 9543
+        },
+        {
+          "path": "core-go/syncclient/other_revocation.go",
+          "sha256": "d758db93061acd99acc5cb72421c8f0155f50f32eb5151649a43e82c1a0077d2",
+          "bytes": 10510
+        },
+        {
+          "path": "core-go/syncclient/pause_guard.go",
+          "sha256": "0c28a255cb9b75ed457e21cb3f0ebfda904022e71d4066b6837b236682781831",
+          "bytes": 1155
+        },
+        {
+          "path": "core-go/syncclient/pause_guard_test.go",
+          "sha256": "da6a15770d95096c86aaeaf5d25117166cf0a55e6f3939584251e14731e22a25",
+          "bytes": 4366
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_binding.go",
+          "sha256": "41db0be3395fdd67982b6b50cd2d3e7891526add55efb50fbda8934fbafd36f7",
+          "bytes": 3226
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_binding_test.go",
+          "sha256": "efcdde2d6eff5daf3c8ea4b249520d39a8380390fbc97baffbc80829d4532575",
+          "bytes": 3625
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_checked_test.go",
+          "sha256": "a933d140bf760a3dd306e57793b63b608d57f18ec2f7e0850985b562d4951fd7",
+          "bytes": 5789
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_client.go",
+          "sha256": "fc9675b524df321d2d46e6db60ee43a79231d81fcb779a94c3b7e1c3121e2a69",
+          "bytes": 21831
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_evidence.go",
+          "sha256": "daccb79b0111daa2258a2a3a6b6d22f4f6471e1d01c1e57d879f781102df1029",
+          "bytes": 4702
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_journal.go",
+          "sha256": "110ccd3a3c97be33ae59c9841eba74577069ed2d75f2e2a701b6edb8628b5d42",
+          "bytes": 7668
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_journal_test.go",
+          "sha256": "5989054c56de57f67ae4c9a8746e52a4802278a5ff23a36bb5c20d9475f7d54b",
+          "bytes": 3004
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_operations.go",
+          "sha256": "120d4d0c82808b8af77ab597bb74227d19a24d8bdc6fa23ffd2ba3c361631b4c",
+          "bytes": 28294
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_preparation.go",
+          "sha256": "26c8354ff7cdf5ce3542aa0ef1000ee81c9fbb8372e2fab55b9555665faa7164",
+          "bytes": 12766
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_preparation_test.go",
+          "sha256": "d44a220b0f88e34aa2f0b98e55a5ffeecd4706004d82add3cb1a20349e2460d0",
+          "bytes": 12238
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_recovered_preparation.go",
+          "sha256": "b0095c30227290321b8b2333216f377f758bc74efc9be3a8468095f09cf160c7",
+          "bytes": 13480
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_recovered_preparation_test.go",
+          "sha256": "34baace049ae0087ee89722583a3830099f340221ed9c7e64d19385ce94afb1a",
+          "bytes": 10624
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_status.go",
+          "sha256": "49fde1a18b436d6eed7ee5a5e5d0a4c891e59251d0a53e826540c614418ca5d5",
+          "bytes": 1904
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_status_test.go",
+          "sha256": "da84e6cbf3eee9847577a2fe5376cf9a9c65199185fbb4bad20d040e3e752667",
+          "bytes": 5102
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_vault_journal.go",
+          "sha256": "305d59ccaf317b962e16b785ec78944c465b843e0acc64d6c3708002e904f42b",
+          "bytes": 1077
+        },
+        {
+          "path": "core-go/syncclient/self_revocation.go",
+          "sha256": "c9a43b3181b77980df55a108ef5ea3c2a4d695725e9a6022d5851fdaa148138e",
+          "bytes": 11473
+        },
+        {
+          "path": "core-go/syncclient/verifier.go",
+          "sha256": "96fd8db31936531d3d683c814da6c06a1785a05b5b600d34765d02672d506d80",
+          "bytes": 13200
+        },
+        {
+          "path": "core-go/syncclient/verifier_test.go",
+          "sha256": "ed746caf2f63be8e9bdab93cf3618fadf651e22f97d9df199629b1983017a20e",
+          "bytes": 9434
+        },
+        {
+          "path": "core-go/syncclient/write_pending.go",
+          "sha256": "82cc2564151b4aec59f3f289d2e96da937709de02362f5bf06d65212827e6cad",
+          "bytes": 2665
+        },
+        {
+          "path": "core-go/syncclient/writes.go",
+          "sha256": "42e02fcd6257de7702ae1715c94bc86adc4141eb1d312ab983e1f26f656d4f80",
+          "bytes": 19165
+        },
+        {
+          "path": "core-go/syncclient/writes_test.go",
+          "sha256": "12863c5ef565c961c8209411472518608cb8515035853c595b7a313bf91f868c",
+          "bytes": 10660
+        }
+      ]
+    },
+    "https": {
+      "version": 1,
+      "scope": "v1 HTTPS coverage inventory selected from GoFiles/CgoFiles/C/H/S and archived TS/protocol sources; may include uncompiled files, not compiler-input tracing. Original file hashes retained.",
+      "files": [
+        {
+          "path": "core-go/cryptox/approval_history.go",
+          "sha256": "55583661b47a665008557b1b1d41da2fecb650a62016e75edd83cf9f24852c4f",
+          "bytes": 424
+        },
+        {
+          "path": "core-go/cryptox/boot.go",
+          "sha256": "72dfc2e6f2f47f1b84b655d30e2cbacef3ae4f2bf4fea7e1f49891e7fbb9340c",
+          "bytes": 2624
+        },
+        {
+          "path": "core-go/cryptox/crypto.go",
+          "sha256": "c2496c71a313740f7ccf40dcc247545737e9082e85a376d3fe19ddeccbf1087e",
+          "bytes": 5617
+        },
+        {
+          "path": "core-go/cryptox/device_session.go",
+          "sha256": "86bc8d2834c0a15bf35a2d6793e14e30612289fae94e290fe2a2a28ca8c40cac",
+          "bytes": 2311
+        },
+        {
+          "path": "core-go/cryptox/doc.go",
+          "sha256": "52985ede624786ad26ef697c3c23829588434d5c150c61c0c203609105accf13",
+          "bytes": 267
+        },
+        {
+          "path": "core-go/cryptox/enrollment.go",
+          "sha256": "f7c030d00fc3991ed2a140b2825e029be8bb761025ad58c9ef629ec840c30b5f",
+          "bytes": 13636
+        },
+        {
+          "path": "core-go/cryptox/enrollment_transport.go",
+          "sha256": "920d4719a11b6525346ff17cd9a0ee84ad8241a18a68c4677d348e788542225c",
+          "bytes": 2568
+        },
+        {
+          "path": "core-go/cryptox/environment.go",
+          "sha256": "17bd91be7ea4968d23a976256b829b517d02d653b2900d56616fb8b54c899e54",
+          "bytes": 11148
+        },
+        {
+          "path": "core-go/cryptox/environment_origin.go",
+          "sha256": "a3ba176bc399051f6ee7e494ee32ef7ca2e8c998d50114e342e2f8cb71d0e568",
+          "bytes": 12446
+        },
+        {
+          "path": "core-go/cryptox/issuer_proof.go",
+          "sha256": "711fc6b464f7ff58c14178347c5e9170830c36c4c546d216fec8845dc91d3ab4",
+          "bytes": 22394
+        },
+        {
+          "path": "core-go/cryptox/issuer_proof_v2.go",
+          "sha256": "beee72ec73d2b2434cfc8b861a82eda34217354155fd606fb1ee601e11ddf93f",
+          "bytes": 28180
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_access.go",
+          "sha256": "0ac2e033a0b2da65362b88d9f31b0e13ce366593615fb1ef8c7959c9240ba541",
+          "bytes": 7747
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_graph.go",
+          "sha256": "af188154e4cb04f14a9fe9426ebad7320e46f34285c788baa44090d154c4b649",
+          "bytes": 10459
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_proof.go",
+          "sha256": "db90793f628a0e6140e6718ff5765a1145f1139d91eba1df920d97a5a8e3573a",
+          "bytes": 19618
+        },
+        {
+          "path": "core-go/cryptox/lifecycle.go",
+          "sha256": "b0f3c954efb95273b4845b86b5894de276b3745be27dc9b30975e20e6e2a6d8e",
+          "bytes": 7878
+        },
+        {
+          "path": "core-go/cryptox/pairing_relay.go",
+          "sha256": "40a5986903959340ebed09b5d965b5c686f78a80d5685f679b93a4819e2eb724",
+          "bytes": 1601
+        },
+        {
+          "path": "core-go/cryptox/recovered_device.go",
+          "sha256": "80bf44506c35c6ac5e3fad02d3566315da404052f1fa60cdbdd4f08bfde6ae70",
+          "bytes": 14103
+        },
+        {
+          "path": "core-go/cryptox/recovery.go",
+          "sha256": "21721b4f8e8bb31b3ace4a56fd73e9867db2e18a4d967b9e9685e4837b3387f0",
+          "bytes": 2247
+        },
+        {
+          "path": "core-go/cryptox/recovery_authority.go",
+          "sha256": "047828516f8005d2d5459027c14f54917ace46ec737c3dea5b8ee6912516d313",
+          "bytes": 29511
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag.go",
+          "sha256": "36ddf8ec4c694a105a226bdc44c8578d9a236e9b8d14ae5d26eaf9a466343500",
+          "bytes": 20062
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_canonical.go",
+          "sha256": "f1cf55f6e6990524c3282f2174ddef97e206dd5274ad27d1b263584fe4975533",
+          "bytes": 5118
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_decode.go",
+          "sha256": "0abb9e335c61d1e4a26c42ec886447dec545d3739058d1bf670df0846faaa5c6",
+          "bytes": 2736
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_enrollment.go",
+          "sha256": "62e324faaace3ccc18df92a653c30fa8c14c7ea7096c817435eadf17efaec741",
+          "bytes": 6778
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_validation.go",
+          "sha256": "ab3220fa5c264d787ba068d228a42ab569e896f6cc4814994dcf8b5f027fdac8",
+          "bytes": 16047
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_wire.go",
+          "sha256": "5a028091f1964124324bd0684de8bd3c6cf496bac681d4cb645018679be5a2ac",
+          "bytes": 16032
+        },
+        {
+          "path": "core-go/cryptox/recovery_schema.go",
+          "sha256": "4ec9c4c9c0a0b81cf14b231bb734804f2a5114c2779ccd7a5cdf16fba947f2ce",
+          "bytes": 2340
+        },
+        {
+          "path": "core-go/cryptox/strict_json.go",
+          "sha256": "ee9a5aa56d4c9aee59603228528baa6d2d38ae5956378b9d574b54f5f451b59b",
+          "bytes": 1854
+        },
+        {
+          "path": "core-go/cryptox/wire.go",
+          "sha256": "652be79a4da5b6c503ad7267250186383eb4f4c3d872e35b3e98fbd7714d3522",
+          "bytes": 6719
+        },
+        {
+          "path": "core-go/go.mod",
+          "sha256": "2e838079c045a55937ca4bc688e2f644da89c0ceefb16810a874fe533bdb6c0d",
+          "bytes": 245
+        },
+        {
+          "path": "core-go/go.sum",
+          "sha256": "8dbf052d842aec5593e3217e27d9e95defd46aa263baae104007b5981feab55f",
+          "bytes": 817
+        },
+        {
+          "path": "core-go/localipc/diagnostics.go",
+          "sha256": "f878f9ba59c12fa8fb5d2d3e29f94eab349cfa2e7c0ee87add6f749c4fbcc68d",
+          "bytes": 2889
+        },
+        {
+          "path": "core-go/localipc/ipc.go",
+          "sha256": "21a24efa0b87e957874b78ff02a3e1357ee83a7ac81bc4d2d22cecba471ab3ce",
+          "bytes": 14434
+        },
+        {
+          "path": "core-go/localipc/native_unix.go",
+          "sha256": "2afe7bf0815d252100af4c9a2dde9ee845c5693cdca949f83b2ba9b1b35b81b7",
+          "bytes": 6904
+        },
+        {
+          "path": "core-go/localipc/operations.go",
+          "sha256": "aae7ffeb77fe3ab109f3e68d925efaacdc433042e25f5584c733b5ab267c9e72",
+          "bytes": 715
+        },
+        {
+          "path": "core-go/localipc/peer_darwin.go",
+          "sha256": "1034a5d83ad7b21d0a6faeef6880f3d3c0d1b2d2b710f870c45ba542a5dbdc86",
+          "bytes": 259
+        },
+        {
+          "path": "core-go/localipc/transport.go",
+          "sha256": "61da0275ef7f6335a0b318cd8082c89d7f08780bc8f8f4789c90f5d47bda5c70",
+          "bytes": 1575
+        },
+        {
+          "path": "core-go/localipc/writes.go",
+          "sha256": "7089d82cc19900fff7f01efde25a40020ed01da0d46bc5e467944d898d653113",
+          "bytes": 2904
+        },
+        {
+          "path": "core-go/localkeys/acl_darwin.go",
+          "sha256": "b70d628c11de5ba8d627fafd564b14b027b874d78cd15c1e0bae0c56be16d065",
+          "bytes": 1379
+        },
+        {
+          "path": "core-go/localkeys/existing_unix.go",
+          "sha256": "b1852fc21fdda48be30c0d8d2d1a860d81a3c884ef3732ef148b9d1cb594c767",
+          "bytes": 313
+        },
+        {
+          "path": "core-go/localkeys/fragment.go",
+          "sha256": "768c1d79756e12abcc1323012cee7df6305a7981c0c19a3520510eb0963873c7",
+          "bytes": 1305
+        },
+        {
+          "path": "core-go/localkeys/fs.go",
+          "sha256": "e1148d74dfcf943bcd4ac77b0bd1d9bf2bbb1f7096ac4fd90f6ffaa1fa45404e",
+          "bytes": 273
+        },
+        {
+          "path": "core-go/localkeys/fs_unix.go",
+          "sha256": "30da6c5301a071233a72becf6e5b3629fc8fa2cb700d486d14815fb39f5e2cf2",
+          "bytes": 6774
+        },
+        {
+          "path": "core-go/localkeys/material.go",
+          "sha256": "c69e86a0d8a4704f1a160f3f5a5376d605dc776c072d1ebbcef04a1cdebf3631",
+          "bytes": 4021
+        },
+        {
+          "path": "core-go/localkeys/recovery_dag.go",
+          "sha256": "799b03d4ace86ae173fc7a60e6c64a23d7a265caeb940e4982f37440adb641d8",
+          "bytes": 2617
+        },
+        {
+          "path": "core-go/localkeys/state.go",
+          "sha256": "bb341b2ea9724069d01fb1e376251d753fd455c664c2ca1cbb9afd1df337bb48",
+          "bytes": 2354
+        },
+        {
+          "path": "core-go/localkeys/trust.go",
+          "sha256": "13dfec7090393282a196a8bcefbbd5b695dc40d1317b4578e72c674a64e517f2",
+          "bytes": 6583
+        },
+        {
+          "path": "core-go/localkeys/vault.go",
+          "sha256": "8e4c652716d79646d35c67ee8a81fde3d0b94f5e038bec6ae9c19881d585d6a4",
+          "bytes": 8098
+        },
+        {
+          "path": "core-go/localstate/engine.go",
+          "sha256": "1d8b4ba49c333c8aa482ef43cc6a7aa2f228d7705193eb9ed38d621a1134bb35",
+          "bytes": 26619
+        },
+        {
+          "path": "core-go/localstate/files.go",
+          "sha256": "e9b856ac4f9a28c7e8a24a9e5a7f8b40a9da0ed3d0cf979d29b50b6be930ac42",
+          "bytes": 5111
+        },
+        {
+          "path": "core-go/localstate/files_unix.go",
+          "sha256": "f9e60c1a83d08b22815dd4215d0b449073d6430a70e12267a1d94d6d3399aae0",
+          "bytes": 907
+        },
+        {
+          "path": "core-go/mobileworkflow/approval.go",
+          "sha256": "147bf0886cbc7444b5b7f52e7c209c36aeb44ec5217d1994d1076e3f38d6f1f2",
+          "bytes": 20877
+        },
+        {
+          "path": "core-go/mobileworkflow/approval_v3.go",
+          "sha256": "e1aa6bd334d785ef14681f605ef0d534a447bc2554ead3cfeedc16aadda79097",
+          "bytes": 15929
+        },
+        {
+          "path": "core-go/mobileworkflow/approval_v4.go",
+          "sha256": "53592c043cbbaed68ce0057fc2bf3fea2e33f502b2d39a93d6650eb73b9b7ca2",
+          "bytes": 16118
+        },
+        {
+          "path": "core-go/mobileworkflow/enrollment_v3.go",
+          "sha256": "76f769d2c5e9ff432a80e09618f877a8014544e5e0e0a7f501cdb55a1b791eb1",
+          "bytes": 13369
+        },
+        {
+          "path": "core-go/mobileworkflow/environment_recovery.go",
+          "sha256": "bb3cc4cc00f6e59a6dd904d84e4852c686c893257bf49edb3a76c69e24d03316",
+          "bytes": 2059
+        },
+        {
+          "path": "core-go/mobileworkflow/environments_v2.go",
+          "sha256": "46d55e40d33fac5f59e4b078745b364504a83993b42c5b8e6a23d993dbe81ce6",
+          "bytes": 12797
+        },
+        {
+          "path": "core-go/mobileworkflow/management.go",
+          "sha256": "b8443c4be5fe81d290cee3a35c79a9db11a6f56efc9140b9b1662816b3feb18c",
+          "bytes": 17426
+        },
+        {
+          "path": "core-go/mobileworkflow/pending_write.go",
+          "sha256": "ec8e7154fd69761d92bc18294c34be366a69617acf94ee5ace327f82021a4bc3",
+          "bytes": 5401
+        },
+        {
+          "path": "core-go/mobileworkflow/recovered_device_workflow.go",
+          "sha256": "5e0c6b190fbc1b640f09e4ca86f409d89873afdee6be2914a11d036912837286",
+          "bytes": 20343
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery.go",
+          "sha256": "4bc0ab7bcf072e6a3db4c0cb2984916f3ce5fab07f35fda04748dd7867b5a222",
+          "bytes": 49371
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_state.go",
+          "sha256": "b05d35937b326020b62816c9381b46415c582252798af108569111a0b54897bd",
+          "bytes": 15579
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_transition.go",
+          "sha256": "ce5c302d3f3e0c634ca4131e04027514f7835bc962ae48b130fc40a305ad61d1",
+          "bytes": 13962
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_workflow.go",
+          "sha256": "a2c53272ceb43dfde6c6249f7e6d61aa9176d3db4578e485061e86d89154044f",
+          "bytes": 9625
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_challenge_wait.go",
+          "sha256": "478b51e8054df35f454f4a350ea0652a4ed841d2ffa7a0ca5a6de2f6b38c99f1",
+          "bytes": 1869
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_clock.go",
+          "sha256": "023bf7d3c4231fa00fa76c81b5d956bbc2b1bc74bd588a8e7c47bebcf99ec309",
+          "bytes": 1824
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_lease.go",
+          "sha256": "666b113fcc9f152eb5256b4adacfbc1680abbe3cf1245231a8ee8a9540f7d994",
+          "bytes": 5178
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_owner.go",
+          "sha256": "d0ad21dec6847c5a18be60ff379c892b0e57a71389b398f9cfb0e0e3fb0069da",
+          "bytes": 10139
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_prepare_state.go",
+          "sha256": "7653a66af2a92a2eb00c555b611be6e528b0571cdead4878c73be075e4c3caec",
+          "bytes": 7411
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_query.go",
+          "sha256": "6e74729d44133622a3c317b63e0defcd965f79189fd93c7d5fff905ba5159233",
+          "bytes": 6409
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered.go",
+          "sha256": "0b5625427a1cacd50bbcbffc8fc097cb2a94917bf58c7afc4e62a1a2f0506aca",
+          "bytes": 9252
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_state.go",
+          "sha256": "d27a8b99ab5457579a975336988d8c691091a44dc4b7e4ff3479991421a04174",
+          "bytes": 6221
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_state.go",
+          "sha256": "2d06df7a92e6fbb2d66c0aa7ae23ba41783f0c94c98b7ce01ad1fbbc6beb50bb",
+          "bytes": 9622
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_transition.go",
+          "sha256": "fcf72746c37b5a991e81c22ad4c88d533ae0130abaaa8e9ecbeea8d51d8aefaa",
+          "bytes": 12381
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_envelopes.go",
+          "sha256": "986ecd9d45f57b3a904372ef9a07ba174b874b6fb1c9189fd774f1de9a72e398",
+          "bytes": 6239
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_origin.go",
+          "sha256": "d836ba130076b7ce5d6ed77913912633c6e2b4dd23c083fb113e3e5a7933829a",
+          "bytes": 5400
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_session.go",
+          "sha256": "bbe649f4feabf00fa8eb197094857eb14af714dbd96e4fd86558b17e93282b74",
+          "bytes": 11576
+        },
+        {
+          "path": "core-go/mobileworkflow/selfrevoke.go",
+          "sha256": "1fbb47eada3f98bc84ce8b40882942668bd234aca8d45cf6e24a8a478c3534d1",
+          "bytes": 6868
+        },
+        {
+          "path": "core-go/mobileworkflow/source_projection.go",
+          "sha256": "6c8eb6a15aa27da748b0889b9b92703d30b2d6d89e0abee7b602558b6fd9a1c7",
+          "bytes": 6696
+        },
+        {
+          "path": "core-go/mobileworkflow/vaultworkflow.go",
+          "sha256": "ba4a028148421997532f0c0d63d60e41691f76edce758e4d731246fe32b9cf06",
+          "bytes": 52635
+        },
+        {
+          "path": "core-go/pairing/confirmation.go",
+          "sha256": "97f073acfd15b6842567f0dcefee71d4710fbd029034498997e79dbdd4e004a0",
+          "bytes": 1937
+        },
+        {
+          "path": "core-go/pairing/context.go",
+          "sha256": "cbfdfac7224d624c566c408c1ee405e59dd47709ad5bdcdf04b2afcda86c59e6",
+          "bytes": 5429
+        },
+        {
+          "path": "core-go/pairing/native_unavailable.go",
+          "sha256": "2f637f440e447cd5cee0a750af974fc564701d2ce305892cfd0ab7d81952b003",
+          "bytes": 274
+        },
+        {
+          "path": "core-go/pairing/session.go",
+          "sha256": "ed9811d3f41941f68c615a6149d99933ae075aa69a477b900a2ea1307fb6821b",
+          "bytes": 4806
+        },
+        {
+          "path": "core-go/syncclient/approver_v2.go",
+          "sha256": "3c10f7fc7861dd5960eb5920d000364de10365e23fd5c0a486692702bc991f29",
+          "bytes": 10133
+        },
+        {
+          "path": "core-go/syncclient/approver_v3.go",
+          "sha256": "a0ade5e9e0c7da58406e9df5022b37b64798ba41c536970879e9b7ab6b3976c5",
+          "bytes": 10419
+        },
+        {
+          "path": "core-go/syncclient/approver_v4.go",
+          "sha256": "32f95f64c3262cf406c2fc062992c2241b04dc51514ffcf575698273fccc4ac4",
+          "bytes": 12247
+        },
+        {
+          "path": "core-go/syncclient/approver_v5.go",
+          "sha256": "83df60f7a07d94079b868941e9ad809a7a16f91705033faf9faa69eda49e1f1b",
+          "bytes": 12207
+        },
+        {
+          "path": "core-go/syncclient/authorizations.go",
+          "sha256": "a3b4e44e9a0e12275a177fa8b656e02632182c86c671951510d4c8ea3137a0aa",
+          "bytes": 5243
+        },
+        {
+          "path": "core-go/syncclient/boot.go",
+          "sha256": "89e5a343d25bc9947f82fb2ff1e43871be46fde041f6e701d8d05e0cae546479",
+          "bytes": 3405
+        },
+        {
+          "path": "core-go/syncclient/cached_sources.go",
+          "sha256": "2d3b1129831226b220a6c7d1c1b0582a4df78bff3a03fe1f90e19745e970bcd2",
+          "bytes": 13247
+        },
+        {
+          "path": "core-go/syncclient/client.go",
+          "sha256": "c19f3163047b98c54539de9c85fd40ebd6c8affe531205c6e6aaef31e16b4057",
+          "bytes": 11546
+        },
+        {
+          "path": "core-go/syncclient/control_dag.go",
+          "sha256": "eb64c7ef004dc9dfa9e834fa3dc98a893f95c3f429d0ba484629811a80f7c20a",
+          "bytes": 2911
+        },
+        {
+          "path": "core-go/syncclient/control_recovery.go",
+          "sha256": "cbbeca137f67271c5a6925c7988136e108df2349e27369ca51220ad95377870f",
+          "bytes": 4575
+        },
+        {
+          "path": "core-go/syncclient/dag_protocol.go",
+          "sha256": "729a1ede79d0106e48fb64fd8e1f16a654ad084b1ea69da856d4525e9eb49bb3",
+          "bytes": 1878
+        },
+        {
+          "path": "core-go/syncclient/device_session.go",
+          "sha256": "bef2f5ba13162b01b87c2fdab077befe1e0f3e599162d3af6a18961965a4e00e",
+          "bytes": 3230
+        },
+        {
+          "path": "core-go/syncclient/enrollment.go",
+          "sha256": "f197e80a889014f1130edb1760bcb3c6fe50dc41b2f917f7e1f608f21f450ef2",
+          "bytes": 18720
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v2.go",
+          "sha256": "01cdebc8f083818c4f15c81fd807c223cbd422b49369213acd21ec6dd49dad09",
+          "bytes": 18174
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v3.go",
+          "sha256": "22c572e0e5dfbff25bfee88f994b7dd0e8981eaa6f844cd44f19bc56382ac0f4",
+          "bytes": 18380
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v4.go",
+          "sha256": "2b213018d6ede8312d6770d93ce20834ba1d7d2069170693cfcdfa9e063584ee",
+          "bytes": 18375
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v5.go",
+          "sha256": "167a1eb2a77e606c6feaf87947b8880eb6e042a615dbca3b365c8cd5acbdb773",
+          "bytes": 18363
+        },
+        {
+          "path": "core-go/syncclient/environment_checkpoint.go",
+          "sha256": "f95e0693f143c1c2449ae4c5e443754d58f9c0e19265c7222815ca3d76e2c584",
+          "bytes": 1785
+        },
+        {
+          "path": "core-go/syncclient/environment_dag_writes.go",
+          "sha256": "43a1ad4298008cc0920a6b4bcb55e4c8c16675572b4952b8ef6ca9a208b85213",
+          "bytes": 2803
+        },
+        {
+          "path": "core-go/syncclient/environment_origin_writes.go",
+          "sha256": "edd808e69a50e392d510ee4890603dd065ce26278513de4bc9f27fef182beb67",
+          "bytes": 11824
+        },
+        {
+          "path": "core-go/syncclient/environment_recovery_writes.go",
+          "sha256": "6688af8df9fbd279f57095f69d85b23c5ca1de7fea13f554c04e5d4ec3e41c12",
+          "bytes": 2816
+        },
+        {
+          "path": "core-go/syncclient/environment_writes.go",
+          "sha256": "e705babfd9445e04398aa774d455a1a9c0ac09632cdcfae77785852001dba70d",
+          "bytes": 2887
+        },
+        {
+          "path": "core-go/syncclient/environments.go",
+          "sha256": "fdcb2f7fa48b58c363c1e9cafa4878f9767c6056a746b71df11eb75e55c02306",
+          "bytes": 5840
+        },
+        {
+          "path": "core-go/syncclient/errors.go",
+          "sha256": "d9f15f341b08487e9d3b02bc5faa1674be4bea4c4a0f3d1ddf45d2e1ed8a0df2",
+          "bytes": 2295
+        },
+        {
+          "path": "core-go/syncclient/fault_codes.go",
+          "sha256": "3cf7b74d8d20d09c3eb01aef25cab4f7bbb126663564a738cde50926e4cd3f44",
+          "bytes": 8752
+        },
+        {
+          "path": "core-go/syncclient/grant_updates.go",
+          "sha256": "396171e80a9d718836298282ae79d4ba7d5bc78e4518e5e53eed07bf43c82766",
+          "bytes": 21259
+        },
+        {
+          "path": "core-go/syncclient/issuer_dag_verifier.go",
+          "sha256": "fbe06a376b927f1719317989dd183ec69fe23667fcf08eb7bccdfe81b8820e18",
+          "bytes": 21921
+        },
+        {
+          "path": "core-go/syncclient/issuer_origin_verifier.go",
+          "sha256": "18a9fab56676de3e7239d040e9dc32447dceca5faca526918f526650d0e66598",
+          "bytes": 22888
+        },
+        {
+          "path": "core-go/syncclient/issuer_recovery_verifier.go",
+          "sha256": "2d6e03b5dabe79cdd807c231246b74af2080bc00a6cb92b9b900f02432738774",
+          "bytes": 21159
+        },
+        {
+          "path": "core-go/syncclient/issuer_verifier.go",
+          "sha256": "75e55cae26add86aef75a5891048479d0f119e2894125e240a91016bfec80ae4",
+          "bytes": 2642
+        },
+        {
+          "path": "core-go/syncclient/login.go",
+          "sha256": "359e3481594b0043d8a93a976dd157c43719920e24ccfc4adc803e68668058fb",
+          "bytes": 3899
+        },
+        {
+          "path": "core-go/syncclient/management_dag.go",
+          "sha256": "0ee627f525526f301462fced30cca9bfb206a204661cf209dfb97a63713bedd3",
+          "bytes": 3807
+        },
+        {
+          "path": "core-go/syncclient/notifications.go",
+          "sha256": "ea3003a02a5f9cb936dc9cea7fa67380ed960a7d69278e9c8f689ff17a53a5b2",
+          "bytes": 7219
+        },
+        {
+          "path": "core-go/syncclient/other_revocation.go",
+          "sha256": "d758db93061acd99acc5cb72421c8f0155f50f32eb5151649a43e82c1a0077d2",
+          "bytes": 10510
+        },
+        {
+          "path": "core-go/syncclient/pause_guard.go",
+          "sha256": "0c28a255cb9b75ed457e21cb3f0ebfda904022e71d4066b6837b236682781831",
+          "bytes": 1155
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_binding.go",
+          "sha256": "41db0be3395fdd67982b6b50cd2d3e7891526add55efb50fbda8934fbafd36f7",
+          "bytes": 3226
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_client.go",
+          "sha256": "fc9675b524df321d2d46e6db60ee43a79231d81fcb779a94c3b7e1c3121e2a69",
+          "bytes": 21831
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_evidence.go",
+          "sha256": "daccb79b0111daa2258a2a3a6b6d22f4f6471e1d01c1e57d879f781102df1029",
+          "bytes": 4702
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_journal.go",
+          "sha256": "110ccd3a3c97be33ae59c9841eba74577069ed2d75f2e2a701b6edb8628b5d42",
+          "bytes": 7668
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_operations.go",
+          "sha256": "120d4d0c82808b8af77ab597bb74227d19a24d8bdc6fa23ffd2ba3c361631b4c",
+          "bytes": 28294
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_preparation.go",
+          "sha256": "26c8354ff7cdf5ce3542aa0ef1000ee81c9fbb8372e2fab55b9555665faa7164",
+          "bytes": 12766
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_recovered_preparation.go",
+          "sha256": "b0095c30227290321b8b2333216f377f758bc74efc9be3a8468095f09cf160c7",
+          "bytes": 13480
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_status.go",
+          "sha256": "49fde1a18b436d6eed7ee5a5e5d0a4c891e59251d0a53e826540c614418ca5d5",
+          "bytes": 1904
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_vault_journal.go",
+          "sha256": "305d59ccaf317b962e16b785ec78944c465b843e0acc64d6c3708002e904f42b",
+          "bytes": 1077
+        },
+        {
+          "path": "core-go/syncclient/self_revocation.go",
+          "sha256": "c9a43b3181b77980df55a108ef5ea3c2a4d695725e9a6022d5851fdaa148138e",
+          "bytes": 11473
+        },
+        {
+          "path": "core-go/syncclient/verifier.go",
+          "sha256": "96fd8db31936531d3d683c814da6c06a1785a05b5b600d34765d02672d506d80",
+          "bytes": 13200
+        },
+        {
+          "path": "core-go/syncclient/write_pending.go",
+          "sha256": "82cc2564151b4aec59f3f289d2e96da937709de02362f5bf06d65212827e6cad",
+          "bytes": 2665
+        },
+        {
+          "path": "core-go/syncclient/writes.go",
+          "sha256": "42e02fcd6257de7702ae1715c94bc86adc4141eb1d312ab983e1f26f656d4f80",
+          "bytes": 19165
+        },
+        {
+          "path": "protocol/mise.toml",
+          "sha256": "3f1771b8503d8fb5b4f13062ab7e51ac4bd89e5d240189e212afc0bf9d378fdf",
+          "bytes": 140
+        },
+        {
+          "path": "protocol/tests/device-session.test.ts",
+          "sha256": "e0da79b5bf70910124f64911725e7de25f6c7c6aceda5d074b8403b482e9441c",
+          "bytes": 1268
+        },
+        {
+          "path": "protocol/tests/environment-origin.test.ts",
+          "sha256": "7ee4f01986df08bc5e68364e4cbf15563aac8b21b97afa04924e3310180c288b",
+          "bytes": 6657
+        },
+        {
+          "path": "protocol/tests/issuer-proof.test.ts",
+          "sha256": "8231ac53fb08e7ccb080f1c09fa02163f383dcd4ec2e93399b0bac305999116d",
+          "bytes": 7925
+        },
+        {
+          "path": "protocol/tests/issuer-recovery.test.ts",
+          "sha256": "89a0558f821155fb423a5995b2339a68e11f13f82006372199dfe2c9383a0ef6",
+          "bytes": 10971
+        },
+        {
+          "path": "protocol/tests/max-packet.test.ts",
+          "sha256": "30add0023903a3b8d8ca5af0ccc9b2c38dd38d2a11dbd4b5f15b26e8e82a38aa",
+          "bytes": 1207
+        },
+        {
+          "path": "protocol/tests/recovery-authority.test.ts",
+          "sha256": "4692bf6353f0d779dc22a1d35ea37aa20e7b00b2e2e67d0cb2f56eec415df117",
+          "bytes": 12013
+        },
+        {
+          "path": "protocol/tests/recovery-dag.test.ts",
+          "sha256": "9eb0a9550138a4a551e14ae02a14e06d18556cdfab9cc9f02470d8def350f2fc",
+          "bytes": 13435
+        },
+        {
+          "path": "protocol/tests/reserved-name.test.ts",
+          "sha256": "38842449cea467a6b4a52774440b7816694c6b323820ddb459a4e54e6a92d270",
+          "bytes": 520
+        },
+        {
+          "path": "protocol/tests/wire.test.ts",
+          "sha256": "44b4f4458b31e6cb28f4e65dcd2279a56b5f2bb19dcacf1545f18a71f2cf6876",
+          "bytes": 2914
+        },
+        {
+          "path": "protocol/typescript/wire.ts",
+          "sha256": "2dcb529deb4ca4c8656c846ed527e31be2e63f208a12c9df108963cbdc4ef140",
+          "bytes": 3743
+        },
+        {
+          "path": "protocol/vectors/device-boot-v1.json",
+          "sha256": "2ab958706bd21fc77de04258fdc802ad1ae612e9b9a7715bf5926dbd30653552",
+          "bytes": 1139
+        },
+        {
+          "path": "protocol/vectors/device-enrollment-v1.json",
+          "sha256": "c84cb01922272974564079b997e48c95465859d24892852a922d15fc63c59014",
+          "bytes": 9946
+        },
+        {
+          "path": "protocol/vectors/device-session-v1.json",
+          "sha256": "e652c70e208af6e627019e8ccfb28b45f346df001242c87fbd64ab7d7df5f28b",
+          "bytes": 1198
+        },
+        {
+          "path": "protocol/vectors/environment-lifecycle-v1.json",
+          "sha256": "2187ec357c38b7f32215df22d828801547e0a701f1d02139352bb876873676ae",
+          "bytes": 11830
+        },
+        {
+          "path": "protocol/vectors/environment-origin-v1.json",
+          "sha256": "51b72e2f78e7cbedbb093194fb67f5db1f45b639f0d0a6d6538bee4ed3d9bfde",
+          "bytes": 56372
+        },
+        {
+          "path": "protocol/vectors/issuer-proof-v1.json",
+          "sha256": "fae49cf7b676e3af60c7b603ff98b0eec47e20ddd6a66ad7cb4f17e502b22a4e",
+          "bytes": 15933
+        },
+        {
+          "path": "protocol/vectors/issuer-recovery-v1.json",
+          "sha256": "f6d87dd01c65bd66bc89b60e0f1f0b4226fa9196d9fa3448ce2c1841bb5b877a",
+          "bytes": 177661
+        },
+        {
+          "path": "protocol/vectors/max-packet-v1.json",
+          "sha256": "bae18973273364d6dad4947d2c97a27e8fdf9c8b43c361eb24be87ba29581fa1",
+          "bytes": 813
+        },
+        {
+          "path": "protocol/vectors/pairing-application-v1.json",
+          "sha256": "0c4c8e04b0a5840c3953a7e241fd977b2f6b67c52e81e86da95cd42496ce7781",
+          "bytes": 3900
+        },
+        {
+          "path": "protocol/vectors/pairing-relay-v1.json",
+          "sha256": "a2ab2416932088bdc8edc37324aacfda6731bbbf56aeab048197b244b7d2399e",
+          "bytes": 1085
+        },
+        {
+          "path": "protocol/vectors/recovery-authority-v1.json",
+          "sha256": "2e10ea9981b709cda2fea359be73bffd442f3169eb264b049956e2c1b5682a51",
+          "bytes": 85463
+        },
+        {
+          "path": "protocol/vectors/recovery-dag-v1.json",
+          "sha256": "22f82f175fcd940c04e6745150e9399f747bc9954fee3cad0e4af614e0697287",
+          "bytes": 343471
+        },
+        {
+          "path": "protocol/vectors/recovery-lifecycle-v1.json",
+          "sha256": "baf981a0e1fb3cab590a5326c415e6d9e15996b3a173f67cd516a38f9562468a",
+          "bytes": 5626
+        },
+        {
+          "path": "protocol/vectors/signatures-v1.json",
+          "sha256": "9542c3a512af0fd2cfcce9a18f938975736619fc61192803dcb9fe0e271413cf",
+          "bytes": 3127
+        },
+        {
+          "path": "protocol/vectors/vault-initialization-v1.json",
+          "sha256": "c6aec0c861dde9ae779036e5115dea4df76adde8213aea099d0dcc094977a8ea",
+          "bytes": 7735
+        },
+        {
+          "path": "server/mise.toml",
+          "sha256": "7302fdf6bd269a8b4f20152c29536144d6e8132a00d5218887c12d91614183e5",
+          "bytes": 205
+        },
+        {
+          "path": "server/package.json",
+          "sha256": "baa1b58ffdac9a7a6dc8f056e30b114928daabb93fcc66c11f6b0b338838ae3e",
+          "bytes": 932
+        },
+        {
+          "path": "server/pnpm-lock.yaml",
+          "sha256": "0c3de8846c3d62df68f4a8c695093d07c8b46ad31a131f8aaf030d4c77b4dc5a",
+          "bytes": 63195
+        },
+        {
+          "path": "server/src/account-lifecycle.ts",
+          "sha256": "475d1cc00891c4497a3b6ea217b182a7053cb38bd8f2d48201be89850694b39b",
+          "bytes": 14753
+        },
+        {
+          "path": "server/src/dag-enrollment.ts",
+          "sha256": "606a9354e3249e6f400ffd24e8d0bc138e3f914484613774d67fad74f04e5616",
+          "bytes": 11482
+        },
+        {
+          "path": "server/src/email-transport.ts",
+          "sha256": "777640efc7dae2010a6257f77fb523bd89603f43aa2ebc375866e86c68f0d32a",
+          "bytes": 849
+        },
+        {
+          "path": "server/src/enrollment-wire.ts",
+          "sha256": "c0adac1ceba47bdd577323b8cef497d3be0c5baf816fddfe3262607905b30ab4",
+          "bytes": 8613
+        },
+        {
+          "path": "server/src/enrollment.ts",
+          "sha256": "b0c7003215b85d06b1b440eb60848927a8061a2be76a15dd64ee1d72d4aa1dca",
+          "bytes": 26512
+        },
+        {
+          "path": "server/src/environment-origin.ts",
+          "sha256": "0249a38eb953aa5dfd9bf1920e52c41ec28731ecd0ca8bc428715a90155a56ad",
+          "bytes": 6667
+        },
+        {
+          "path": "server/src/environments.ts",
+          "sha256": "9bebed79bf337526acfad5fc01d947ae6a8f027c6732953807424d26296105c6",
+          "bytes": 33788
+        },
+        {
+          "path": "server/src/grant-management.ts",
+          "sha256": "c420b8dafb7ba498a6f77c46f5fec42c6a1055c4bedede1ee95da945466b3077",
+          "bytes": 9616
+        },
+        {
+          "path": "server/src/http-account.ts",
+          "sha256": "0ac67dcf33b4f6be4c8d552282d081460d9084f40f1e2924d4093b5bb5075ca8",
+          "bytes": 1825
+        },
+        {
+          "path": "server/src/http-dag-enrollment.ts",
+          "sha256": "794f5dba504779aad60e334b644daf78a48817d380615b861218d9dcbeb502fb",
+          "bytes": 2192
+        },
+        {
+          "path": "server/src/http-enrollment.ts",
+          "sha256": "c280acceaf1ef271910d57b2dd8ec899e8a2dac8af0ddf562f359c799579d728",
+          "bytes": 4280
+        },
+        {
+          "path": "server/src/http-environments.ts",
+          "sha256": "71f79039a29f0e0dea25ecb7ff6ba2f9362b538452990c5ea41254ca973756a4",
+          "bytes": 4495
+        },
+        {
+          "path": "server/src/http-grant-management.ts",
+          "sha256": "197c38a13d44615f1e3a20c377dfff59e0ac4eae4e860d36559fa1681ef4233b",
+          "bytes": 1920
+        },
+        {
+          "path": "server/src/http-lifecycle.ts",
+          "sha256": "3832006b38281ecc9186da20fb1456d5be04cd511220c5e2cf6144e3b372439e",
+          "bytes": 4149
+        },
+        {
+          "path": "server/src/http-pending-pairings.ts",
+          "sha256": "d0e3ed64171dc7599dfb71db371d1b03fb00ea836005a901183b8252b255a9a1",
+          "bytes": 752
+        },
+        {
+          "path": "server/src/http-recovery-authority.ts",
+          "sha256": "d10b224f38d4420a9a92c59cb0bbd0465b005ce2115e57e4a05e04ad40ea785a",
+          "bytes": 3590
+        },
+        {
+          "path": "server/src/http-recovery-dag.ts",
+          "sha256": "24d6a1dbc54098b24694aa5376814e4b0619ae2c8212b3f2d2ca83a55e1e344f",
+          "bytes": 2777
+        },
+        {
+          "path": "server/src/http.ts",
+          "sha256": "86f33dad2c36ff75f56750df92093768479df0f89e55e72657913a30f6519fde",
+          "bytes": 10738
+        },
+        {
+          "path": "server/src/initialization-evidence.ts",
+          "sha256": "2e42fc4b966c7b6c4707f636a0dbb635357f21a775fcad531cab10228749ed5b",
+          "bytes": 2450
+        },
+        {
+          "path": "server/src/issuer-dag.ts",
+          "sha256": "e43d81a2b958a4057d0eb2b955d46a3abba9cf7d422d49843db23d5d352ab426",
+          "bytes": 6308
+        },
+        {
+          "path": "server/src/issuer-origin.ts",
+          "sha256": "2a2bb9b58bee01ce795ce4d3c793fffd2907ea86b060d58d86c22ec0593a928b",
+          "bytes": 35703
+        },
+        {
+          "path": "server/src/issuer-proof.ts",
+          "sha256": "c6dbe8b7b2f1a14dae75e429d4b487fa56214f8830a6ae3a185a7adc7e63f938",
+          "bytes": 15550
+        },
+        {
+          "path": "server/src/issuer-recovery.ts",
+          "sha256": "9bd68988d32835a7225624b1fb715d181882c6eeea950e36b4e6ddefbfe677a7",
+          "bytes": 45681
+        },
+        {
+          "path": "server/src/lifecycle-wire.ts",
+          "sha256": "d4d1b8162900828e1c87d69ac3d70a9f5aed785ba176cf0c5a264bc64f6aad57",
+          "bytes": 5937
+        },
+        {
+          "path": "server/src/lifecycle.ts",
+          "sha256": "113bdc842cad7fc91f2445cf38fe3004a8a6b77575775031c6f9bcad873539cf",
+          "bytes": 16162
+        },
+        {
+          "path": "server/src/model.ts",
+          "sha256": "a5cdc09a25e28432970a1b4a6d4b2d1b4fb87365a8da05c81cffde3dde32fab8",
+          "bytes": 3787
+        },
+        {
+          "path": "server/src/node-runtime.ts",
+          "sha256": "c2ba1642e8250cbdac0231845bf6c7f988f8a67d4f3c25ea5f51e0f385c2df44",
+          "bytes": 4872
+        },
+        {
+          "path": "server/src/node-store.ts",
+          "sha256": "bf1583658d5a69aa43b81cbdd5d116f07acd46b486e9cecd6a7a013c5d3017b4",
+          "bytes": 999
+        },
+        {
+          "path": "server/src/node.ts",
+          "sha256": "ba0e47c0f1125cd59e0ddc9d959fa3ed6d6a9ce7364de6b835aa079b1addd0c9",
+          "bytes": 1941
+        },
+        {
+          "path": "server/src/notifications.ts",
+          "sha256": "09926756f042d8498c87ec0f1a2e55289d964483b2782c72ba6a61997a153261",
+          "bytes": 5398
+        },
+        {
+          "path": "server/src/password.ts",
+          "sha256": "0f5b7d837b525397c97debb328844cdd1cc0e062fa20a5f70ddcb11a8119151a",
+          "bytes": 1238
+        },
+        {
+          "path": "server/src/pending-pairings.ts",
+          "sha256": "33360911559e51bc3b2a1850d03f5e60ec4e6223f22a485e84a06980d2e78cc5",
+          "bytes": 4228
+        },
+        {
+          "path": "server/src/protocol-info.ts",
+          "sha256": "e2a7146e1669de726b6ea6dae1d02f8fbe6031df1c0f425ba08650ed5da6ede4",
+          "bytes": 2206
+        },
+        {
+          "path": "server/src/protocol.ts",
+          "sha256": "c4d4d86de64f6d2170fdca9ed01445e9f5cf442eebce544dcd7de329ee85348d",
+          "bytes": 3991
+        },
+        {
+          "path": "server/src/recovered-device-wire.ts",
+          "sha256": "2ad4065d2ce2dad6d48cad7e87bd2e5f9728ee42256e5b3c6bec04faa3b7461f",
+          "bytes": 6791
+        },
+        {
+          "path": "server/src/recovery-authority-history.ts",
+          "sha256": "e7fde68b8edf9a63ea0c748662456991aa725eb4d46e00cb319002479de7c66a",
+          "bytes": 7872
+        },
+        {
+          "path": "server/src/recovery-authority-wire.ts",
+          "sha256": "c6d2694793112e500c230bda0b54503517cc0758ea4eabf454a9039242c8fb9e",
+          "bytes": 15020
+        },
+        {
+          "path": "server/src/recovery-authority.ts",
+          "sha256": "4cb6745300e5b144b8729d69c526cf36332eb8ad2db54ca875ad16c8ff55d79e",
+          "bytes": 24866
+        },
+        {
+          "path": "server/src/recovery-dag-account.ts",
+          "sha256": "6c1a49c7e6f46f10e4ae99f5c3aa35b18c3f55d4ca9bce364cc787a9405320d2",
+          "bytes": 16191
+        },
+        {
+          "path": "server/src/recovery-dag-service.ts",
+          "sha256": "19e1fe3b97eaa78e92c427fca7c9c0af06c448073bc6c7ca37fb8339eda74402",
+          "bytes": 20579
+        },
+        {
+          "path": "server/src/recovery-dag-wire.ts",
+          "sha256": "d409af1af52806c6dfe78ca829632e93c6a1e43765315778c6ee3eec2c9b73da",
+          "bytes": 20116
+        },
+        {
+          "path": "server/src/recovery-dag.ts",
+          "sha256": "93641063a3decb274de9f60f3d339f388d01d93a74ec2c30464e02b72167bfb3",
+          "bytes": 18786
+        },
+        {
+          "path": "server/src/recovery-envelope-evidence.ts",
+          "sha256": "da3fc9367947b4f14ddc8ae52c061c00a81c61727e5f3e19cd8b0fe8c6a08c1e",
+          "bytes": 5631
+        },
+        {
+          "path": "server/src/registration.ts",
+          "sha256": "093b2e9bd64d24a8594636487b385bac4c6672ffb0889a485a2f3e6b760ab3ba",
+          "bytes": 4776
+        },
+        {
+          "path": "server/src/service.ts",
+          "sha256": "19149a1c07f7d5cd050f6493dbed62247878a6a0b3e2eed182cba93cdc9daa30",
+          "bytes": 18617
+        },
+        {
+          "path": "server/src/smtp.ts",
+          "sha256": "0673fcbc2282987efb21bccc5a0529e1e31a54beaab7e01a27b660ec4452697e",
+          "bytes": 1325
+        },
+        {
+          "path": "server/src/store.ts",
+          "sha256": "f7a525ce8cf4ead7aea59fa88dbec4d560fabfb77b171d24f25fb0abda25dd31",
+          "bytes": 3606
+        },
+        {
+          "path": "server/src/strict-recovery-body.ts",
+          "sha256": "d64d591f55ff098167cafc46e1b605e171bcca49501e0c390eb311e1ded2daeb",
+          "bytes": 3900
+        },
+        {
+          "path": "server/src/trust-root.ts",
+          "sha256": "40c74815932a38971f4dfcd8bc12aa48340e8ea9bbc08dca365a8fd7ba6cadea",
+          "bytes": 2116
+        },
+        {
+          "path": "server/src/worker-env.d.ts",
+          "sha256": "b01042940d1c65ac8159a84871567bfb58aaaf38f040dcbfbb8e13dcdf93df27",
+          "bytes": 1044
+        },
+        {
+          "path": "server/src/worker-password.ts",
+          "sha256": "10f1ec2949374522d15dd070cd8b25df8d079229ce4325459ac8415e6d2cccee",
+          "bytes": 1935
+        },
+        {
+          "path": "server/src/worker.ts",
+          "sha256": "463847a5be6d9b9f901565e5b985b2bb2c61e4d0fbe725bb35a456e319112ff3",
+          "bytes": 16406
+        },
+        {
+          "path": "server/test/account-lifecycle.test.ts",
+          "sha256": "085adfd14b5684168fe2e3f336bea4fca44a07b341080da10d067ba9a57d616b",
+          "bytes": 15855
+        },
+        {
+          "path": "server/test/enrollment.test.ts",
+          "sha256": "487965592996a84cba85d4d1dcfc5da718ba0279cddefb2cbecee8f5104657a3",
+          "bytes": 15305
+        },
+        {
+          "path": "server/test/environment-dag.test.ts",
+          "sha256": "4d12c3c3433ce796c4c96c6dc767f4df3e7eb822ea2851eebacdbbca2036fa29",
+          "bytes": 16252
+        },
+        {
+          "path": "server/test/environments.test.ts",
+          "sha256": "507c1543cdc15d4ca57bd4ab11c2cab35b87f6e27fb5672436d641fe778502d8",
+          "bytes": 24340
+        },
+        {
+          "path": "server/test/fixtures.ts",
+          "sha256": "f1f2cc5c88b3dfed5ff7e37c182ee49a0a22edd22fe40226626dad041bba4122",
+          "bytes": 4958
+        },
+        {
+          "path": "server/test/grant-management-dag.test.ts",
+          "sha256": "18d241d2e2e07c5db7e03ec8fbc2773e6ec280d97d7eac6c6201ac21b515c949",
+          "bytes": 11359
+        },
+        {
+          "path": "server/test/grant-management.test.ts",
+          "sha256": "aebcbf383932022f1e00082cc4d11eb0726bf8055c04e3f0982b3da90b2a2434",
+          "bytes": 16345
+        },
+        {
+          "path": "server/test/inactive-grant-evidence.test.ts",
+          "sha256": "b9dc2c25ad5fd71b0828a2abedd76d15ab16d7927ab8ab6202c1db7fd5ed6c07",
+          "bytes": 2705
+        },
+        {
+          "path": "server/test/initialization-evidence.test.ts",
+          "sha256": "273db01b28421209614ec321f368a372f2e2f740ea6b177eab3e16d1d654cebe",
+          "bytes": 8577
+        },
+        {
+          "path": "server/test/issuer-origin.test.ts",
+          "sha256": "50167f11711985d7aecc01affdca8cf2eb9268b700b6bda4a4475356d8b60d76",
+          "bytes": 45844
+        },
+        {
+          "path": "server/test/issuer-proof.test.ts",
+          "sha256": "6729b40ae8809255b8b5c2bed8b490534fc35fe2d5a152efa379590eddbf494f",
+          "bytes": 29378
+        },
+        {
+          "path": "server/test/lifecycle.test.ts",
+          "sha256": "5e4bfd555b0188e7e6ac4a38038aeedc68a7eb4886cde8a0a115eaa621cd57fa",
+          "bytes": 26938
+        },
+        {
+          "path": "server/test/mutation-status.test.ts",
+          "sha256": "ffa17b8dbe67aba3020b8c2bc12821818eb3a51304cef7a9382ebb20c5492690",
+          "bytes": 3512
+        },
+        {
+          "path": "server/test/notifications.test.ts",
+          "sha256": "8dad80a2f4c2c1b6414517772a62280600fd4b187d1cb2179f5802a01be21871",
+          "bytes": 13326
+        },
+        {
+          "path": "server/test/pending-pairings-worker-harness.ts",
+          "sha256": "b23486d98ef38b1c8ef5030b2c0a26218ad2ef4e78de40511dfd338ab61b65ed",
+          "bytes": 563
+        },
+        {
+          "path": "server/test/pending-pairings.test.ts",
+          "sha256": "9d22121dbfe048c4fd52e1c27728f6d66dc075a9e5ead3410791fc0d15ee1e00",
+          "bytes": 15845
+        },
+        {
+          "path": "server/test/protocol-info.test.ts",
+          "sha256": "f8bac35d1e72aa42ff17bb86d4a9ddf1b28536a6e563008d6d7aa92330eadace",
+          "bytes": 1798
+        },
+        {
+          "path": "server/test/protocol.test.ts",
+          "sha256": "a25ad05f8c2790e68f9430a464ec7b73c69f6b56d954e740a5fb5548dcfad970",
+          "bytes": 2815
+        },
+        {
+          "path": "server/test/pull-projection.test.ts",
+          "sha256": "863b0ed718e2278747ea3544f3e03ee099c8dcaa66364fd5b47bd0fc4fcfdd5a",
+          "bytes": 8764
+        },
+        {
+          "path": "server/test/recovered-management-fixtures.ts",
+          "sha256": "851b45e807e647084b93c3066e817cb7d3710c4a35a01c06cb30890e62f3a23c",
+          "bytes": 8946
+        },
+        {
+          "path": "server/test/recovered-management.test.ts",
+          "sha256": "ecabef116d81b091d536d135bec1781c294702e53e4902f7e5176107932cf59d",
+          "bytes": 20092
+        },
+        {
+          "path": "server/test/recovery-authority-wire.test.ts",
+          "sha256": "06b270afd001691d6f6480ad9ac28e982275a5104a7f0d424b166fa6152f7450",
+          "bytes": 5053
+        },
+        {
+          "path": "server/test/recovery-authority.test.ts",
+          "sha256": "1ed6531192f1da48f627c7b1d862c7848b9c08e39972c723841982aa17c11e48",
+          "bytes": 30591
+        },
+        {
+          "path": "server/test/recovery-dag-http.test.ts",
+          "sha256": "ffcf7b5369d3cb2b354eab160b45f8270c188847cb3562efc4e5dbc3dd2d11f8",
+          "bytes": 26036
+        },
+        {
+          "path": "server/test/recovery-dag.test.ts",
+          "sha256": "e2b832d1003913166c82e00608289f5eea2554c7fa1f15614a01d80504baec09",
+          "bytes": 19542
+        },
+        {
+          "path": "server/test/recovery-envelope-evidence.test.ts",
+          "sha256": "beb42c719c6a38641f0fa0a56144d8ea20384949b7e62cde1bde5355c461fc35",
+          "bytes": 7882
+        },
+        {
+          "path": "server/test/recovery-origin-fixtures.ts",
+          "sha256": "f361a281c4a6d97c14708a44164d878cd24732782f127c3b26b6fbe152f2c47c",
+          "bytes": 17776
+        },
+        {
+          "path": "server/test/recovery-origin.test.ts",
+          "sha256": "1bf28087b0b921efb2c4ee9dba827fb488ced404a6b25d4582afe5aac6b0a76c",
+          "bytes": 12855
+        },
+        {
+          "path": "server/test/registration-policy.test.ts",
+          "sha256": "58ecee6ad61c5b18ee8a0c50bb246c43ad3d0a437dca4d4df2e94eadce69c849",
+          "bytes": 15749
+        },
+        {
+          "path": "server/test/registration-worker.test.ts",
+          "sha256": "ce1856a3d20f38e3f3b687c5e8db09aabd6bd73f80cce0fe9b9cc1583a89683a",
+          "bytes": 11888
+        },
+        {
+          "path": "server/test/service.test.ts",
+          "sha256": "23329f3d3d6223085108ea5040203be15f20594c991311b7aae71141610cb0d7",
+          "bytes": 12734
+        },
+        {
+          "path": "server/test/smtp-tls.test.ts",
+          "sha256": "c1572a56262bebff0c1a6ddc44e3100b552f181f90d5ecc5d22f8be80b147fe3",
+          "bytes": 5843
+        },
+        {
+          "path": "server/test/vectors/device-boot-v1.json",
+          "sha256": "2ab958706bd21fc77de04258fdc802ad1ae612e9b9a7715bf5926dbd30653552",
+          "bytes": 1139
+        },
+        {
+          "path": "server/test/vectors/device-enrollment-v1.json",
+          "sha256": "222c8d6234400a559672ed6c86dd5602658b64e57f0bd317c3c5aef2f73afdc3",
+          "bytes": 7145
+        },
+        {
+          "path": "server/test/vectors/device-session-v1.json",
+          "sha256": "e652c70e208af6e627019e8ccfb28b45f346df001242c87fbd64ab7d7df5f28b",
+          "bytes": 1198
+        },
+        {
+          "path": "server/test/vectors/environment-lifecycle-v1.json",
+          "sha256": "2187ec357c38b7f32215df22d828801547e0a701f1d02139352bb876873676ae",
+          "bytes": 11830
+        },
+        {
+          "path": "server/test/vectors/environment-origin-v1.json",
+          "sha256": "51b72e2f78e7cbedbb093194fb67f5db1f45b639f0d0a6d6538bee4ed3d9bfde",
+          "bytes": 56372
+        },
+        {
+          "path": "server/test/vectors/issuer-proof-v1.json",
+          "sha256": "fae49cf7b676e3af60c7b603ff98b0eec47e20ddd6a66ad7cb4f17e502b22a4e",
+          "bytes": 15933
+        },
+        {
+          "path": "server/test/vectors/issuer-recovery-v1.json",
+          "sha256": "f6d87dd01c65bd66bc89b60e0f1f0b4226fa9196d9fa3448ce2c1841bb5b877a",
+          "bytes": 177661
+        },
+        {
+          "path": "server/test/vectors/recovery-authority-v1.json",
+          "sha256": "2e10ea9981b709cda2fea359be73bffd442f3169eb264b049956e2c1b5682a51",
+          "bytes": 85463
+        },
+        {
+          "path": "server/test/vectors/recovery-dag-v1.json",
+          "sha256": "22f82f175fcd940c04e6745150e9399f747bc9954fee3cad0e4af614e0697287",
+          "bytes": 343471
+        },
+        {
+          "path": "server/test/vectors/recovery-lifecycle-v1.json",
+          "sha256": "baf981a0e1fb3cab590a5326c415e6d9e15996b3a173f67cd516a38f9562468a",
+          "bytes": 5626
+        },
+        {
+          "path": "server/test/vectors/signatures-v1.json",
+          "sha256": "9542c3a512af0fd2cfcce9a18f938975736619fc61192803dcb9fe0e271413cf",
+          "bytes": 3127
+        },
+        {
+          "path": "server/test/vectors/source.json",
+          "sha256": "90c36dfc46d571b58e0c8bb421cf6c37d84bbc0c29b9a5e208dd944b6ff38771",
+          "bytes": 509
+        },
+        {
+          "path": "server/test/vectors/vault-initialization-v1.json",
+          "sha256": "c6aec0c861dde9ae779036e5115dea4df76adde8213aea099d0dcc094977a8ea",
+          "bytes": 7735
+        },
+        {
+          "path": "server/test/worker-account.test.ts",
+          "sha256": "640f8c855aefaa2b27acff386a1c79f34467161634660efafaece22bcdad6ee5",
+          "bytes": 5816
+        },
+        {
+          "path": "server/test/worker-harness.ts",
+          "sha256": "2be443b97545b9769e2af1a12460f9998478535d4a9c94100419db6ce4e1b018",
+          "bytes": 4953
+        },
+        {
+          "path": "server/test/worker-notifications.test.ts",
+          "sha256": "34d23a87890e703231f80b8ada14d1f66ad2d926ef0dc52307e5646a85139f6c",
+          "bytes": 10621
+        },
+        {
+          "path": "server/test/worker.test.ts",
+          "sha256": "06b29cbb39f574d84da9619b439a450492b9045696d4ce5698f1e1d4ffb14f06",
+          "bytes": 10300
+        },
+        {
+          "path": "server/tests/synthetic-registration-server.ts",
+          "sha256": "ab6fdb3abd62f7f43d4c2f160bfc5e05ef517e30de01d1abc9d0e474a4c39cb1",
+          "bytes": 2991
+        },
+        {
+          "path": "server/tests/synthetic-server.ts",
+          "sha256": "ecf379b25dfa2ea613ee0f496a09da38e6803338511850e6e8c8b7b50ce46145",
+          "bytes": 4080
+        },
+        {
+          "path": "server/tsconfig.build.json",
+          "sha256": "c3f56f2f469733c919eaa0741a7f5b64b0ce209a3b38266ac05fbfaa4cff310a",
+          "bytes": 205
+        },
+        {
+          "path": "server/tsconfig.json",
+          "sha256": "de17521c7442ac85e488c134a056068fa8039f97b624447a530f8cdd2a8d2c90",
+          "bytes": 479
+        },
+        {
+          "path": "workspace/acceptance/daemon_process_test.go",
+          "sha256": "0f5f984a40c397830ecea2a8653f50d0ddca96f0ed9bf5d5cfdce1b9ce0b1719",
+          "bytes": 16886
+        },
+        {
+          "path": "workspace/acceptance/enrollment_test.go",
+          "sha256": "04983ad9c9276b09580a25a93591620043b0fe6140ffeb1805775acaad19eb6b",
+          "bytes": 16567
+        },
+        {
+          "path": "workspace/acceptance/environment_test.go",
+          "sha256": "e5392af137e19ad3452fe71dcbd7489000882e75edd00ccf07fd6d2586a205fb",
+          "bytes": 20387
+        },
+        {
+          "path": "workspace/acceptance/flow_test.go",
+          "sha256": "726fccc509da7005d62324788f91d4fa66e68af126314b1460ab2437af82e32d",
+          "bytes": 19804
+        },
+        {
+          "path": "workspace/acceptance/lifecycle_test.go",
+          "sha256": "de4a59d108d812380b15882ab00946fcde21dd9c731d15103e01d9301645a8aa",
+          "bytes": 15411
+        },
+        {
+          "path": "workspace/acceptance/management_fault_test.go",
+          "sha256": "73460bb23ba304950f5f69c3d8c0f10bb9c8f15e03e2252537f47790520ce981",
+          "bytes": 5635
+        },
+        {
+          "path": "workspace/acceptance/management_test.go",
+          "sha256": "88e1701ab752f1a14391b4b2eae16c16efc6570abd34cb3f1884ccf3df33bb69",
+          "bytes": 16278
+        },
+        {
+          "path": "workspace/acceptance/manager_checkpoint_test.go",
+          "sha256": "317f3d425a121410798c8c73ae4e42d69e2cf9c80609f520e552ebb2e6a9224f",
+          "bytes": 7434
+        },
+        {
+          "path": "workspace/acceptance/mobile_approval_v4_test.go",
+          "sha256": "290fda283a0d8fc51d49fef388b94337eeff82e09f83be1563d6e834bfb6beb6",
+          "bytes": 10695
+        },
+        {
+          "path": "workspace/acceptance/mobile_dag_original_query_test.go",
+          "sha256": "119a75859c1e68ec5e47285f2c92ef034c77426d4bb0ba7d6b90bd1983ba6758",
+          "bytes": 15666
+        },
+        {
+          "path": "workspace/acceptance/mobile_dag_owner_test.go",
+          "sha256": "28b501222e691e05b693069fa5e57c6da7c0488c7a506046bf7b6c36c654d9b8",
+          "bytes": 2949
+        },
+        {
+          "path": "workspace/acceptance/mobile_dag_recovered_test.go",
+          "sha256": "e6c01f7b6f1474ce75b0a07d18d503dc2c0ba42efb9685fcd7f6209c2e2abdfa",
+          "bytes": 9938
+        },
+        {
+          "path": "workspace/acceptance/mobile_dag_transition_test.go",
+          "sha256": "0483be670322478df8e3af862f7e4224b4dff4893f6cf7d7c64095941376935b",
+          "bytes": 10405
+        },
+        {
+          "path": "workspace/acceptance/mobile_manager_test.go",
+          "sha256": "958418aabc140b8bc8d3ffcec827df84677b43f810f3d532e5c28ab59238e295",
+          "bytes": 16244
+        },
+        {
+          "path": "workspace/acceptance/mobile_pending_write_test.go",
+          "sha256": "2f43c452493b0e77f06e35bc948bf400bbb000aaba52126d76ebb42392ecaa73",
+          "bytes": 4615
+        },
+        {
+          "path": "workspace/acceptance/mobile_recovery_authority_test.go",
+          "sha256": "0839f6f754dd7d2cf7bb9bdf5e1bf62f664abfdef7efc86a712ffdfbd54c4c5c",
+          "bytes": 15535
+        },
+        {
+          "path": "workspace/acceptance/mobile_recovery_clock_test.go",
+          "sha256": "2243494428f73304b74c337fe315a833971c0211a7dc80bc47a3a5a629689e99",
+          "bytes": 2645
+        },
+        {
+          "path": "workspace/acceptance/mobile_recovery_envelope_test.go",
+          "sha256": "f8536fd97b0a3d934a521d427a2de63a861dc3fd0ad31314b0062efd9b3da7ed",
+          "bytes": 8081
+        },
+        {
+          "path": "workspace/acceptance/mobile_recovery_origin_test.go",
+          "sha256": "8a8c0c1654b58b1c2b8f98f46253efe8735c306d915457e21000e07d42bbdf0e",
+          "bytes": 18777
+        },
+        {
+          "path": "workspace/acceptance/mobile_recovery_test.go",
+          "sha256": "19005b1f84ad4bd1a34ebccda2792aca886dc70b48a59f4bff0ecbf84006f4a0",
+          "bytes": 34821
+        },
+        {
+          "path": "workspace/acceptance/mobileworkflow_test.go",
+          "sha256": "93c8b536d3ed239c0edbbcb08f62790fa33584ff6051d7a39a55f6d588c48f65",
+          "bytes": 13750
+        },
+        {
+          "path": "workspace/acceptance/multimanager_test.go",
+          "sha256": "da2c1a798b4f2111e622bc220624dc6f778661e5b58c8ede93ecea68e5d33b3e",
+          "bytes": 30033
+        },
+        {
+          "path": "workspace/acceptance/notification_test.go",
+          "sha256": "c1d596d4d5a47899e5aa2d73a8238fcc5d632dcd868a4b19aff49402e63ed448",
+          "bytes": 8131
+        },
+        {
+          "path": "workspace/acceptance/origin_test.go",
+          "sha256": "9554c252a102f331256b17997d9a519e02b6d5be050507251d4627ed09235518",
+          "bytes": 41832
+        },
+        {
+          "path": "workspace/acceptance/pause_rotation_test.go",
+          "sha256": "d15669cbd802bb771ba544647e3821cb63e0a6bdca4513712113015afff0a4a1",
+          "bytes": 12682
+        },
+        {
+          "path": "workspace/acceptance/recovered_environment_workflow_test.go",
+          "sha256": "19f2ff4088e8058d080ef660bdddb363db64abf753abc73b03a155382d5d8463",
+          "bytes": 6591
+        },
+        {
+          "path": "workspace/acceptance/recovery_challenge_wait_test.go",
+          "sha256": "412dca980a981ff22954dede47fe817b9c70d79bc4aa2e41080c8ad80552c379",
+          "bytes": 6288
+        },
+        {
+          "path": "workspace/acceptance/recovery_cli_v4_test.go",
+          "sha256": "46e55ba77b780d32ea8e4b3482701f684fa014fd1bb5394bbaf611997629ca3c",
+          "bytes": 16219
+        },
+        {
+          "path": "workspace/acceptance/recovery_control_test.go",
+          "sha256": "c1e4a76f0a48870bd16370583a2a006178ef5ef6e0aa7a273bb0a887a1a08dcb",
+          "bytes": 19675
+        },
+        {
+          "path": "workspace/acceptance/selfrevocation_test.go",
+          "sha256": "398f899182f9c7090d62879b6e19bb141ebb4fc4050b249682b8361a2f4b59a8",
+          "bytes": 11536
+        },
+        {
+          "path": "workspace/go.mod",
+          "sha256": "42fe197a713546028131c191e3484e6b1d75f3b0f259fb722c6348038e4d3017",
+          "bytes": 350
+        },
+        {
+          "path": "workspace/go.sum",
+          "sha256": "04fc4ba69c6bc3e9c79b8b69e218bbf38706d326b6aa562a2509d3a66ae6caca",
+          "bytes": 662
+        }
+      ]
+    }
+  },
+  "toolchain": {
+    "go": "1.26.4",
+    "node": "24.16.0",
+    "nativeBuildTag": false,
+    "serverDependencyLockSHA256": "0c3de8846c3d62df68f4a8c695093d07c8b46ad31a131f8aaf030d4c77b4dc5a"
+  },
+  "history": [
+    {
+      "log": "compile-01.log",
+      "result": "FAIL",
+      "reason": "Default Go build-cache filesystem denied before source compile; switched to authorized private temporary cache.",
+      "sha256": "22eeb5ff556cb198d3777a97f10c1db4d8a7ba09447e9672ca6a9474652b2668"
+    },
+    {
+      "log": "compile-02.log",
+      "result": "FAIL",
+      "reason": "Compile invoked from wrong module directory; corrected working directory.",
+      "sha256": "462cb21099362b6064491243f96026be9714e2862e48899a0518f47de6b46469"
+    },
+    {
+      "log": "compile-03.log",
+      "result": "PASS",
+      "reason": "Initial two-package source compilation; no tests run.",
+      "sha256": "724f5505823de7cc2dcf16a6b117b54432a76fd9f50e2948c3f9b0a320d1da65"
+    },
+    {
+      "log": "component-01.log",
+      "result": "FAIL",
+      "reason": "Synthetic signed fixture used decimal 44 instead of published hex 44 recovery seed; actual signature validator rejected. Production verification unchanged.",
+      "sha256": "9c4ce48313dc16d422cffad1ae947b430eb7db0c5e4d12253fbaa95bfb8dfd32"
+    },
+    {
+      "log": "component-02.log",
+      "result": "PASS",
+      "reason": "Corrected public synthetic fixture, one test event.",
+      "sha256": "4dce7cc7d6ea2e1f05891b7b614f2b8c4e407939ca6cb5dab9ee49d893e7e2cf"
+    },
+    {
+      "log": "component-03.log",
+      "result": "FAIL",
+      "reason": "Test-only source used a nonexistent source field and negative-journal fixture looked up record instead of operation, causing compile failure/panic; corrected fixture types.",
+      "sha256": "b074e64cfbf7b4dfcb94ad467c5e37b407b19923b5b11a24a4979d38f202a134"
+    },
+    {
+      "log": "component-04.log",
+      "result": "FAIL",
+      "reason": "Sandbox denied temporary loopback TLS listener; normal authorized test escalation used, no host security or trust settings changed.",
+      "sha256": "d428a584afc1962d1ce7117a097fa8a970a919607507100061cb4427463fbb0f"
+    },
+    {
+      "log": "component-05.log",
+      "result": "PASS",
+      "reason": "Preliminary components; final additional schema and callback-drain tests reported separately.",
+      "sha256": "ec3a6a065c986bc7129c9b19f966260f400b8af0d67ef65ea8c1ac81d54af4d7"
+    }
+  ],
+  "limitations": [
+    "Always untrusted. AcceptedSequence/OriginalConfirmed refer only to the original certificate-5 registration packet; they do not mean this phone has completed Boot/Pull or persisted final device trust.",
+    "RAM owner bearer never persisted; idle owner does not imply SDK background/logout/forget lifecycle is wired. Real native provider must compare captured whole sealed snapshot and epoch for every writer under one slot lock.",
+    "Cold intent/challenged requires original live owner and is explicitly interrupted. No local expiry/tombstone/Applied fabrication or automatic new ID. Cold sealed only uses full current code for a new restricted query session with RotationRequired=true.",
+    "Not-accepted-at-query is not terminal closure. Atomic server resolve-or-close and late-POST rejection are a separate future slice.",
+    "Test native store is an isolated AES+mutex/CAS model; these Go tests are not Android/iOS SDK authentication or hardware evidence.",
+    "No B3b trust promotion, recovered-v2/P4 device management UI/native bridge, or new CI/release/installer/deployment result."
+  ],
+  "historySourceScope": "Preliminary red runs retain raw logs but did not have a complete frozen source inventory; no final source or successful artifact is attributed to those failures. Final race and HTTPS executions have separate exact dependency inventories.",
+  "resultProvenance": {
+    "componentRace": "frozen-v1 execution; unchanged result and raw-log SHA, not rerun on v2",
+    "affectedRace": "frozen-v1 execution; unchanged result and raw-log SHA, not rerun on v2",
+    "consumerCompileOnly": "frozen-v1 execution; unchanged result and raw-log SHA, not rerun on v2",
+    "vet": "frozen-v1 execution; unchanged result and raw-log SHA, not rerun on v2",
+    "https": "frozen-v1 execution; unchanged result and raw-log SHA, not rerun on v2"
+  },
+  "inventoryClarification": {
+    "originalRunCoverage": {
+      "fileCount": 532,
+      "coreTestFileCount": 125,
+      "containsAppsecurityAttemptsTest": true,
+      "sha256": "d5a2a47143c68eabc2ef36d2e534626dd042045f7c9dcf1ac328d3d0af43ea4d",
+      "definition": "执行时覆盖性源码快照，可能含未编译文件；不是编译器输入追踪"
+    },
+    "selectedPublicHTTPSCoverage": {
+      "fileCount": 297,
+      "coreTestFileCount": 0,
+      "workspaceTestFileCount": 30,
+      "containsAppsecurityAttemptsTest": false,
+      "sha256": "1e9f834a930d74d9e1af35b8fa7bd3ade5225e22d324b885da92ca19cd3fe1e7",
+      "selection": "go list GoFiles/CgoFiles/CFiles/HFiles/SFiles plus archived TS/protocol inventory; TestGoFiles/XTestGoFiles metadata were not included",
+      "definition": "覆盖性源码库存，可能含未编译文件；不声称每一份实际编译"
+    },
+    "v1PublicEvidenceSHA256": "e842f7c72a8fff3b13ee0273f19db36018d88386bcffd7c40a98b6560e6ad27f"
+  },
+  "revision2": {
+    "scope": "Only B3a DecodeDAGRecoveredPreparation recursively rejects noncanonical object field names, semantic case duplicates, missing fields and invalid null. No signature/authorization/state-machine/nullable protocol changes.",
+    "classification": "exact-schema contract gap; no demonstrated authorization or signature bypass",
+    "v1ManifestSHA256": "af5155b76bd562ee07645e574465ead857edf14621c0db6ce132f36efbe062b8",
+    "independentReview": {
+      "version": 1,
+      "reviewedManifestSHA256": "af5155b76bd562ee07645e574465ead857edf14621c0db6ce132f36efbe062b8",
+      "candidateDeliverablesVerified": 24,
+      "privateArtifactsVerified": 26,
+      "mode": "read-only source audit plus 2 synthetic schema rejection subcases in independent temporary copy",
+      "candidateSourceModified": false,
+      "fullSuiteRerun": false,
+      "finding": {
+        "classification": "exact-schema contract gap, no demonstrated authorization/signature bypass",
+        "location": "syncclient/recovery_dag_recovered_preparation.go:66",
+        "inputChanges": [
+          "selectedRights[0].role renamed Role",
+          "selectedRights[0] contains both role and Role with same value"
+        ],
+        "expected": "reject unknown JSON tag or semantic duplicate",
+        "actual": "DecodeDAGRecoveredPreparation accepts both inputs",
+        "negativeTests": {
+          "exitCode": 1,
+          "failedSubcases": 2,
+          "packageElapsedSeconds": 0.685
+        }
+      },
+      "artifacts": [
+        {
+          "path": "core-go/syncclient/b3a_review_strict_nested_test.go",
+          "bytes": 908,
+          "sha256": "12846e39b8f849828415907ac2d934fca31ff98794cfe4067f32b54d92512882"
+        },
+        {
+          "path": "strict-nested-result.jsonl",
+          "bytes": 3596,
+          "sha256": "cf64e7295cfb66fe8144e466092cec489cc1a30f1a6a9327b01243e68083ec7b"
+        },
+        {
+          "path": "strict-nested-stderr.txt",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    "localRed": {
+      "testEvents": {
+        "fail": 3
+      },
+      "packages": [
+        {
+          "package": "github.com/harmonia-vault/core-go/syncclient",
+          "result": "fail",
+          "elapsedSeconds": 0.603
+        }
+      ],
+      "startUTC": "2026-10-03T18:12:13.886815+00:00",
+      "endUTC": "2026-10-03T18:12:14.489423+00:00",
+      "logSHA256": "e5b68ff0d315f84a869bb7bdea97775457047d017ef40fffe9c501dcccbdc45d"
+    },
+    "firstGreen": {
+      "testEvents": {
+        "pass": 4
+      },
+      "packages": [
+        {
+          "package": "github.com/harmonia-vault/core-go/syncclient",
+          "result": "pass",
+          "elapsedSeconds": 2.968
+        }
+      ],
+      "startUTC": "2026-10-03T18:15:25.712872+00:00",
+      "endUTC": "2026-10-03T18:15:28.680558+00:00",
+      "logSHA256": "e364eefa2ae64d40264e7f11b7f1f64395ff2162df1ea98f8d22082a4bd1eeb8"
+    },
+    "precolocationAffectedRace": {
+      "testEvents": {
+        "pass": 145
+      },
+      "packages": [
+        {
+          "package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "result": "pass",
+          "elapsedSeconds": 51.531
+        },
+        {
+          "package": "github.com/harmonia-vault/core-go/syncclient",
+          "result": "pass",
+          "elapsedSeconds": 73.343
+        }
+      ],
+      "startUTC": "2026-10-03T18:17:11.447531+00:00",
+      "endUTC": "2026-10-03T18:18:24.790855+00:00",
+      "logSHA256": "2b00336d85d7f50c80b9c09f2fb9e9ad9de11f29ab42277179b42239bb0c903a"
+    },
+    "finalLayoutAffectedRace": {
+      "testEvents": {
+        "pass": 145
+      },
+      "packages": [
+        {
+          "package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "result": "pass",
+          "elapsedSeconds": 51.108
+        },
+        {
+          "package": "github.com/harmonia-vault/core-go/syncclient",
+          "result": "pass",
+          "elapsedSeconds": 72.912
+        }
+      ],
+      "startUTC": "2026-10-03T18:20:51.378638+00:00",
+      "endUTC": "2026-10-03T18:22:04.291026+00:00",
+      "logSHA256": "2ebf863982188654299b0a42778379a1ac2a108a446f631d99dcad744858f468"
+    },
+    "vet": {
+      "exitCode": 0,
+      "packages": [
+        "syncclient",
+        "mobileworkflow"
+      ],
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "consumerCompileOnly": {
+      "testEvents": {},
+      "packages": [
+        {
+          "package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+          "result": "pass",
+          "elapsedSeconds": 0.392
+        },
+        {
+          "package": "github.com/harmonia-vault/core-go/mobilebridge",
+          "result": "pass",
+          "elapsedSeconds": 0.413
+        }
+      ],
+      "startUTC": "2026-10-03T18:17:11.715733+00:00",
+      "endUTC": "2026-10-03T18:17:12.128298+00:00",
+      "logSHA256": "a429276570c8bdf90269a74cc41f3eb58e7ad14b2406a1e953f4ef2d1e12ea87",
+      "testsRun": 0
+    },
+    "nestedCoverage": {
+      "objects": 243,
+      "decoderAliasAndDuplicateNegatives": 486,
+      "fieldShapeNegatives": 6200,
+      "preservedCanonicalNulls": 8,
+      "notes": "These are loop assertions, not additional Go test PASS events. Both intent and challenged canonical positive records and invalid optional challenge:null are exercised."
+    },
+    "sourceCoverage": {
+      "version": 1,
+      "scope": "v2 affected Go source coverage inventory inherited from v1 list and rehashed; may include uncompiled files, not compiler-input tracing",
+      "files": [
+        {
+          "path": "core-go/appsecurity/attempts.go",
+          "bytes": 6188,
+          "sha256": "a8fb04f842f10458e531387eb539b6d01f238a1789390ae94619ce84d88abcf1"
+        },
+        {
+          "path": "core-go/appsecurity/lease.go",
+          "bytes": 4446,
+          "sha256": "e92921ba082ede71e902d0586795436f21d823615567364224bd0447b898e497"
+        },
+        {
+          "path": "core-go/appsecurity/pin.go",
+          "bytes": 3536,
+          "sha256": "f656eb8267b5b419ab46feeae7561c29e752c6de6149da678db0d44d7dc36a58"
+        },
+        {
+          "path": "core-go/appsecurity/record.go",
+          "bytes": 6504,
+          "sha256": "70a4d6e1c5fed3739ba2c9524d679e5fe0c5d399a974e5e5409cd8c8402ac428"
+        },
+        {
+          "path": "core-go/cryptox/approval_history.go",
+          "bytes": 424,
+          "sha256": "55583661b47a665008557b1b1d41da2fecb650a62016e75edd83cf9f24852c4f"
+        },
+        {
+          "path": "core-go/cryptox/boot.go",
+          "bytes": 2624,
+          "sha256": "72dfc2e6f2f47f1b84b655d30e2cbacef3ae4f2bf4fea7e1f49891e7fbb9340c"
+        },
+        {
+          "path": "core-go/cryptox/crypto.go",
+          "bytes": 5617,
+          "sha256": "c2496c71a313740f7ccf40dcc247545737e9082e85a376d3fe19ddeccbf1087e"
+        },
+        {
+          "path": "core-go/cryptox/device_session.go",
+          "bytes": 2311,
+          "sha256": "86bc8d2834c0a15bf35a2d6793e14e30612289fae94e290fe2a2a28ca8c40cac"
+        },
+        {
+          "path": "core-go/cryptox/doc.go",
+          "bytes": 267,
+          "sha256": "52985ede624786ad26ef697c3c23829588434d5c150c61c0c203609105accf13"
+        },
+        {
+          "path": "core-go/cryptox/enrollment.go",
+          "bytes": 13636,
+          "sha256": "f7c030d00fc3991ed2a140b2825e029be8bb761025ad58c9ef629ec840c30b5f"
+        },
+        {
+          "path": "core-go/cryptox/enrollment_transport.go",
+          "bytes": 2568,
+          "sha256": "920d4719a11b6525346ff17cd9a0ee84ad8241a18a68c4677d348e788542225c"
+        },
+        {
+          "path": "core-go/cryptox/environment.go",
+          "bytes": 11148,
+          "sha256": "17bd91be7ea4968d23a976256b829b517d02d653b2900d56616fb8b54c899e54"
+        },
+        {
+          "path": "core-go/cryptox/environment_origin.go",
+          "bytes": 12446,
+          "sha256": "a3ba176bc399051f6ee7e494ee32ef7ca2e8c998d50114e342e2f8cb71d0e568"
+        },
+        {
+          "path": "core-go/cryptox/issuer_proof.go",
+          "bytes": 22394,
+          "sha256": "711fc6b464f7ff58c14178347c5e9170830c36c4c546d216fec8845dc91d3ab4"
+        },
+        {
+          "path": "core-go/cryptox/issuer_proof_v2.go",
+          "bytes": 28180,
+          "sha256": "beee72ec73d2b2434cfc8b861a82eda34217354155fd606fb1ee601e11ddf93f"
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_access.go",
+          "bytes": 7747,
+          "sha256": "0ac2e033a0b2da65362b88d9f31b0e13ce366593615fb1ef8c7959c9240ba541"
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_graph.go",
+          "bytes": 10459,
+          "sha256": "af188154e4cb04f14a9fe9426ebad7320e46f34285c788baa44090d154c4b649"
+        },
+        {
+          "path": "core-go/cryptox/issuer_recovery_proof.go",
+          "bytes": 19618,
+          "sha256": "db90793f628a0e6140e6718ff5765a1145f1139d91eba1df920d97a5a8e3573a"
+        },
+        {
+          "path": "core-go/cryptox/lifecycle.go",
+          "bytes": 7878,
+          "sha256": "b0f3c954efb95273b4845b86b5894de276b3745be27dc9b30975e20e6e2a6d8e"
+        },
+        {
+          "path": "core-go/cryptox/pairing_relay.go",
+          "bytes": 1601,
+          "sha256": "40a5986903959340ebed09b5d965b5c686f78a80d5685f679b93a4819e2eb724"
+        },
+        {
+          "path": "core-go/cryptox/recovered_device.go",
+          "bytes": 14103,
+          "sha256": "80bf44506c35c6ac5e3fad02d3566315da404052f1fa60cdbdd4f08bfde6ae70"
+        },
+        {
+          "path": "core-go/cryptox/recovery.go",
+          "bytes": 2247,
+          "sha256": "21721b4f8e8bb31b3ace4a56fd73e9867db2e18a4d967b9e9685e4837b3387f0"
+        },
+        {
+          "path": "core-go/cryptox/recovery_authority.go",
+          "bytes": 29511,
+          "sha256": "047828516f8005d2d5459027c14f54917ace46ec737c3dea5b8ee6912516d313"
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag.go",
+          "bytes": 20062,
+          "sha256": "36ddf8ec4c694a105a226bdc44c8578d9a236e9b8d14ae5d26eaf9a466343500"
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_canonical.go",
+          "bytes": 5118,
+          "sha256": "f1cf55f6e6990524c3282f2174ddef97e206dd5274ad27d1b263584fe4975533"
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_decode.go",
+          "bytes": 2736,
+          "sha256": "0abb9e335c61d1e4a26c42ec886447dec545d3739058d1bf670df0846faaa5c6"
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_enrollment.go",
+          "bytes": 6778,
+          "sha256": "62e324faaace3ccc18df92a653c30fa8c14c7ea7096c817435eadf17efaec741"
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_validation.go",
+          "bytes": 16047,
+          "sha256": "ab3220fa5c264d787ba068d228a42ab569e896f6cc4814994dcf8b5f027fdac8"
+        },
+        {
+          "path": "core-go/cryptox/recovery_dag_wire.go",
+          "bytes": 16032,
+          "sha256": "5a028091f1964124324bd0684de8bd3c6cf496bac681d4cb645018679be5a2ac"
+        },
+        {
+          "path": "core-go/cryptox/recovery_schema.go",
+          "bytes": 2340,
+          "sha256": "4ec9c4c9c0a0b81cf14b231bb734804f2a5114c2779ccd7a5cdf16fba947f2ce"
+        },
+        {
+          "path": "core-go/cryptox/strict_json.go",
+          "bytes": 1854,
+          "sha256": "ee9a5aa56d4c9aee59603228528baa6d2d38ae5956378b9d574b54f5f451b59b"
+        },
+        {
+          "path": "core-go/cryptox/wire.go",
+          "bytes": 6719,
+          "sha256": "652be79a4da5b6c503ad7267250186383eb4f4c3d872e35b3e98fbd7714d3522"
+        },
+        {
+          "path": "core-go/go.mod",
+          "bytes": 245,
+          "sha256": "2e838079c045a55937ca4bc688e2f644da89c0ceefb16810a874fe533bdb6c0d"
+        },
+        {
+          "path": "core-go/go.sum",
+          "bytes": 817,
+          "sha256": "8dbf052d842aec5593e3217e27d9e95defd46aa263baae104007b5981feab55f"
+        },
+        {
+          "path": "core-go/internal/dagrecoveredfixture/fixture.go",
+          "bytes": 3975,
+          "sha256": "93f6ca657dd11cff342fbc759ca69e5421584d16a7f6ee2835694dbaea56d0d8"
+        },
+        {
+          "path": "core-go/localkeys/acl_darwin.go",
+          "bytes": 1379,
+          "sha256": "b70d628c11de5ba8d627fafd564b14b027b874d78cd15c1e0bae0c56be16d065"
+        },
+        {
+          "path": "core-go/localkeys/existing_unix.go",
+          "bytes": 313,
+          "sha256": "b1852fc21fdda48be30c0d8d2d1a860d81a3c884ef3732ef148b9d1cb594c767"
+        },
+        {
+          "path": "core-go/localkeys/fragment.go",
+          "bytes": 1305,
+          "sha256": "768c1d79756e12abcc1323012cee7df6305a7981c0c19a3520510eb0963873c7"
+        },
+        {
+          "path": "core-go/localkeys/fs.go",
+          "bytes": 273,
+          "sha256": "e1148d74dfcf943bcd4ac77b0bd1d9bf2bbb1f7096ac4fd90f6ffaa1fa45404e"
+        },
+        {
+          "path": "core-go/localkeys/fs_unix.go",
+          "bytes": 6774,
+          "sha256": "30da6c5301a071233a72becf6e5b3629fc8fa2cb700d486d14815fb39f5e2cf2"
+        },
+        {
+          "path": "core-go/localkeys/material.go",
+          "bytes": 4021,
+          "sha256": "c69e86a0d8a4704f1a160f3f5a5376d605dc776c072d1ebbcef04a1cdebf3631"
+        },
+        {
+          "path": "core-go/localkeys/recovery_dag.go",
+          "bytes": 2617,
+          "sha256": "799b03d4ace86ae173fc7a60e6c64a23d7a265caeb940e4982f37440adb641d8"
+        },
+        {
+          "path": "core-go/localkeys/state.go",
+          "bytes": 2354,
+          "sha256": "bb341b2ea9724069d01fb1e376251d753fd455c664c2ca1cbb9afd1df337bb48"
+        },
+        {
+          "path": "core-go/localkeys/trust.go",
+          "bytes": 6583,
+          "sha256": "13dfec7090393282a196a8bcefbbd5b695dc40d1317b4578e72c674a64e517f2"
+        },
+        {
+          "path": "core-go/localkeys/vault.go",
+          "bytes": 8098,
+          "sha256": "8e4c652716d79646d35c67ee8a81fde3d0b94f5e038bec6ae9c19881d585d6a4"
+        },
+        {
+          "path": "core-go/localstate/engine.go",
+          "bytes": 26619,
+          "sha256": "1d8b4ba49c333c8aa482ef43cc6a7aa2f228d7705193eb9ed38d621a1134bb35"
+        },
+        {
+          "path": "core-go/localstate/files.go",
+          "bytes": 5111,
+          "sha256": "e9b856ac4f9a28c7e8a24a9e5a7f8b40a9da0ed3d0cf979d29b50b6be930ac42"
+        },
+        {
+          "path": "core-go/localstate/files_unix.go",
+          "bytes": 907,
+          "sha256": "f9e60c1a83d08b22815dd4215d0b449073d6430a70e12267a1d94d6d3399aae0"
+        },
+        {
+          "path": "core-go/mobilebridge/approval.go",
+          "bytes": 1892,
+          "sha256": "67ec07a298b4a24a0ee431df8b0d65d3aa83836aa10f8bb6a6869ac8ed71dd78"
+        },
+        {
+          "path": "core-go/mobilebridge/approval_test.go",
+          "bytes": 2553,
+          "sha256": "a8d3695a87970e6381c415e480a53a1e3bf9d3baef1ad111330450277c76b502"
+        },
+        {
+          "path": "core-go/mobilebridge/bridge.go",
+          "bytes": 10297,
+          "sha256": "dd9cc30f85ca8ef13222989e54652cbd5b29f76e7d3fb2787bdd03ea6f127470"
+        },
+        {
+          "path": "core-go/mobilebridge/bridge_test.go",
+          "bytes": 3993,
+          "sha256": "aea227ca6355a66ed3aa7b83c9c728448ea067a4e1b112c10224acf1ebfe7423"
+        },
+        {
+          "path": "core-go/mobilebridge/business_intents.go",
+          "bytes": 2553,
+          "sha256": "ddb83904374f1227c8aeebaab911ddccc24ff77a1752691e120fa865d56fab7a"
+        },
+        {
+          "path": "core-go/mobilebridge/business_intents_test.go",
+          "bytes": 6037,
+          "sha256": "8bd772f7f43adcb9acfcbd37f8b9c0af49d522d696ac3c1d8fccfd364ba98d98"
+        },
+        {
+          "path": "core-go/mobilebridge/internal/recoverysessions/binding.go",
+          "bytes": 2231,
+          "sha256": "b9186400ad0fa19e413f4d0919004adba7355adc864eb5c7cb6a1de31b5d8197"
+        },
+        {
+          "path": "core-go/mobilebridge/internal/recoverysessions/registry.go",
+          "bytes": 9536,
+          "sha256": "0e78f34220bb195e6818f601214046db45b80436c86a2209cd4c7b83f8fbd4f1"
+        },
+        {
+          "path": "core-go/mobilebridge/internal/recoverysessions/registry_test.go",
+          "bytes": 13057,
+          "sha256": "c339433568f435da21742266f62e97ba805c9ca4d29f56d0b40a79f8153456d9"
+        },
+        {
+          "path": "core-go/mobilebridge/management.go",
+          "bytes": 1871,
+          "sha256": "ec7a75956925096de8da9df42ee73580b76aea0b9c9b2ec2a05b80bdb26892b2"
+        },
+        {
+          "path": "core-go/mobilebridge/management_test.go",
+          "bytes": 1438,
+          "sha256": "a95505e3d4056abc62839cc357dbb93fd04d3765da578624f29a7d09e1b6042f"
+        },
+        {
+          "path": "core-go/mobilebridge/pinprovider.go",
+          "bytes": 16459,
+          "sha256": "39b171d47473392b0488fbd01588c8e92f21f96a064ca35c622b0ae43e791172"
+        },
+        {
+          "path": "core-go/mobilebridge/pinprovider_test.go",
+          "bytes": 14640,
+          "sha256": "5d0691a793e54b93143ac3b0810fefbab1832877997a6a4d926ff6b5f63e544c"
+        },
+        {
+          "path": "core-go/mobilebridge/recovery.go",
+          "bytes": 3786,
+          "sha256": "7cb96800225f310798cc59950aa443cbe5d06bbeb102f3c1a3abec3ef29f78f7"
+        },
+        {
+          "path": "core-go/mobilebridge/recovery_registry.go",
+          "bytes": 7159,
+          "sha256": "5ff7794f1be6280517308aeaae9d4c260f414cf7976fd2cd7f0710af2708ef6e"
+        },
+        {
+          "path": "core-go/mobilebridge/recovery_test.go",
+          "bytes": 2355,
+          "sha256": "f8b4846f0735da052b9d032d17660a17a4e820be5cb511119678bd0ee4e55516"
+        },
+        {
+          "path": "core-go/mobilebridge/selftest.go",
+          "bytes": 3132,
+          "sha256": "04c4afc75b0f6dfec82bb829a5767b426edadd3cdfc4865837597bc4baf16148"
+        },
+        {
+          "path": "core-go/mobilebridge/v3_test.go",
+          "bytes": 2710,
+          "sha256": "8ed4f5bd8d8e4fa1861e2edc874047db706e10f3483c471ef47d6677b42d32be"
+        },
+        {
+          "path": "core-go/mobilebridge/workflow.go",
+          "bytes": 25843,
+          "sha256": "12d0097aca2b2ba861dcc4b9820cf1c63b03fcd2efcf31f9eecc4317e3d5e8b3"
+        },
+        {
+          "path": "core-go/mobilebridge/workflow_cas_test.go",
+          "bytes": 3337,
+          "sha256": "038650050c4efdf567601aabd2bfc0c194ad66d9b7b8afa585937e18dae57371"
+        },
+        {
+          "path": "core-go/mobilebridge/workflow_save_retire_test.go",
+          "bytes": 4359,
+          "sha256": "cb2186910afa0ee21a6b4a2eab7091876dbe2d7e75c6012c1096914f4fdc6d50"
+        },
+        {
+          "path": "core-go/mobilebridge/workflow_test.go",
+          "bytes": 3640,
+          "sha256": "503a0acc11e43e104cdab2f8e8c46ba7c110325c6251ea2d6cc3d533bcd13f6a"
+        },
+        {
+          "path": "core-go/mobileworkflow/approval.go",
+          "bytes": 20877,
+          "sha256": "147bf0886cbc7444b5b7f52e7c209c36aeb44ec5217d1994d1076e3f38d6f1f2"
+        },
+        {
+          "path": "core-go/mobileworkflow/approval_test.go",
+          "bytes": 2364,
+          "sha256": "d674a632e6f47150c65416caa1908ce86de8a9a58e31fe47bcead5e78711b879"
+        },
+        {
+          "path": "core-go/mobileworkflow/approval_v3.go",
+          "bytes": 15929,
+          "sha256": "e1aa6bd334d785ef14681f605ef0d534a447bc2554ead3cfeedc16aadda79097"
+        },
+        {
+          "path": "core-go/mobileworkflow/approval_v4.go",
+          "bytes": 16118,
+          "sha256": "53592c043cbbaed68ce0057fc2bf3fea2e33f502b2d39a93d6650eb73b9b7ca2"
+        },
+        {
+          "path": "core-go/mobileworkflow/enrollment_v3.go",
+          "bytes": 13369,
+          "sha256": "76f769d2c5e9ff432a80e09618f877a8014544e5e0e0a7f501cdb55a1b791eb1"
+        },
+        {
+          "path": "core-go/mobileworkflow/environment_recovery.go",
+          "bytes": 2059,
+          "sha256": "bb3cc4cc00f6e59a6dd904d84e4852c686c893257bf49edb3a76c69e24d03316"
+        },
+        {
+          "path": "core-go/mobileworkflow/environments_v2.go",
+          "bytes": 12797,
+          "sha256": "46d55e40d33fac5f59e4b078745b364504a83993b42c5b8e6a23d993dbe81ce6"
+        },
+        {
+          "path": "core-go/mobileworkflow/errors_test.go",
+          "bytes": 1368,
+          "sha256": "0e95bf15ebdfe67ea15b7063b0bc5189988404423e7752b3b442f3d5e6788964"
+        },
+        {
+          "path": "core-go/mobileworkflow/management.go",
+          "bytes": 17426,
+          "sha256": "b8443c4be5fe81d290cee3a35c79a9db11a6f56efc9140b9b1662816b3feb18c"
+        },
+        {
+          "path": "core-go/mobileworkflow/management_test.go",
+          "bytes": 5071,
+          "sha256": "db793f20ebc75be037ca59eba717d99624a40058bf192efd0cefdf564420ad08"
+        },
+        {
+          "path": "core-go/mobileworkflow/pending_write.go",
+          "bytes": 5401,
+          "sha256": "ec8e7154fd69761d92bc18294c34be366a69617acf94ee5ace327f82021a4bc3"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovered_device_workflow.go",
+          "bytes": 20343,
+          "sha256": "5e0c6b190fbc1b640f09e4ca86f409d89873afdee6be2914a11d036912837286"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery.go",
+          "bytes": 49371,
+          "sha256": "4bc0ab7bcf072e6a3db4c0cb2984916f3ce5fab07f35fda04748dd7867b5a222"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_state.go",
+          "bytes": 15579,
+          "sha256": "b05d35937b326020b62816c9381b46415c582252798af108569111a0b54897bd"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_state_test.go",
+          "bytes": 5323,
+          "sha256": "3e87b312f11aea79fa2c1e65b003654471d45c5926ed8d9b0f66a4b65a01058f"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_transition.go",
+          "bytes": 13962,
+          "sha256": "ce5c302d3f3e0c634ca4131e04027514f7835bc962ae48b130fc40a305ad61d1"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_authority_workflow.go",
+          "bytes": 9625,
+          "sha256": "a2c53272ceb43dfde6c6249f7e6d61aa9176d3db4578e485061e86d89154044f"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_challenge_wait.go",
+          "bytes": 1869,
+          "sha256": "478b51e8054df35f454f4a350ea0652a4ed841d2ffa7a0ca5a6de2f6b38c99f1"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_challenge_wait_test.go",
+          "bytes": 3301,
+          "sha256": "a39cbbfaadcaf65165b8e93cc8e692d3041b10e11717e70e0e95182e76dee4b0"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_clock.go",
+          "bytes": 1824,
+          "sha256": "023bf7d3c4231fa00fa76c81b5d956bbc2b1bc74bd588a8e7c47bebcf99ec309"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_clock_test.go",
+          "bytes": 1774,
+          "sha256": "c5612962e34cd3d1770b6e82e94a3ba2f3385c231a3be0a34f6b35f20dae9b0a"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_lease.go",
+          "bytes": 5178,
+          "sha256": "666b113fcc9f152eb5256b4adacfbc1680abbe3cf1245231a8ee8a9540f7d994"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_lease_test.go",
+          "bytes": 2751,
+          "sha256": "6f4c164e22c96ee306c357e4f08d6bfea7728127c4fa8fbfd8a1f48b0dac7c73"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_owner.go",
+          "bytes": 10139,
+          "sha256": "d0ad21dec6847c5a18be60ff379c892b0e57a71389b398f9cfb0e0e3fb0069da"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_owner_test.go",
+          "bytes": 11219,
+          "sha256": "6954e0885438a47e108307a23cb93b80b1d807e6a257623b3730be1eeb2a05e3"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_prepare_gates_test.go",
+          "bytes": 6107,
+          "sha256": "8523336068a27b4a3ffb4e9f51f571cd861837c1e9a44dbfc7d13603c93d5b39"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_prepare_state.go",
+          "bytes": 7411,
+          "sha256": "7653a66af2a92a2eb00c555b611be6e528b0571cdead4878c73be075e4c3caec"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_prepare_state_test.go",
+          "bytes": 14430,
+          "sha256": "41324247749a05bddb2f68dad1cfe0abd8bc1e662c2962efaff4bd1138777970"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_query.go",
+          "bytes": 6409,
+          "sha256": "6e74729d44133622a3c317b63e0defcd965f79189fd93c7d5fff905ba5159233"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_query_test.go",
+          "bytes": 4610,
+          "sha256": "37ebf904f53c0506aad3776cc7c05abe33057dd8d42b466cab4928c8cc1360a2"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered.go",
+          "bytes": 9252,
+          "sha256": "0b5625427a1cacd50bbcbffc8fc097cb2a94917bf58c7afc4e62a1a2f0506aca"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_fixture_test.go",
+          "bytes": 4531,
+          "sha256": "8fca723b931b0a2ca1238403dceb0561d38458a22f0c1a4158b68addb06ed6f1"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_gates_test.go",
+          "bytes": 6785,
+          "sha256": "2dcb035cdba258280c06b5cdeed6ea4e67e5420c25aa3189723b18d5e1061ef3"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_lease_test.go",
+          "bytes": 3521,
+          "sha256": "aa01c44f148b48f4da55dd4ac5d48eb692b8bb6d9c55292af6be5673e0629458"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_state.go",
+          "bytes": 6221,
+          "sha256": "d27a8b99ab5457579a975336988d8c691091a44dc4b7e4ff3479991421a04174"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_recovered_state_test.go",
+          "bytes": 9649,
+          "sha256": "773b9799e27692a3f8157942b99022b20e6f7ea44b61e3b4af702fcb83c12538"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_state.go",
+          "bytes": 9622,
+          "sha256": "2d06df7a92e6fbb2d66c0aa7ae23ba41783f0c94c98b7ce01ad1fbbc6beb50bb"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_state_test.go",
+          "bytes": 13326,
+          "sha256": "2caabfdcc265b96145a7e80de025ef80b2db95556056cf4456a07e91853fd9d1"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_transition.go",
+          "bytes": 12381,
+          "sha256": "fcf72746c37b5a991e81c22ad4c88d533ae0130abaaa8e9ecbeea8d51d8aefaa"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_dag_transition_test.go",
+          "bytes": 5877,
+          "sha256": "41d35150276ec5af6ee5e909a5d51f75298f5989a85dba367852f74eaac9dbf1"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_envelopes.go",
+          "bytes": 6239,
+          "sha256": "986ecd9d45f57b3a904372ef9a07ba174b874b6fb1c9189fd774f1de9a72e398"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_envelopes_test.go",
+          "bytes": 6126,
+          "sha256": "227c178e20f06a273a8f4df62ea79d462478e9c1815a9609c2e2a2a87baf65d2"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_origin.go",
+          "bytes": 5400,
+          "sha256": "d836ba130076b7ce5d6ed77913912633c6e2b4dd23c083fb113e3e5a7933829a"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_session.go",
+          "bytes": 11576,
+          "sha256": "bbe649f4feabf00fa8eb197094857eb14af714dbd96e4fd86558b17e93282b74"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_session_test.go",
+          "bytes": 5045,
+          "sha256": "db278d2dd49a95291190b77a5d6a85dc0882d7aeb482af7cca9437ca37d7b5ff"
+        },
+        {
+          "path": "core-go/mobileworkflow/recovery_test.go",
+          "bytes": 12072,
+          "sha256": "48dc3cb66277c03bba7a1974d4c116d24fa565e12db7fa6b653be51383db973d"
+        },
+        {
+          "path": "core-go/mobileworkflow/selfrevoke.go",
+          "bytes": 6868,
+          "sha256": "1fbb47eada3f98bc84ce8b40882942668bd234aca8d45cf6e24a8a478c3534d1"
+        },
+        {
+          "path": "core-go/mobileworkflow/selfrevoke_test.go",
+          "bytes": 15922,
+          "sha256": "7c882c8cdbbd9f6944bcc3da1b6a01f222353fae8bad32492c55b6144b3d3469"
+        },
+        {
+          "path": "core-go/mobileworkflow/source_projection.go",
+          "bytes": 6696,
+          "sha256": "6c8eb6a15aa27da748b0889b9b92703d30b2d6d89e0abee7b602558b6fd9a1c7"
+        },
+        {
+          "path": "core-go/mobileworkflow/source_projection_test.go",
+          "bytes": 18051,
+          "sha256": "e12c9a5063113596ee5026923536bdf11988be967ad7c6bfcaab1c077d9dc17e"
+        },
+        {
+          "path": "core-go/mobileworkflow/vaultworkflow.go",
+          "bytes": 52635,
+          "sha256": "ba4a028148421997532f0c0d63d60e41691f76edce758e4d731246fe32b9cf06"
+        },
+        {
+          "path": "core-go/mobileworkflow/vaultworkflow_test.go",
+          "bytes": 5816,
+          "sha256": "135e57d068f4b27e4d292c672c13bfd92907a05cc61dc8f6096d344ad89bb59f"
+        },
+        {
+          "path": "core-go/pairing/confirmation.go",
+          "bytes": 1937,
+          "sha256": "97f073acfd15b6842567f0dcefee71d4710fbd029034498997e79dbdd4e004a0"
+        },
+        {
+          "path": "core-go/pairing/context.go",
+          "bytes": 5429,
+          "sha256": "cbfdfac7224d624c566c408c1ee405e59dd47709ad5bdcdf04b2afcda86c59e6"
+        },
+        {
+          "path": "core-go/pairing/native_unavailable.go",
+          "bytes": 274,
+          "sha256": "2f637f440e447cd5cee0a750af974fc564701d2ce305892cfd0ab7d81952b003"
+        },
+        {
+          "path": "core-go/pairing/session.go",
+          "bytes": 4806,
+          "sha256": "ed9811d3f41941f68c615a6149d99933ae075aa69a477b900a2ea1307fb6821b"
+        },
+        {
+          "path": "core-go/syncclient/approver_v2.go",
+          "bytes": 10133,
+          "sha256": "3c10f7fc7861dd5960eb5920d000364de10365e23fd5c0a486692702bc991f29"
+        },
+        {
+          "path": "core-go/syncclient/approver_v3.go",
+          "bytes": 10419,
+          "sha256": "a0ade5e9e0c7da58406e9df5022b37b64798ba41c536970879e9b7ab6b3976c5"
+        },
+        {
+          "path": "core-go/syncclient/approver_v4.go",
+          "bytes": 12247,
+          "sha256": "32f95f64c3262cf406c2fc062992c2241b04dc51514ffcf575698273fccc4ac4"
+        },
+        {
+          "path": "core-go/syncclient/approver_v5.go",
+          "bytes": 12207,
+          "sha256": "83df60f7a07d94079b868941e9ad809a7a16f91705033faf9faa69eda49e1f1b"
+        },
+        {
+          "path": "core-go/syncclient/authorizations.go",
+          "bytes": 5243,
+          "sha256": "a3b4e44e9a0e12275a177fa8b656e02632182c86c671951510d4c8ea3137a0aa"
+        },
+        {
+          "path": "core-go/syncclient/authorizations_test.go",
+          "bytes": 6296,
+          "sha256": "455d0b87421e54382645207a2439004c2fa26046912221553af5867ba7000a08"
+        },
+        {
+          "path": "core-go/syncclient/boot.go",
+          "bytes": 3405,
+          "sha256": "89e5a343d25bc9947f82fb2ff1e43871be46fde041f6e701d8d05e0cae546479"
+        },
+        {
+          "path": "core-go/syncclient/boot_test.go",
+          "bytes": 5524,
+          "sha256": "72ac1d3bbe60e9ebe5d1a918b3d88584b36b0e20cd223248086c9d0ad4f8ab75"
+        },
+        {
+          "path": "core-go/syncclient/cached_sources.go",
+          "bytes": 13247,
+          "sha256": "2d3b1129831226b220a6c7d1c1b0582a4df78bff3a03fe1f90e19745e970bcd2"
+        },
+        {
+          "path": "core-go/syncclient/cached_sources_test.go",
+          "bytes": 13415,
+          "sha256": "942a04e13b2edddf74e49ca66a444765fcf36c244d3176a59f43c39843ac0776"
+        },
+        {
+          "path": "core-go/syncclient/client.go",
+          "bytes": 11546,
+          "sha256": "c19f3163047b98c54539de9c85fd40ebd6c8affe531205c6e6aaef31e16b4057"
+        },
+        {
+          "path": "core-go/syncclient/client_test.go",
+          "bytes": 9948,
+          "sha256": "7f32dcd7e25e6cebc905a3f17283f09f068a9d0dab26b49321229c7432d42a44"
+        },
+        {
+          "path": "core-go/syncclient/control_dag.go",
+          "bytes": 2911,
+          "sha256": "eb64c7ef004dc9dfa9e834fa3dc98a893f95c3f429d0ba484629811a80f7c20a"
+        },
+        {
+          "path": "core-go/syncclient/control_dag_test.go",
+          "bytes": 5701,
+          "sha256": "7e33964f0ceb39d228fe12e74e1f9f49231c4a947fff6c1c1fa97b031d1fc544"
+        },
+        {
+          "path": "core-go/syncclient/control_recovery.go",
+          "bytes": 4575,
+          "sha256": "cbbeca137f67271c5a6925c7988136e108df2349e27369ca51220ad95377870f"
+        },
+        {
+          "path": "core-go/syncclient/control_recovery_test.go",
+          "bytes": 5821,
+          "sha256": "7afbd27eb83fc6562df6f04da24829a8eff5a11f9ad82fc219427fa5561632fd"
+        },
+        {
+          "path": "core-go/syncclient/dag_protocol.go",
+          "bytes": 1878,
+          "sha256": "729a1ede79d0106e48fb64fd8e1f16a654ad084b1ea69da856d4525e9eb49bb3"
+        },
+        {
+          "path": "core-go/syncclient/device_session.go",
+          "bytes": 3230,
+          "sha256": "bef2f5ba13162b01b87c2fdab077befe1e0f3e599162d3af6a18961965a4e00e"
+        },
+        {
+          "path": "core-go/syncclient/enrollment.go",
+          "bytes": 18720,
+          "sha256": "f197e80a889014f1130edb1760bcb3c6fe50dc41b2f917f7e1f608f21f450ef2"
+        },
+        {
+          "path": "core-go/syncclient/enrollment_test.go",
+          "bytes": 3841,
+          "sha256": "c5b78780d09f98265cba9ef91533090b266050c0663ebe1319dff3301274173e"
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v2.go",
+          "bytes": 18174,
+          "sha256": "01cdebc8f083818c4f15c81fd807c223cbd422b49369213acd21ec6dd49dad09"
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v3.go",
+          "bytes": 18380,
+          "sha256": "22c572e0e5dfbff25bfee88f994b7dd0e8981eaa6f844cd44f19bc56382ac0f4"
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v4.go",
+          "bytes": 18375,
+          "sha256": "2b213018d6ede8312d6770d93ce20834ba1d7d2069170693cfcdfa9e063584ee"
+        },
+        {
+          "path": "core-go/syncclient/enrollment_v5.go",
+          "bytes": 18363,
+          "sha256": "167a1eb2a77e606c6feaf87947b8880eb6e042a615dbca3b365c8cd5acbdb773"
+        },
+        {
+          "path": "core-go/syncclient/environment_batch_test.go",
+          "bytes": 3969,
+          "sha256": "99b34ac8fc40235ee7b15f558f05fb479f7f9e2beac53f11187f72d5541429a6"
+        },
+        {
+          "path": "core-go/syncclient/environment_checkpoint.go",
+          "bytes": 1785,
+          "sha256": "f95e0693f143c1c2449ae4c5e443754d58f9c0e19265c7222815ca3d76e2c584"
+        },
+        {
+          "path": "core-go/syncclient/environment_dag_writes.go",
+          "bytes": 2803,
+          "sha256": "43a1ad4298008cc0920a6b4bcb55e4c8c16675572b4952b8ef6ca9a208b85213"
+        },
+        {
+          "path": "core-go/syncclient/environment_origin_writes.go",
+          "bytes": 11824,
+          "sha256": "edd808e69a50e392d510ee4890603dd065ce26278513de4bc9f27fef182beb67"
+        },
+        {
+          "path": "core-go/syncclient/environment_recovery_writes.go",
+          "bytes": 2816,
+          "sha256": "6688af8df9fbd279f57095f69d85b23c5ca1de7fea13f554c04e5d4ec3e41c12"
+        },
+        {
+          "path": "core-go/syncclient/environment_writes.go",
+          "bytes": 2887,
+          "sha256": "e705babfd9445e04398aa774d455a1a9c0ac09632cdcfae77785852001dba70d"
+        },
+        {
+          "path": "core-go/syncclient/environment_writes_test.go",
+          "bytes": 5727,
+          "sha256": "916fca33c427bf40e1733c52482d802e933889fdf3395ab03196622e420b5c0a"
+        },
+        {
+          "path": "core-go/syncclient/environments.go",
+          "bytes": 5840,
+          "sha256": "fdcb2f7fa48b58c363c1e9cafa4878f9767c6056a746b71df11eb75e55c02306"
+        },
+        {
+          "path": "core-go/syncclient/errors.go",
+          "bytes": 2295,
+          "sha256": "d9f15f341b08487e9d3b02bc5faa1674be4bea4c4a0f3d1ddf45d2e1ed8a0df2"
+        },
+        {
+          "path": "core-go/syncclient/errors_test.go",
+          "bytes": 3553,
+          "sha256": "a2ca7455a42fb8748eb5225783f79e28e43f6a4da435cdc263486a89d6bd0372"
+        },
+        {
+          "path": "core-go/syncclient/fault_codes.go",
+          "bytes": 8752,
+          "sha256": "3cf7b74d8d20d09c3eb01aef25cab4f7bbb126663564a738cde50926e4cd3f44"
+        },
+        {
+          "path": "core-go/syncclient/grant_updates.go",
+          "bytes": 21259,
+          "sha256": "396171e80a9d718836298282ae79d4ba7d5bc78e4518e5e53eed07bf43c82766"
+        },
+        {
+          "path": "core-go/syncclient/grant_updates_test.go",
+          "bytes": 11951,
+          "sha256": "824b898d1434eecbdce7c85885e187a3e6456930bb230be19fc244daf308d4d5"
+        },
+        {
+          "path": "core-go/syncclient/issuer_dag_verifier.go",
+          "bytes": 21921,
+          "sha256": "fbe06a376b927f1719317989dd183ec69fe23667fcf08eb7bccdfe81b8820e18"
+        },
+        {
+          "path": "core-go/syncclient/issuer_origin_verifier.go",
+          "bytes": 22888,
+          "sha256": "18a9fab56676de3e7239d040e9dc32447dceca5faca526918f526650d0e66598"
+        },
+        {
+          "path": "core-go/syncclient/issuer_origin_verifier_test.go",
+          "bytes": 20561,
+          "sha256": "12f686b4c05768ec2a16d4d64f4692a2721be31bba2bfbbab0527f255bfe73af"
+        },
+        {
+          "path": "core-go/syncclient/issuer_recovery_verifier.go",
+          "bytes": 21159,
+          "sha256": "2d6e03b5dabe79cdd807c231246b74af2080bc00a6cb92b9b900f02432738774"
+        },
+        {
+          "path": "core-go/syncclient/issuer_recovery_verifier_test.go",
+          "bytes": 10621,
+          "sha256": "0f5bb731a47c0f98844f345f8de7a96942cc9e0c8fa585e8071d3f48b9fb06c1"
+        },
+        {
+          "path": "core-go/syncclient/issuer_verifier.go",
+          "bytes": 2642,
+          "sha256": "75e55cae26add86aef75a5891048479d0f119e2894125e240a91016bfec80ae4"
+        },
+        {
+          "path": "core-go/syncclient/issuer_verifier_test.go",
+          "bytes": 10556,
+          "sha256": "bb0a89c639384320105104df6b01b111a432fd842e195c4637ab7b9a779c1cbf"
+        },
+        {
+          "path": "core-go/syncclient/login.go",
+          "bytes": 3899,
+          "sha256": "359e3481594b0043d8a93a976dd157c43719920e24ccfc4adc803e68668058fb"
+        },
+        {
+          "path": "core-go/syncclient/management_dag.go",
+          "bytes": 3807,
+          "sha256": "0ee627f525526f301462fced30cca9bfb206a204661cf209dfb97a63713bedd3"
+        },
+        {
+          "path": "core-go/syncclient/management_dag_test.go",
+          "bytes": 10038,
+          "sha256": "b4e30eb56ac1c1429c6717a052c7a967002257989a73df786d5620b5334cfd7b"
+        },
+        {
+          "path": "core-go/syncclient/notifications.go",
+          "bytes": 7219,
+          "sha256": "ea3003a02a5f9cb936dc9cea7fa67380ed960a7d69278e9c8f689ff17a53a5b2"
+        },
+        {
+          "path": "core-go/syncclient/notifications_test.go",
+          "bytes": 9543,
+          "sha256": "c25a650ac36ea32000a526e9ceb340f98170bafc7cf4476de5ab86e7f6209df4"
+        },
+        {
+          "path": "core-go/syncclient/other_revocation.go",
+          "bytes": 10510,
+          "sha256": "d758db93061acd99acc5cb72421c8f0155f50f32eb5151649a43e82c1a0077d2"
+        },
+        {
+          "path": "core-go/syncclient/pause_guard.go",
+          "bytes": 1155,
+          "sha256": "0c28a255cb9b75ed457e21cb3f0ebfda904022e71d4066b6837b236682781831"
+        },
+        {
+          "path": "core-go/syncclient/pause_guard_test.go",
+          "bytes": 4366,
+          "sha256": "da6a15770d95096c86aaeaf5d25117166cf0a55e6f3939584251e14731e22a25"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_binding.go",
+          "bytes": 3226,
+          "sha256": "41db0be3395fdd67982b6b50cd2d3e7891526add55efb50fbda8934fbafd36f7"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_binding_test.go",
+          "bytes": 3625,
+          "sha256": "efcdde2d6eff5daf3c8ea4b249520d39a8380390fbc97baffbc80829d4532575"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_checked_test.go",
+          "bytes": 5789,
+          "sha256": "a933d140bf760a3dd306e57793b63b608d57f18ec2f7e0850985b562d4951fd7"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_client.go",
+          "bytes": 21831,
+          "sha256": "fc9675b524df321d2d46e6db60ee43a79231d81fcb779a94c3b7e1c3121e2a69"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_evidence.go",
+          "bytes": 4702,
+          "sha256": "daccb79b0111daa2258a2a3a6b6d22f4f6471e1d01c1e57d879f781102df1029"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_journal.go",
+          "bytes": 7668,
+          "sha256": "110ccd3a3c97be33ae59c9841eba74577069ed2d75f2e2a701b6edb8628b5d42"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_journal_test.go",
+          "bytes": 3004,
+          "sha256": "5989054c56de57f67ae4c9a8746e52a4802278a5ff23a36bb5c20d9475f7d54b"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_operations.go",
+          "bytes": 28294,
+          "sha256": "120d4d0c82808b8af77ab597bb74227d19a24d8bdc6fa23ffd2ba3c361631b4c"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_preparation.go",
+          "bytes": 12766,
+          "sha256": "26c8354ff7cdf5ce3542aa0ef1000ee81c9fbb8372e2fab55b9555665faa7164"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_preparation_test.go",
+          "bytes": 12238,
+          "sha256": "d44a220b0f88e34aa2f0b98e55a5ffeecd4706004d82add3cb1a20349e2460d0"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_recovered_preparation.go",
+          "bytes": 15121,
+          "sha256": "fe3736f4391411a91beccbe6d347ca7796bea14e47a7efa2928153691f9e5da8"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_recovered_preparation_test.go",
+          "bytes": 15832,
+          "sha256": "e04a452655cfe31f367046ee7be185da1e9d157a6457893b9a9910e93e00ccbf"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_status.go",
+          "bytes": 1904,
+          "sha256": "49fde1a18b436d6eed7ee5a5e5d0a4c891e59251d0a53e826540c614418ca5d5"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_status_test.go",
+          "bytes": 5102,
+          "sha256": "da84e6cbf3eee9847577a2fe5376cf9a9c65199185fbb4bad20d040e3e752667"
+        },
+        {
+          "path": "core-go/syncclient/recovery_dag_vault_journal.go",
+          "bytes": 1077,
+          "sha256": "305d59ccaf317b962e16b785ec78944c465b843e0acc64d6c3708002e904f42b"
+        },
+        {
+          "path": "core-go/syncclient/self_revocation.go",
+          "bytes": 11473,
+          "sha256": "c9a43b3181b77980df55a108ef5ea3c2a4d695725e9a6022d5851fdaa148138e"
+        },
+        {
+          "path": "core-go/syncclient/verifier.go",
+          "bytes": 13200,
+          "sha256": "96fd8db31936531d3d683c814da6c06a1785a05b5b600d34765d02672d506d80"
+        },
+        {
+          "path": "core-go/syncclient/verifier_test.go",
+          "bytes": 9434,
+          "sha256": "ed746caf2f63be8e9bdab93cf3618fadf651e22f97d9df199629b1983017a20e"
+        },
+        {
+          "path": "core-go/syncclient/write_pending.go",
+          "bytes": 2665,
+          "sha256": "82cc2564151b4aec59f3f289d2e96da937709de02362f5bf06d65212827e6cad"
+        },
+        {
+          "path": "core-go/syncclient/writes.go",
+          "bytes": 19165,
+          "sha256": "42e02fcd6257de7702ae1715c94bc86adc4141eb1d312ab983e1f26f656d4f80"
+        },
+        {
+          "path": "core-go/syncclient/writes_test.go",
+          "bytes": 10660,
+          "sha256": "12863c5ef565c961c8209411472518608cb8515035853c595b7a313bf91f868c"
+        }
+      ]
+    },
+    "notRerun": [
+      "full four-package 723-event v1 matrix",
+      "three real HTTPS original-transaction scenes",
+      "SDK/native/UI/VM"
+    ],
+    "finalCommand": "go test -race ./syncclient ./mobileworkflow -run '^Test(B3a|DAGRecoveredPreparation|MobileDAGRecovered(AtomicPromotionColdState|ImmutableAndJointSchema|LegacyGatesWithLiveLogin|CASFailureRetiresAndPreserves))' -count=1 -timeout=120s -json",
+    "layout": "New tests are colocated in the existing recovery_dag_recovered_preparation_test.go; deliverable path set remains exactly the same 24 paths as v1."
+  }
+}

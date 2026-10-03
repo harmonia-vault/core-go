@@ -14,10 +14,11 @@ type dagOwnerPort struct {
 	target *dagOwnerTarget
 }
 type dagOwnerTarget struct {
-	entry       *dagOwnerEntry
-	ctx         context.Context
-	journal     *syncclient.CheckedDAGJournal
-	preparation syncclient.DAGTransitionPreparationStore
+	entry                *dagOwnerEntry
+	ctx                  context.Context
+	journal              *syncclient.CheckedDAGJournal
+	preparation          syncclient.DAGTransitionPreparationStore
+	recoveredPreparation syncclient.DAGRecoveredPreparationStore
 }
 
 func (p *dagOwnerPort) attach(t *dagOwnerTarget) error {
@@ -106,7 +107,7 @@ func (w *Workflow) attachDAGOwnerState(cancel context.CancelFunc, allowPending b
 		return dagOwnerIdentity{}, err
 	}
 	// B1 只安装全新只读 owner；sealed 原包必须走 S2a，不可提升 fresh query。
-	if w.state.RecoveryDAGPreparation != nil && !allowPending {
+	if (w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil) && !allowPending {
 		return dagOwnerIdentity{}, ErrDAGPreparationInterrupted
 	}
 	if w.state.RecoveryDAG != nil && !allowPending {
@@ -154,4 +155,36 @@ func (p *dagOwnerPort) SaveTransitionPreparation(value syncclient.DAGTransitionP
 		t.entry.invalidate()
 	}
 	return err
+}
+
+func (p *dagOwnerPort) LoadRecoveredPreparation() (syncclient.DAGRecoveredPreparation, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	t, e := p.active()
+	if e != nil {
+		return syncclient.DAGRecoveredPreparation{}, e
+	}
+	if t.recoveredPreparation == nil {
+		return syncclient.DAGRecoveredPreparation{}, ErrDAGProtectedState
+	}
+	v, e := t.recoveredPreparation.LoadRecoveredPreparation()
+	if e != nil && !errors.Is(e, errDAGJournalAbsent) {
+		t.entry.invalidate()
+	}
+	return v, e
+}
+func (p *dagOwnerPort) SaveRecoveredPreparation(v syncclient.DAGRecoveredPreparation) error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	t, e := p.active()
+	if e != nil {
+		return e
+	}
+	if t.recoveredPreparation == nil {
+		return ErrDAGProtectedState
+	}
+	if e = t.recoveredPreparation.SaveRecoveredPreparation(v); e != nil {
+		t.entry.invalidate()
+	}
+	return e
 }

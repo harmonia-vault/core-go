@@ -84,7 +84,7 @@ func (w *Workflow) dagBindingLocked() (syncclient.DAGJournalBinding, error) {
 }
 func (w *Workflow) validateDAGStateLocked() error {
 	r := w.state.RecoveryDAG
-	if r == nil && w.state.RecoveryDAGPreparation == nil {
+	if r == nil && w.state.RecoveryDAGPreparation == nil && w.state.RecoveryDAGRecoveredPreparation == nil {
 		return nil
 	}
 	b, err := w.dagBindingLocked()
@@ -171,6 +171,17 @@ func (s mobileDAGStore) CompareAndSwapDAGJournal(b syncclient.DAGJournalBinding,
 		}
 		candidate.RecoveryDAGPreparation = nil
 	}
+
+	if preparation := w.state.RecoveryDAGRecoveredPreparation; preparation != nil {
+		prepared, err := syncclient.DecodeDAGRecoveredPreparation(preparation.Record)
+		if err != nil {
+			return err
+		}
+		if err = syncclient.ValidateDAGRecoveredPromotion(prepared, p); err != nil {
+			return err
+		}
+		candidate.RecoveryDAGRecoveredPreparation = nil
+	}
 	return w.saveDAGCandidateLocked(candidate)
 }
 
@@ -195,7 +206,7 @@ func (w *Workflow) RecoveryDAGPendingInfo() (RecoveryDAGPendingInfo, error) {
 	if w.dagPersistenceFailed {
 		return info, ErrDAGPersistence
 	}
-	if w.state.RecoveryDAGPreparation != nil {
+	if w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
 		return info, ErrDAGPreparationInterrupted
 	}
 	if w.state.RecoveryDAG == nil {

@@ -50,7 +50,7 @@ func (w *Workflow) mobileEnrollmentGate() error {
 	if w.dagPersistenceFailed {
 		return ErrDAGPersistence
 	}
-	if w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil {
+	if w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
 		return ErrRecoveryRestricted
 	}
 	if w.closed {

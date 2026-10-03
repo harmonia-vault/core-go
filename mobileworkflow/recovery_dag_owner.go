@@ -266,7 +266,7 @@ func (w *Workflow) runDAGOwner(parent context.Context, r *DAGRecoveryRegistry, s
 		httpClient, now := w.http, w.now
 		w.mu.Unlock()
 		var session *syncclient.DAGRecoverySession
-		session, err = syncclient.OpenDAGRecoverySession(ctx, syncclient.DAGRecoveryConfig{Endpoint: identity.Binding.Endpoint, HTTPClient: httpClient, AccountID: identity.Binding.AccountID, AccountGeneration: identity.Binding.AccountGeneration, Now: now, Journal: &e.port, Preparation: &e.port}, string(code))
+		session, err = syncclient.OpenDAGRecoverySession(ctx, syncclient.DAGRecoveryConfig{Endpoint: identity.Binding.Endpoint, HTTPClient: httpClient, AccountID: identity.Binding.AccountID, AccountGeneration: identity.Binding.AccountGeneration, Now: now, Journal: &e.port, Preparation: &e.port, RecoveredPreparation: &e.port}, string(code))
 		if err != nil {
 			return info, err
 		}

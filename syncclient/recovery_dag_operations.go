@@ -371,6 +371,23 @@ type DAGRecoveredResult struct {
 func (s *DAGRecoverySession) SealRecoveredDevice(ctx context.Context, id, deviceID string, signing ed25519.PrivateKey, receiving []byte, rights []cryptox.RecoveredDeviceRight) (ProtectedDAGOperation, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.config.RecoveredPreparation != nil {
+		return ProtectedDAGOperation{}, ErrDAGRecoveryState
+	}
+	return s.sealRecoveredDevice(ctx, id, deviceID, signing, receiving, DAGRecoveredSelectionIntent{SelectedRights: rights})
+}
+
+// B3 手机必须传明确已展示的基点并使用持久 preparation；不接自由签包。
+func (s *DAGRecoverySession) SealRecoveredDeviceForIntent(ctx context.Context, id, deviceID string, signing ed25519.PrivateKey, receiving []byte, in DAGRecoveredSelectionIntent) (ProtectedDAGOperation, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.config.RecoveredPreparation == nil {
+		return ProtectedDAGOperation{}, ErrDAGRecoveryState
+	}
+	return s.sealRecoveredDevice(ctx, id, deviceID, signing, receiving, in)
+}
+func (s *DAGRecoverySession) sealRecoveredDevice(ctx context.Context, id, deviceID string, signing ed25519.PrivateKey, receiving []byte, in DAGRecoveredSelectionIntent) (ProtectedDAGOperation, error) {
+	rights := in.SelectedRights
 	if e := s.live(); e != nil {
 		return ProtectedDAGOperation{}, e
 	}
@@ -385,8 +402,25 @@ func (s *DAGRecoverySession) SealRecoveredDevice(ctx context.Context, id, device
 		return ProtectedDAGOperation{}, e
 	}
 	pub, recv := cryptox.EncodeBase64(signing.Public().(ed25519.PublicKey)), cryptox.EncodeBase64(x.PublicKey().Bytes())
+	var preparation DAGRecoveredPreparation
+	if s.config.RecoveredPreparation != nil {
+		preparation, e = s.recoveredIntent(id, deviceID, pub, recv, in)
+		if e != nil {
+			return ProtectedDAGOperation{}, e
+		}
+		preparation, e = s.saveRecoveredIntent(preparation)
+		if e != nil {
+			return ProtectedDAGOperation{}, e
+		}
+		rights = preparation.SelectedRights
+	}
 	var c DAGDeviceChallenge
-	if e = s.request(ctx, "POST", dagPath("recovered-device-challenges-v2"), s.token, map[string]string{"operationId": id, "deviceId": deviceID, "deviceSigningPublicKey": pub, "deviceReceivingPublicKey": recv}, &c); e != nil {
+	if preparation.Challenge != nil {
+		c = *preparation.Challenge
+	} else if e = s.request(ctx, "POST", dagPath("recovered-device-challenges-v2"), s.token, map[string]string{"operationId": id, "deviceId": deviceID, "deviceSigningPublicKey": pub, "deviceReceivingPublicKey": recv}, &c); e != nil {
+		if s.config.RecoveredPreparation != nil {
+			return ProtectedDAGOperation{}, errors.Join(ErrDAGPreparationPending, e)
+		}
 		return ProtectedDAGOperation{}, e
 	}
 	if c.OperationID != id || c.DeviceID != deviceID || c.DeviceSigningPublicKey != pub || c.DeviceReceivingPublicKey != recv || c.AccountGeneration != strconv.FormatUint(s.config.AccountGeneration, 10) || c.ExpectedSequence != strconv.FormatUint(s.vault.Sequence, 10) || c.RestrictedSessionHash != digest([]byte(s.token)) || c.RecoveryGeneration != s.vault.RecoveryGeneration || c.RecoveryTransitionHash != s.vault.RecoveryHeadHash || c.ExpiresAt <= s.config.Now().Unix() || c.ExpiresAt > s.config.Now().Unix()+125 || !sameJSON(c.DependencyBundle, s.vault.DependencyBundle) {
@@ -399,6 +433,16 @@ func (s *DAGRecoverySession) SealRecoveredDevice(ctx context.Context, id, device
 	graph, e := cryptox.VerifyIssuerRecoveryDAG(s.pin, source)
 	if e != nil {
 		return ProtectedDAGOperation{}, e
+	}
+	if s.config.RecoveredPreparation != nil && preparation.Phase == "intent" {
+		preparation.Phase = "challenged"
+		preparation.Challenge = &c
+		if e = ValidateDAGRecoveredPreparation(preparation); e != nil {
+			return ProtectedDAGOperation{}, e
+		}
+		if e = s.config.RecoveredPreparation.SaveRecoveredPreparation(preparation); e != nil {
+			return ProtectedDAGOperation{}, e
+		}
 	}
 	sub := cryptox.RecoveredDeviceSubmissionV2{CertificateVersion: "5", Capabilities: []string{cryptox.RecoveryDAGCapability}, SelectedRights: append([]cryptox.RecoveredDeviceRight(nil), rights...), Grants: []cryptox.SignedGrantWire{}, IssuerEvidence: c.IssuerEvidence, Envelopes: []cryptox.RecoveryEnvelope{}}
 	sort.Slice(sub.SelectedRights, func(i, j int) bool { return sub.SelectedRights[i].EnvironmentID < sub.SelectedRights[j].EnvironmentID })

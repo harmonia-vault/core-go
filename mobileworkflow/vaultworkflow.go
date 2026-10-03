@@ -103,32 +103,33 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
-	RecoveryDAGPreparation *recoveryDAGPreparationState  `json:"recoveryDAGPreparation,omitempty"`
-	RecoveryDAG            *recoveryDAGState             `json:"recoveryDAG,omitempty"`
-	PendingApprovalV4      *approvalRecordV4             `json:"pendingApprovalV4,omitempty"`
-	RecoveredDevice        *recoveredDeviceRecord        `json:"recoveredDevice,omitempty"`
-	RecoveryAuthority      *recoveryAuthorityRecord      `json:"recoveryAuthority,omitempty"`
-	Management             *managementState              `json:"management,omitempty"`
-	Version                int                           `json:"version"`
-	Endpoint               string                        `json:"endpoint"`
-	DeviceID               string                        `json:"deviceId"`
-	SigningPublicKey       string                        `json:"signingPublicKey"`
-	ReceivingPublicKey     string                        `json:"receivingPublicKey"`
-	AccountID              string                        `json:"accountId"`
-	AccountGeneration      string                        `json:"accountGeneration"`
-	Root                   *cryptox.TrustRoot            `json:"root,omitempty"`
-	Pending                *pendingInitialization        `json:"pending,omitempty"`
-	Cloud                  localstate.State              `json:"cloud"`
-	Grants                 []cryptox.SignedGrantWire     `json:"grants"`
-	Labels                 map[string]labelState         `json:"labels"`
-	WriteJournal           []byte                        `json:"writeJournal,omitempty"`
-	EnvironmentWrites      map[string]*environmentRecord `json:"environmentWrites,omitempty"`
-	InitialAuthorities     []cryptox.SignedGrantWire     `json:"initialAuthorities,omitempty"`
-	PendingApproval        *approvalRecord               `json:"pendingApproval,omitempty"`
-	SelfRevocation         []byte                        `json:"selfRevocation,omitempty"`
-	Recovery               *recoveryRecord               `json:"recovery,omitempty"`
-	EnrollmentV3           *mobileEnrollmentRecord       `json:"enrollmentV3,omitempty"`
-	PendingApprovalV3      *approvalRecordV3             `json:"pendingApprovalV3,omitempty"`
+	RecoveryDAGRecoveredPreparation *recoveryDAGPreparationState  `json:"recoveryDAGRecoveredPreparation,omitempty"`
+	RecoveryDAGPreparation          *recoveryDAGPreparationState  `json:"recoveryDAGPreparation,omitempty"`
+	RecoveryDAG                     *recoveryDAGState             `json:"recoveryDAG,omitempty"`
+	PendingApprovalV4               *approvalRecordV4             `json:"pendingApprovalV4,omitempty"`
+	RecoveredDevice                 *recoveredDeviceRecord        `json:"recoveredDevice,omitempty"`
+	RecoveryAuthority               *recoveryAuthorityRecord      `json:"recoveryAuthority,omitempty"`
+	Management                      *managementState              `json:"management,omitempty"`
+	Version                         int                           `json:"version"`
+	Endpoint                        string                        `json:"endpoint"`
+	DeviceID                        string                        `json:"deviceId"`
+	SigningPublicKey                string                        `json:"signingPublicKey"`
+	ReceivingPublicKey              string                        `json:"receivingPublicKey"`
+	AccountID                       string                        `json:"accountId"`
+	AccountGeneration               string                        `json:"accountGeneration"`
+	Root                            *cryptox.TrustRoot            `json:"root,omitempty"`
+	Pending                         *pendingInitialization        `json:"pending,omitempty"`
+	Cloud                           localstate.State              `json:"cloud"`
+	Grants                          []cryptox.SignedGrantWire     `json:"grants"`
+	Labels                          map[string]labelState         `json:"labels"`
+	WriteJournal                    []byte                        `json:"writeJournal,omitempty"`
+	EnvironmentWrites               map[string]*environmentRecord `json:"environmentWrites,omitempty"`
+	InitialAuthorities              []cryptox.SignedGrantWire     `json:"initialAuthorities,omitempty"`
+	PendingApproval                 *approvalRecord               `json:"pendingApproval,omitempty"`
+	SelfRevocation                  []byte                        `json:"selfRevocation,omitempty"`
+	Recovery                        *recoveryRecord               `json:"recovery,omitempty"`
+	EnrollmentV3                    *mobileEnrollmentRecord       `json:"enrollmentV3,omitempty"`
+	PendingApprovalV3               *approvalRecordV3             `json:"pendingApprovalV3,omitempty"`
 }
 type memoryStore struct{ state localstate.State }
 
@@ -426,7 +427,7 @@ func (w *Workflow) checkWithoutManagement() error {
 	if w.dagPersistenceFailed {
 		return ErrDAGPersistence
 	}
-	if w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil {
+	if w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
 		return ErrRecoveryRestricted
 	}
 	if w.closed {
@@ -951,6 +952,7 @@ func (w *Workflow) invalidateTrust() error {
 	}
 	w.state.RecoveryDAG = nil
 	w.state.RecoveryDAGPreparation = nil
+	w.state.RecoveryDAGRecoveredPreparation = nil
 	if w.managementPending() {
 		clear(w.state.Management.Pending.Packet)
 	}
