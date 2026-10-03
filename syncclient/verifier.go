@@ -190,6 +190,7 @@ func (v *PinnedVerifier) verifyPullValues(ctx context.Context, pull Pull, previo
 		out.Environments[g.EnvironmentID] = environment
 	}
 	responseSeen := map[string]bool{}
+	responsePoints := map[string]localstate.MutationCheckpoint{}
 	last := previous.Sequence
 	if pull.Full {
 		last = 0
@@ -234,6 +235,7 @@ func (v *PinnedVerifier) verifyPullValues(ctx context.Context, pull Pull, previo
 			}
 		}
 		out.SeenMutations[id] = localstate.MutationCheckpoint{Sequence: event.Sequence, Fingerprint: fingerprint}
+		responsePoints[id] = out.SeenMutations[id]
 		environment, readable := out.Environments[m.EnvironmentID]
 		if !readable {
 			return localstate.CloudSnapshot{}, errors.New("event exposed an unauthorized environment")
@@ -268,8 +270,12 @@ func (v *PinnedVerifier) verifyPullValues(ctx context.Context, pull Pull, previo
 		out.Environments[m.EnvironmentID] = environment
 	}
 	// A returned current-version rotation declares the exact signed batch.
-	// Reject a missing inner event before committing its data checkpoint; a
-	// retry may fetch full history, but never promote a partial transaction.
+	// Full history reconstructs values from this response, so previously seen
+	// fingerprints cannot stand in for an omitted event in this reconstruction.
+	batchCheckpoint := out
+	if pull.Full {
+		batchCheckpoint.SeenMutations = responsePoints
+	}
 	for _, event := range pull.EnvironmentEvents {
 		c := event.Change.Change
 		environment, readable := out.Environments[c.EnvironmentID]
@@ -281,7 +287,7 @@ func (v *PinnedVerifier) verifyPullValues(ctx context.Context, pull Pull, previo
 			return localstate.CloudSnapshot{}, cryptox.ErrInvalidWire
 		}
 		tail := expected + 1 + uint64(len(c.Mutations))
-		if err := VerifyEnvironmentChangeCheckpoint(out, event.Change, tail); err != nil {
+		if err := VerifyEnvironmentChangeCheckpoint(batchCheckpoint, event.Change, tail); err != nil {
 			return localstate.CloudSnapshot{}, ErrFullPullRequired
 		}
 	}
