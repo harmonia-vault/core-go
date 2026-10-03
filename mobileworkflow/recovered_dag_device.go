@@ -131,6 +131,9 @@ func (w *Workflow) validateRecoveredDAGDeviceLocked() error {
 		return ErrDAGProtectedState
 	}
 	cloud := w.engine.State().Cloud
+	if r := w.state.RecoveryDAGResolution; r != nil && cloud.Sequence < r.Baseline.MinimumSequence {
+		return ErrDAGProtectedState
+	}
 	if cloud.AccountID != p.AccountID || cloud.AccountGeneration != p.AccountGeneration || cloud.Sequence < p.AcceptedSequence || cloud.AuthorizationSequence < cloud.Sequence || len(cloud.IssuerEvidence) == 0 {
 		return ErrDAGProtectedState
 	}
@@ -148,6 +151,9 @@ func (w *Workflow) validateRecoveredDAGDeviceLocked() error {
 	}
 	proof, err := cryptox.VerifyIssuerRecoveryDAG(result.Pin, evidence)
 	if err != nil {
+		return err
+	}
+	if err = syncclient.ValidateDAGClosedHistory(resolutionClosedCheckpoints(w.state.RecoveryDAGResolution), evidence.Records); err != nil {
 		return err
 	}
 	seen := map[string]bool{}
@@ -272,6 +278,10 @@ func (w *Workflow) updateDAGRecoveredDevice(ctx context.Context, r *DAGRecoveryR
 		return out, context.Canceled
 	}
 	w.mu.Lock()
+	if w.dagResolutionPending() {
+		w.mu.Unlock()
+		return out, ErrDAGResolutionPending
+	}
 	if err = w.checkRecoveredDAGNativeLocked(); err != nil {
 		w.mu.Unlock()
 		return out, err

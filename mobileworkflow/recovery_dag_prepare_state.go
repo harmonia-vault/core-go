@@ -156,6 +156,12 @@ func (w *Workflow) saveDAGCandidateLocked(candidate protectedState) error {
 		w.failDAGPersistenceLocked()
 		return errors.Join(ErrDAGPersistence, err)
 	}
+	if r := candidate.RecoveryDAGResolution; r != nil {
+		r.OwnerEpoch = candidate.Cloud.SessionEpoch
+	}
+	if e := validateDAGResolutionAdvance(w.state, candidate); e != nil {
+		return e
+	}
 	encoded, err := json.Marshal(candidate)
 	if err != nil {
 		return err

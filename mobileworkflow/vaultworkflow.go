@@ -103,6 +103,7 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
+	RecoveryDAGResolution           *recoveryDAGResolutionState   `json:"recoveryDAGResolution,omitempty"`
 	DAGCASRequired                  bool                          `json:"dagCASRequired,omitempty"`
 	RecoveredDAGDevice              *recoveredDAGDeviceRecord     `json:"recoveredDAGDevice,omitempty"`
 	RecoveryDAGRecoveredPreparation *recoveryDAGPreparationState  `json:"recoveryDAGRecoveredPreparation,omitempty"`
@@ -300,8 +301,12 @@ func New(config Config) (*Workflow, error) {
 		return nil, err
 	}
 	workflow := &Workflow{signing: bytes.Clone(config.SigningKey), receiving: bytes.Clone(config.ReceivingPrivateKey), http: client, now: now, state: state, store: store, engine: engine, saveNative: config.SaveProtectedState, saveNativeCAS: config.SaveProtectedStateCAS, checkNativeState: config.CheckProtectedState, protectedSHA256: protectedStateHash(config.ProtectedState)}
-	workflow.requiresDAGCAS = state.DAGCASRequired || state.RecoveryDAG != nil || state.RecoveryDAGPreparation != nil || state.RecoveryDAGRecoveredPreparation != nil || state.RecoveredDAGDevice != nil
+	workflow.requiresDAGCAS = state.RecoveryDAGResolution != nil || state.DAGCASRequired || state.RecoveryDAG != nil || state.RecoveryDAGPreparation != nil || state.RecoveryDAGRecoveredPreparation != nil || state.RecoveredDAGDevice != nil
 	if err := workflow.validateRecoveredDAGDeviceLocked(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
+	if err := workflow.validateDAGResolutionLocked(); err != nil {
 		workflow.Close()
 		return nil, err
 	}
@@ -439,7 +444,7 @@ func (w *Workflow) checkWithoutManagement() error {
 	if w.dagPersistenceFailed {
 		return ErrDAGPersistence
 	}
-	if w.state.RecoveredDAGDevice != nil || w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
+	if w.state.RecoveryDAGResolution != nil || w.state.RecoveredDAGDevice != nil || w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
 		return ErrRecoveryRestricted
 	}
 	if w.closed {
@@ -966,6 +971,10 @@ func (w *Workflow) invalidateTrust() error {
 		w.dagOwnerCancel()
 	}
 	w.state.RecoveredDAGDevice = nil
+	if r := w.state.RecoveryDAGResolution; r != nil {
+		r.Pending = nil
+		r.OwnerEpoch = w.engine.State().SessionEpoch
+	}
 	w.state.RecoveryDAG = nil
 	w.state.RecoveryDAGPreparation = nil
 	w.state.RecoveryDAGRecoveredPreparation = nil

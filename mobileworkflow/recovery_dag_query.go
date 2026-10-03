@@ -104,6 +104,11 @@ func (w *Workflow) QueryRecoveryDAGOriginal(parent context.Context, completeCurr
 		cancel()
 		return result, ErrDAGQueryBusy
 	}
+	if w.dagResolutionPending() {
+		w.mu.Unlock()
+		cancel()
+		return result, ErrDAGResolutionPending
+	}
 	binding, err := w.dagBindingLocked()
 	if err == nil && (w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil) {
 		err = ErrDAGPreparationInterrupted
@@ -118,6 +123,7 @@ func (w *Workflow) QueryRecoveryDAGOriginal(parent context.Context, completeCurr
 	}
 	w.dagQueryCancel = cancel
 	httpClient, now := w.http, w.now
+	history := clone(w.state).RecoveryDAGResolution
 	w.mu.Unlock()
 	defer func() {
 		cancel()
@@ -140,7 +146,11 @@ func (w *Workflow) QueryRecoveryDAGOriginal(parent context.Context, completeCurr
 		return result, err
 	}
 	// Pin 来自已认证的原包，不从本次服务器目录重新选择。
-	session, err := syncclient.OpenDAGRecoverySession(ctx, syncclient.DAGRecoveryConfig{Endpoint: binding.Endpoint, HTTPClient: httpClient, AccountID: binding.AccountID, AccountGeneration: binding.AccountGeneration, Pin: &original.Pin, Now: now, Journal: port}, string(completeCurrentCode))
+	config, err := withDAGResolutionHistory(syncclient.DAGRecoveryConfig{Endpoint: binding.Endpoint, HTTPClient: httpClient, AccountID: binding.AccountID, AccountGeneration: binding.AccountGeneration, Pin: &original.Pin, Now: now, Journal: port}, history)
+	if err != nil {
+		return result, err
+	}
+	session, err := syncclient.OpenDAGRecoverySession(ctx, config, string(completeCurrentCode))
 	if err != nil {
 		return result, err
 	}

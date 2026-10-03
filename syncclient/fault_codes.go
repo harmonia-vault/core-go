@@ -3,6 +3,8 @@ package syncclient
 // 仅固定协议错误名可进入错误文本；远端任意小写文本、hex 或密码等价凭据均不能回显。
 // 新服务端错误缺省为 request_rejected，新增已知错误必须显式审查后加入。
 var knownFaultCodes = map[string]bool{
+	"operation_closed":                             true,
+	"recovery_operation_state_invalid":             true,
 	"account_capacity_reached":                     true,
 	"account_changed":                              true,
 	"account_exists":                               true,

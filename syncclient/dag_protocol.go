@@ -17,6 +17,9 @@ type DAGProtocolInfo struct {
 
 // 显式协商major2，不因证书数字/产品版本/服务端未知字段自动降级。
 func CheckDAGCapability(ctx context.Context, endpoint string, source *http.Client) error {
+	return checkDAGCapabilities(ctx, endpoint, source, cryptox.RecoveryDAGCapability)
+}
+func checkDAGCapabilities(ctx context.Context, endpoint string, source *http.Client, required ...string) error {
 	u, e := url.Parse(endpoint)
 	if e != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
 		return cryptox.ErrInvalidWire
@@ -58,10 +61,23 @@ func CheckDAGCapability(ctx context.Context, endpoint string, source *http.Clien
 			major = true
 		}
 	}
-	for _, cap := range out.Capabilities["2"] {
-		if major && cap == cryptox.RecoveryDAGCapability {
-			return nil
+	if !major {
+		return errors.New("protocol major2 required")
+	}
+	for _, requiredCap := range required {
+		found := false
+		for _, cap := range out.Capabilities["2"] {
+			if cap == requiredCap {
+				found = true
+			}
+		}
+		if !found {
+			return errors.New("explicit recovery capability required")
 		}
 	}
-	return errors.New("issuer recovery DAG capability required")
+	return nil
+}
+
+func CheckRecoveryOperationClosureCapability(ctx context.Context, endpoint string, source *http.Client) error {
+	return checkDAGCapabilities(ctx, endpoint, source, cryptox.RecoveryDAGCapability, cryptox.RecoveryOperationClosureCapability)
 }

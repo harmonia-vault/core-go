@@ -1,0 +1,235 @@
+{
+  "description": "仅合成协议字节/Ed25519向量；不证明HPKE、PAKE或当前授权",
+  "syntheticSigningSeedHex": "6565656565656565656565656565656565656565656565656565656565656565",
+  "currentSessionHash": "86062fb7074b2774cdf85ca98a5a011750eda6b3e17aca4c27e36b27a2cbef73",
+  "requests": [
+    {
+      "request": {
+        "version": 1,
+        "mode": "resolve-or-close",
+        "target": {
+          "profile": "issuer-recovery-dag-v1",
+          "kind": "transition-v2",
+          "accountId": "synthetic-closure-account",
+          "accountGeneration": "1",
+          "operationId": "original-operation-1",
+          "originalSessionHash": "5472917a436f9ddcfa90b09c3e5408df706f835f8e1c2975ac6c35bbc33a5404",
+          "authorizationKind": "old-recovery",
+          "deviceId": "synthetic-new-device",
+          "deviceSigningPublicKey": "1i8Bah79Hk_feT60LNhEceG6nwzwTRKHtcxx9hYofLg",
+          "deviceReceivingPublicKey": "IZ5NgA2paNKl_LAJx4T0dGxxOO257khEtznoMLBc9CQ",
+          "stage": "intent",
+          "basis": {
+            "initializationHash": "5088175e8760dde750f57b9fd73a910f42fb154d2b7d59e1f1a1d2098d876b9d",
+            "expectedSequence": "9",
+            "recoveryGeneration": "3",
+            "recoveryHeadHash": "1f13dd6b980998e2d991e3ae1a264b64d1f6407f5689707e664aa04849c718a6",
+            "recoverySigningPublicKey": "VLDYHQ-n0A5KfWAN-rpvKyIDWyL-M14X7fX5qluwUHQ",
+            "recoveryReceivingPublicKey": "GxuMqoE2oHsZzcQtv_WMNB3gCH2P6uzynuwO1P0MM1U",
+            "dependencyBundleHash": "16c262b80210f499944b08ee60d540e34ea9f880bb788f0db49e5d933cda9b50",
+            "environmentManifestHash": "89f630b43d2c1960f33134862ed402fae8964845d145d0ad8323a5878b6edf9a"
+          },
+          "declaredIntentHash": "12a51dc4d65ebe9cb1bfad6d6e91df1a95885ac905084d1c61e083f5f9666892",
+          "knownChallengeHash": "",
+          "declaredContentHash": ""
+        },
+        "deviceSignature": "HogPPZ0TdHrrUNWz6qrC_efIAZLtTbh1cPesDBCvJUxHb2JNR-Z5NxZtSiScRZhlhAGvXq2boXKl1hEWgHyIDw"
+      },
+      "targetHash": "88824686779ff20e6cc1691a5142287a6a189920bddf0c54cc82b59e12e7aea7",
+      "targetCanonicalHex": "5b226861726d6f6e69612f7265636f766572792d6f7065726174696f6e2d7461726765742f7631222c2231222c226973737565722d7265636f766572792d6461672d7631222c227472616e736974696f6e2d7632222c2273796e7468657469632d636c6f737572652d6163636f756e74222c2231222c226f726967696e616c2d6f7065726174696f6e2d31222c2235343732393137613433366639646463666139306230396333653534303864663730366638333566386531633239373561633663333562626333336135343034222c226f6c642d7265636f76657279222c2273796e7468657469632d6e65772d646576696365222c223169384261683739486b5f66655436304c4e6845636547366e777a7754524b48746378783968596f664c67222c22495a354e67413270614e4b6c5f4c414a78345430644778784f4f3235376b6845747a6e6f4d4c4263394351222c22696e74656e74222c2235303838313735653837363064646537353066353762396664373361393130663432666231353464326237643539653166316131643230393864383736623964222c2239222c2233222c2231663133646436623938303939386532643939316533616531613236346236346431663634303766353638393730376536363461613034383439633731386136222c22564c445948512d6e3041354b6657414e2d7270764b79494457794c2d4d31345837665835716c7577554851222c224778754d716f45326f48735a7a635174765f574d4e4233674348325036757a796e75774f3150304d4d3155222c2231366332363262383032313066343939393434623038656536306435343065333465613966383830626237383866306462343965356439333363646139623530222c2238396636333062343364326331393630663333313334383632656434303266616538393634383435643134356430616438333233613538373862366564663961222c2231326135316463346436356562653963623162666164366436653931646631613935383835616339303530383464316336316530383366356639363636383932222c22222c22225d",
+      "signingCanonicalHex": "5b226861726d6f6e69612f7265636f766572792d6f7065726174696f6e2d7265736f6c7574696f6e2f7631222c227265736f6c76652d6f722d636c6f7365222c2238363036326662373037346232373734636466383563613938613561303131373530656461366233653137616361346332376533366232376132636265663733222c2238383832343638363737396666323065366363313639316135313432323837613661313839393230626464663063353463633832623539653132653761656137225d"
+    },
+    {
+      "request": {
+        "version": 1,
+        "mode": "resolve-or-close",
+        "target": {
+          "profile": "issuer-recovery-dag-v1",
+          "kind": "transition-v2",
+          "accountId": "synthetic-closure-account",
+          "accountGeneration": "1",
+          "operationId": "original-operation-1",
+          "originalSessionHash": "5472917a436f9ddcfa90b09c3e5408df706f835f8e1c2975ac6c35bbc33a5404",
+          "authorizationKind": "old-recovery",
+          "deviceId": "synthetic-new-device",
+          "deviceSigningPublicKey": "1i8Bah79Hk_feT60LNhEceG6nwzwTRKHtcxx9hYofLg",
+          "deviceReceivingPublicKey": "IZ5NgA2paNKl_LAJx4T0dGxxOO257khEtznoMLBc9CQ",
+          "stage": "challenged",
+          "basis": {
+            "initializationHash": "5088175e8760dde750f57b9fd73a910f42fb154d2b7d59e1f1a1d2098d876b9d",
+            "expectedSequence": "9",
+            "recoveryGeneration": "3",
+            "recoveryHeadHash": "1f13dd6b980998e2d991e3ae1a264b64d1f6407f5689707e664aa04849c718a6",
+            "recoverySigningPublicKey": "VLDYHQ-n0A5KfWAN-rpvKyIDWyL-M14X7fX5qluwUHQ",
+            "recoveryReceivingPublicKey": "GxuMqoE2oHsZzcQtv_WMNB3gCH2P6uzynuwO1P0MM1U",
+            "dependencyBundleHash": "16c262b80210f499944b08ee60d540e34ea9f880bb788f0db49e5d933cda9b50",
+            "environmentManifestHash": "89f630b43d2c1960f33134862ed402fae8964845d145d0ad8323a5878b6edf9a"
+          },
+          "declaredIntentHash": "12a51dc4d65ebe9cb1bfad6d6e91df1a95885ac905084d1c61e083f5f9666892",
+          "knownChallengeHash": "209e993c7f8cb72976501607881efc563dc4969cfb42086fea61e5f3bd8429ec",
+          "declaredContentHash": ""
+        },
+        "deviceSignature": "zKowDHajPFgL-T5BHXpJNQamM83NO2UwcvkTyrYPkSbaWM9k4vYlOTqnys4QPce2x5cXStODbPI7LhRPEmNrBg"
+      },
+      "targetHash": "34cec389089f1b6054cfb19a98747f979abc69f4372b3f1e04fed065b5a4ea1f",
+      "targetCanonicalHex": "5b226861726d6f6e69612f7265636f766572792d6f7065726174696f6e2d7461726765742f7631222c2231222c226973737565722d7265636f766572792d6461672d7631222c227472616e736974696f6e2d7632222c2273796e7468657469632d636c6f737572652d6163636f756e74222c2231222c226f726967696e616c2d6f7065726174696f6e2d31222c2235343732393137613433366639646463666139306230396333653534303864663730366638333566386531633239373561633663333562626333336135343034222c226f6c642d7265636f76657279222c2273796e7468657469632d6e65772d646576696365222c223169384261683739486b5f66655436304c4e6845636547366e777a7754524b48746378783968596f664c67222c22495a354e67413270614e4b6c5f4c414a78345430644778784f4f3235376b6845747a6e6f4d4c4263394351222c226368616c6c656e676564222c2235303838313735653837363064646537353066353762396664373361393130663432666231353464326237643539653166316131643230393864383736623964222c2239222c2233222c2231663133646436623938303939386532643939316533616531613236346236346431663634303766353638393730376536363461613034383439633731386136222c22564c445948512d6e3041354b6657414e2d7270764b79494457794c2d4d31345837665835716c7577554851222c224778754d716f45326f48735a7a635174765f574d4e4233674348325036757a796e75774f3150304d4d3155222c2231366332363262383032313066343939393434623038656536306435343065333465613966383830626237383866306462343965356439333363646139623530222c2238396636333062343364326331393630663333313334383632656434303266616538393634383435643134356430616438333233613538373862366564663961222c2231326135316463346436356562653963623162666164366436653931646631613935383835616339303530383464316336316530383366356639363636383932222c2232303965393933633766386362373239373635303136303738383165666335363364633439363963666234323038366665613631653566336264383432396563222c22225d",
+      "signingCanonicalHex": "5b226861726d6f6e69612f7265636f766572792d6f7065726174696f6e2d7265736f6c7574696f6e2f7631222c227265736f6c76652d6f722d636c6f7365222c2238363036326662373037346232373734636466383563613938613561303131373530656461366233653137616361346332376533366232376132636265663733222c2233346365633338393038396631623630353463666231396139383734376639373961626336396634333732623366316530346665643036356235613465613166225d"
+    },
+    {
+      "request": {
+        "version": 1,
+        "mode": "resolve-or-close",
+        "target": {
+          "profile": "issuer-recovery-dag-v1",
+          "kind": "transition-v2",
+          "accountId": "synthetic-closure-account",
+          "accountGeneration": "1",
+          "operationId": "original-operation-1",
+          "originalSessionHash": "5472917a436f9ddcfa90b09c3e5408df706f835f8e1c2975ac6c35bbc33a5404",
+          "authorizationKind": "old-recovery",
+          "deviceId": "synthetic-new-device",
+          "deviceSigningPublicKey": "1i8Bah79Hk_feT60LNhEceG6nwzwTRKHtcxx9hYofLg",
+          "deviceReceivingPublicKey": "IZ5NgA2paNKl_LAJx4T0dGxxOO257khEtznoMLBc9CQ",
+          "stage": "sealed",
+          "basis": {
+            "initializationHash": "5088175e8760dde750f57b9fd73a910f42fb154d2b7d59e1f1a1d2098d876b9d",
+            "expectedSequence": "9",
+            "recoveryGeneration": "3",
+            "recoveryHeadHash": "1f13dd6b980998e2d991e3ae1a264b64d1f6407f5689707e664aa04849c718a6",
+            "recoverySigningPublicKey": "VLDYHQ-n0A5KfWAN-rpvKyIDWyL-M14X7fX5qluwUHQ",
+            "recoveryReceivingPublicKey": "GxuMqoE2oHsZzcQtv_WMNB3gCH2P6uzynuwO1P0MM1U",
+            "dependencyBundleHash": "16c262b80210f499944b08ee60d540e34ea9f880bb788f0db49e5d933cda9b50",
+            "environmentManifestHash": "89f630b43d2c1960f33134862ed402fae8964845d145d0ad8323a5878b6edf9a"
+          },
+          "declaredIntentHash": "12a51dc4d65ebe9cb1bfad6d6e91df1a95885ac905084d1c61e083f5f9666892",
+          "knownChallengeHash": "209e993c7f8cb72976501607881efc563dc4969cfb42086fea61e5f3bd8429ec",
+          "declaredContentHash": "818b30a91c6a9e9f2beb021a8cf66e0076321800d6d8c470cf8e6ffbfe93c5af"
+        },
+        "deviceSignature": "I78K_l16svyC-i9btjxuCkTOydXrN780PjyVWlZeQa1Zq5VzNW7lB0YchashlzCNExbASafuEywEKFnEwMcADQ"
+      },
+      "targetHash": "98b0bc111ad2c8e04ef9e363e883ddaf830f1a7edf02ea18fcca8283f422fcb2",
+      "targetCanonicalHex": "5b226861726d6f6e69612f7265636f766572792d6f7065726174696f6e2d7461726765742f7631222c2231222c226973737565722d7265636f766572792d6461672d7631222c227472616e736974696f6e2d7632222c2273796e7468657469632d636c6f737572652d6163636f756e74222c2231222c226f726967696e616c2d6f7065726174696f6e2d31222c2235343732393137613433366639646463666139306230396333653534303864663730366638333566386531633239373561633663333562626333336135343034222c226f6c642d7265636f76657279222c2273796e7468657469632d6e65772d646576696365222c223169384261683739486b5f66655436304c4e6845636547366e777a7754524b48746378783968596f664c67222c22495a354e67413270614e4b6c5f4c414a78345430644778784f4f3235376b6845747a6e6f4d4c4263394351222c227365616c6564222c2235303838313735653837363064646537353066353762396664373361393130663432666231353464326237643539653166316131643230393864383736623964222c2239222c2233222c2231663133646436623938303939386532643939316533616531613236346236346431663634303766353638393730376536363461613034383439633731386136222c22564c445948512d6e3041354b6657414e2d7270764b79494457794c2d4d31345837665835716c7577554851222c224778754d716f45326f48735a7a635174765f574d4e4233674348325036757a796e75774f3150304d4d3155222c2231366332363262383032313066343939393434623038656536306435343065333465613966383830626237383866306462343965356439333363646139623530222c2238396636333062343364326331393630663333313334383632656434303266616538393634383435643134356430616438333233613538373862366564663961222c2231326135316463346436356562653963623162666164366436653931646631613935383835616339303530383464316336316530383366356639363636383932222c2232303965393933633766386362373239373635303136303738383165666335363364633439363963666234323038366665613631653566336264383432396563222c2238313862333061393163366139653966326265623032316138636636366530303736333231383030643664386334373063663865366666626665393363356166225d",
+      "signingCanonicalHex": "5b226861726d6f6e69612f7265636f766572792d6f7065726174696f6e2d7265736f6c7574696f6e2f7631222c227265736f6c76652d6f722d636c6f7365222c2238363036326662373037346232373734636466383563613938613561303131373530656461366233653137616361346332376533366232376132636265663733222c2239386230626331313161643263386530346566396533363365383833646461663833306631613765646630326561313866636361383238336634323266636232225d"
+    }
+  ],
+  "transitionChallenge": {
+    "accountId": "synthetic-closure-account",
+    "challenge": {
+      "operationId": "synthetic-observed-transition",
+      "challengeId": "challenge-1",
+      "nonce": "ampqampqampqampqampqampqampqampqampqampqamo",
+      "expiresAt": 2030000180,
+      "sessionHash": "5472917a436f9ddcfa90b09c3e5408df706f835f8e1c2975ac6c35bbc33a5404",
+      "accountGeneration": "1",
+      "authorizationKind": "old-recovery",
+      "chainMode": "continuous",
+      "authorizerDeviceId": "",
+      "expectedSequence": "1",
+      "previousTransitionHash": "8da24530f529741d60800bff38bd0b8b09c286fe2bd057d2e5a7cf64509d57b5",
+      "oldRecoveryGeneration": "1",
+      "oldRecoverySigningPublicKey": "VLDYHQ-n0A5KfWAN-rpvKyIDWyL-M14X7fX5qluwUHQ",
+      "oldRecoveryReceivingPublicKey": "GxuMqoE2oHsZzcQtv_WMNB3gCH2P6uzynuwO1P0MM1U",
+      "environmentManifest": [
+        {
+          "environmentId": "synthetic-env",
+          "keyVersion": "1"
+        }
+      ],
+      "authoritySet": [],
+      "issuerEvidence": null,
+      "dependencyBundle": {
+        "initialization": {
+          "proposal": {
+            "idempotencyKey": "original-init",
+            "device": {
+              "id": "device-A",
+              "signingPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+              "receivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg"
+            },
+            "recoveryGeneration": "1",
+            "recoverySigningPublicKey": "-CoYC3Rz2Y_ChGf_gFXwmn9dcYG6bjSpRKlC8s2IuZs",
+            "recoveryReceivingPublicKey": "TVmGmwk-ew09S-cYsUbXMV97k6q2o4HqOsw3hrcq6gE",
+            "trustRootSignature": "uroXuypc53YqjbJ22WJlOYHbA1GB4VLwMgbt7VV2_Dq7SQhdNtvqhYVzdknc2eB-zO5j2MuV1PX-TDzn6M-tDw",
+            "environments": [
+              {
+                "environmentId": "env-fixture",
+                "keyVersion": "1",
+                "recoveryEnvelope": "Kgx1FeyOxSqLD0EzFPzTK6R2-_6COAxYUvwuXCEyb3MMwFIsuBIGjnhyPFksYaUIlU5hLXKYdwJd9OsNCcMcNwpC6DaPICiMVUKeDZ6AKUM",
+                "grant": {
+                  "grant": {
+                    "accountId": "account-chain",
+                    "accountGeneration": "1",
+                    "issuerDeviceId": "device-A",
+                    "subjectDeviceId": "device-A",
+                    "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                    "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+                    "environmentId": "env-fixture",
+                    "keyVersion": "1",
+                    "grantGeneration": "1",
+                    "role": "admin",
+                    "expiresAt": "0",
+                    "idempotencyKey": "root-admin",
+                    "envelope": "aXgvtzIEnY1bPHKFsB5Cf_yeMfD-OJzcen6BFyMUkUEa7hWTcDbVhp4D47UxTztSvuIN19B17Mo5dmkKOLHaRqK7bh6FI1y8UnSHFK_WgcY"
+                  },
+                  "signature": "ifcqDJEukFISlOjiz4NH9ofB_boGOokKPz-wtI8E0qmKYXMPZ-fT39bCKwH17GqHsC5OA618HyhaGsQcX4RUCg"
+                }
+              }
+            ]
+          },
+          "proof": {
+            "accountId": "account-chain",
+            "accountGeneration": "1",
+            "loginTokenHash": "bb88dbf49af9952c4ee3e3140989228fd313362691514d24ecdfdb89d42ae5a5",
+            "challengeId": "init-challenge",
+            "nonce": "RkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkY",
+            "expiresAt": "2030000100",
+            "proposalHash": "e90de69db94314e6f73e9c8bddb68b7e5600e6c4443d32573b782e2f026d9f88"
+          },
+          "deviceSignature": "x8rUL33IvhHT5qXhQCvrMpgaNBbpRllZzFAmxeZZ4xgOqn8joDWhSB7Ef3RqemqJ__3HLiHODNi1iIsmxSSFAQ",
+          "recoverySignature": "2jovZVQCo6dYDEjs0Mrd0Ny_pgJhpos-p39pdAcHfGGvjL4a3XPsAkm4GiVPC9BNncc-Fs61r9jqir6DZXJiCg",
+          "sequence": 1
+        },
+        "records": []
+      }
+    },
+    "challengeHash": "3f458898f2942ae4e271395405f7e40ab06134df22b09c478d84ce2446c3e251",
+    "dependencyBasisHash": "00035b44d3decf851d11ac90f38a913317c735929ccd9f76b2e3482d6af5f8f5",
+    "emptyAdminHash": "30e56f9479406d153b3d74e30c72cbcdfd0e9ecb400a4b18f3fa11147bb9c86f"
+  },
+  "receipts": {
+    "pending": {
+      "version": 1,
+      "profile": "harmonia-recovery-operation-resolution-v1",
+      "accountId": "synthetic-closure-account",
+      "accountGeneration": "1",
+      "kind": "transition-v2",
+      "operationId": "original-operation-1",
+      "targetHash": "88824686779ff20e6cc1691a5142287a6a189920bddf0c54cc82b59e12e7aea7",
+      "state": "pending"
+    },
+    "closed": {
+      "version": 1,
+      "profile": "harmonia-recovery-operation-resolution-v1",
+      "accountId": "synthetic-closure-account",
+      "accountGeneration": "1",
+      "kind": "transition-v2",
+      "operationId": "original-operation-1",
+      "targetHash": "88824686779ff20e6cc1691a5142287a6a189920bddf0c54cc82b59e12e7aea7",
+      "state": "closed",
+      "sequence": 10,
+      "observedChallengeHash": null
+    },
+    "accepted": {
+      "version": 1,
+      "profile": "harmonia-recovery-operation-resolution-v1",
+      "accountId": "synthetic-closure-account",
+      "accountGeneration": "1",
+      "kind": "transition-v2",
+      "operationId": "original-operation-1",
+      "targetHash": "98b0bc111ad2c8e04ef9e363e883ddaf830f1a7edf02ea18fcca8283f422fcb2",
+      "state": "accepted",
+      "sequence": 10,
+      "contentHash": "818b30a91c6a9e9f2beb021a8cf66e0076321800d6d8c470cf8e6ffbfe93c5af"
+    }
+  }
+}

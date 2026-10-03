@@ -72,3 +72,7 @@ run = "go test -race ./mobilebridge -run TestNativeDAG -count=1 -timeout=45s -js
 [tasks.test-mobile-dag-applied-components]
 description = "B3b 原登记确认、最终CAS激活、取消及冷恢复定向组件"
 run = "go test -race ./syncclient ./mobileworkflow -run '^Test(B3b|ConfirmedRecoveredDAG)' -count=1 -timeout=150s -json"
+
+[tasks.test-mobile-dag-closure-components]
+description = "恢复原ID终态wire、whole-state CAS与冷历史的有限组件race"
+run = "go test -race -p 2 ./cryptox ./syncclient ./mobileworkflow -run '^(Test(RecoveryOperation|DAGResolution)|TestDAGVerifiedBinding)' -count=1 -timeout=180s -json"

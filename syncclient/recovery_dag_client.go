@@ -26,6 +26,9 @@ type DAGRecoveryConfig struct {
 	HTTPClient           *http.Client
 	AccountID            string
 	AccountGeneration    uint64
+	PriorBundle          *cryptox.RecoveryDependencyBundle
+	MinimumSequence      uint64
+	ClosedOperations     []DAGClosedOperationCheckpoint
 	Pin                  *cryptox.PinnedIssuerRoot
 	Now                  func() time.Time
 	Journal              DAGRecoveryJournal
@@ -131,6 +134,7 @@ type DAGReceipt struct {
 
 // 私钥/受限会话只在当前进程。String/JSON不允许暴露它们；Close尽力清除。
 type DAGRecoverySession struct {
+	authRecoveryGeneration                  string
 	mu                                      sync.Mutex
 	config                                  DAGRecoveryConfig
 	endpoint                                *url.URL
@@ -245,9 +249,41 @@ func OpenDAGRecoverySession(ctx context.Context, c DAGRecoveryConfig, completeCo
 	if !enrollmentID.MatchString(c.AccountID) || c.AccountGeneration == 0 || c.Journal == nil {
 		return nil, cryptox.ErrInvalidWire
 	}
+	var e error
+	c, e = freezeDAGClosedHistoryConfig(c)
+	if e != nil {
+		return nil, e
+	}
 	if e := CheckDAGCapability(ctx, c.Endpoint, c.HTTPClient); e != nil {
 		return nil, e
 	}
+	s, e := openDAGRecoveryProof(ctx, c, completeCode)
+	if e != nil {
+		return nil, e
+	}
+	keep := false
+	defer func() {
+		if !keep {
+			s.Close()
+		}
+	}()
+	if e = s.refresh(ctx); e != nil {
+		return nil, e
+	}
+	pending, err := c.Journal.Load()
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	if err == nil {
+		if pending.Endpoint != c.Endpoint || pending.AccountID != c.AccountID || pending.AccountGeneration != c.AccountGeneration || pending.Pin != s.pin || validateProtectedDAGOperation(pending) != nil {
+			return nil, cryptox.ErrInvalidWire
+		}
+		s.pending = &pending
+	}
+	keep = true
+	return s, nil
+}
+func openDAGRecoveryProof(ctx context.Context, c DAGRecoveryConfig, completeCode string) (*DAGRecoverySession, error) {
 	u, e := url.Parse(c.Endpoint)
 	if e != nil {
 		return nil, e
@@ -285,6 +321,7 @@ func OpenDAGRecoverySession(ctx context.Context, c DAGRecoveryConfig, completeCo
 	if challenge.ExpiresAt <= s.lastObserved || challenge.ExpiresAt > s.lastObserved+125 {
 		return nil, cryptox.ErrInvalidWire
 	}
+	s.authRecoveryGeneration = challenge.RecoveryGeneration
 	s.keys, e = cryptox.DeriveRecoveryKeys(seed, c.AccountID, body["accountGeneration"], challenge.RecoveryGeneration)
 	if e != nil {
 		return nil, e
@@ -316,19 +353,6 @@ func OpenDAGRecoverySession(ctx context.Context, c DAGRecoveryConfig, completeCo
 	}
 	s.token = session.Token
 	s.expires = session.ExpiresAt
-	if e = s.refresh(ctx); e != nil {
-		return nil, e
-	}
-	pending, err := c.Journal.Load()
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, err
-	}
-	if err == nil {
-		if pending.Endpoint != c.Endpoint || pending.AccountID != c.AccountID || pending.AccountGeneration != c.AccountGeneration || pending.Pin != s.pin || validateProtectedDAGOperation(pending) != nil {
-			return nil, cryptox.ErrInvalidWire
-		}
-		s.pending = &pending
-	}
 	keep = true
 	return s, nil
 }
@@ -372,6 +396,9 @@ func (s *DAGRecoverySession) refresh(ctx context.Context) error {
 	other, e := proof.RecoveryCheckpoint()
 	if e != nil || checkpoint != other || checkpoint.RecoveryGeneration != v.RecoveryGeneration || checkpoint.SigningPublicKey != v.RecoverySigningPublicKey || checkpoint.ReceivingPublicKey != v.RecoveryReceivingPublicKey || checkpoint.TransitionHead != v.RecoveryHeadHash || checkpoint.AcceptedSequence > v.Sequence || validateDAGSequence(v.IssuerEvidence, v.Sequence) != nil {
 		return cryptox.ErrInvalidWire
+	}
+	if e = validateDAGHistoryCheckpoint(s.config, v, proof); e != nil {
+		return e
 	}
 	if s.proof != nil {
 		if _, e = cryptox.VerifyRecoveryDAGAdvance(s.proof, v.IssuerEvidence); e != nil {

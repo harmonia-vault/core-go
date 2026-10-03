@@ -265,8 +265,14 @@ func (w *Workflow) runDAGOwner(parent context.Context, r *DAGRecoveryRegistry, s
 		w.mu.Lock()
 		httpClient, now := w.http, w.now
 		w.mu.Unlock()
+		w.mu.Lock()
+		config, configErr := withDAGResolutionHistory(syncclient.DAGRecoveryConfig{Endpoint: identity.Binding.Endpoint, HTTPClient: httpClient, AccountID: identity.Binding.AccountID, AccountGeneration: identity.Binding.AccountGeneration, Now: now, Journal: &e.port, Preparation: &e.port, RecoveredPreparation: &e.port}, w.state.RecoveryDAGResolution)
+		w.mu.Unlock()
+		if configErr != nil {
+			return info, configErr
+		}
 		var session *syncclient.DAGRecoverySession
-		session, err = syncclient.OpenDAGRecoverySession(ctx, syncclient.DAGRecoveryConfig{Endpoint: identity.Binding.Endpoint, HTTPClient: httpClient, AccountID: identity.Binding.AccountID, AccountGeneration: identity.Binding.AccountGeneration, Now: now, Journal: &e.port, Preparation: &e.port, RecoveredPreparation: &e.port}, string(code))
+		session, err = syncclient.OpenDAGRecoverySession(ctx, config, string(code))
 		if err != nil {
 			return info, err
 		}
@@ -303,6 +309,12 @@ func (w *Workflow) runDAGOwner(parent context.Context, r *DAGRecoveryRegistry, s
 // OpenDAGRecoveryOwner 只开全新只读受限 owner；已有原包一律留给 S2a。
 func (w *Workflow) OpenDAGRecoveryOwner(ctx context.Context, r *DAGRecoveryRegistry, scope DAGOwnerScope, completeCurrentCode []byte) (syncclient.DAGRecoveryInfo, error) {
 	defer clear(completeCurrentCode)
+	w.mu.Lock()
+	hasClosed := w.state.RecoveryDAGResolution != nil && len(w.state.RecoveryDAGResolution.Closed) > 0
+	w.mu.Unlock()
+	if hasClosed {
+		return syncclient.DAGRecoveryInfo{RotationRequired: true}, ErrDAGResolutionPending
+	}
 	if len(completeCurrentCode) == 0 || len(completeCurrentCode) > 512 {
 		return syncclient.DAGRecoveryInfo{RotationRequired: true}, ErrDAGOwnerBinding
 	}

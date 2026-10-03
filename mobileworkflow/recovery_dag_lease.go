@@ -102,6 +102,9 @@ func (w *Workflow) attachDAGOwnerState(cancel context.CancelFunc, allowPending b
 	if w.dagQueryCancel != nil || w.dagOwnerCancel != nil {
 		return dagOwnerIdentity{}, ErrDAGQueryBusy
 	}
+	if w.dagResolutionPending() {
+		return dagOwnerIdentity{}, ErrDAGResolutionPending
+	}
 	b, err := w.dagBindingLocked()
 	if err != nil {
 		return dagOwnerIdentity{}, err
