@@ -1308,6 +1308,11 @@ func (w *Workflow) environmentOperation(ctx context.Context, operation, env, nam
 		}
 	}
 	change := w.baseChange(env, operation, id, authority)
+	recipient, err := w.environmentRecoveryRecipient()
+	if err != nil {
+		return err
+	}
+	change.RecoveryGeneration = recipient.RecoveryGeneration
 	if operation != "delete" {
 		var key []byte
 		if operation == "create" {
@@ -1331,7 +1336,7 @@ func (w *Workflow) environmentOperation(ctx context.Context, operation, env, nam
 			if err != nil {
 				return err
 			}
-			envelope, err := cryptox.WrapEnvironmentKey(key, cryptox.EnvelopeContext{AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, EnvironmentID: env, KeyVersion: "1", RecipientType: "recovery", RecipientID: w.state.AccountID, RecipientGeneration: w.state.Root.RecoveryGeneration, RecipientPublicKey: w.state.Root.RecoveryReceivingPublicKey})
+			envelope, err := cryptox.WrapEnvironmentKey(key, cryptox.EnvelopeContext{AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, EnvironmentID: env, KeyVersion: "1", RecipientType: "recovery", RecipientID: w.state.AccountID, RecipientGeneration: recipient.RecoveryGeneration, RecipientPublicKey: recipient.RecoveryReceivingPublicKey})
 			if err != nil {
 				return err
 			}

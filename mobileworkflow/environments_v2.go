@@ -18,11 +18,13 @@ import (
 var ErrLegacyEnvironmentOrigin = errors.New("legacy create/rotate package has no signed origin; automatic upgrade forbidden")
 
 type environmentOriginJournal struct {
-	Packet      cryptox.EnvironmentChangeV2 `json:"packet"`
-	ContentHash string                      `json:"contentHash"`
-	Authority   cryptox.SignedGrantWire     `json:"authority"`
-	Before      []cryptox.SignedGrantWire   `json:"before"`
-	Control     cryptox.IssuerProofV2       `json:"control"`
+	Packet          cryptox.EnvironmentChangeV2  `json:"packet"`
+	ContentHash     string                       `json:"contentHash"`
+	Authority       cryptox.SignedGrantWire      `json:"authority"`
+	Before          []cryptox.SignedGrantWire    `json:"before"`
+	Control         cryptox.IssuerProofV2        `json:"control"`
+	Capability      string                       `json:"capability,omitempty"`
+	RecoveryControl *cryptox.IssuerRecoveryProof `json:"recoveryControl,omitempty"`
 }
 
 func (w *Workflow) validateEnvironmentOriginRecord(record *environmentRecord) error {
@@ -37,13 +39,46 @@ func (w *Workflow) validateEnvironmentOriginRecord(record *environmentRecord) er
 	if err != nil || hash != r.ContentHash {
 		return errors.New("protected environment V2 content hash changed")
 	}
-	pin, initial, err := w.originPinAndInitial()
-	if err != nil {
-		return err
-	}
-	graph, err := cryptox.VerifyIssuerEvidenceV2(pin, r.Control, initial...)
-	if err != nil {
-		return err
+	var graph syncclient.VerifiedControlEvidence
+	if r.RecoveryControl != nil || r.Capability == cryptox.RecoveryAuthorityCapability {
+		if !w.recoveryEnvironmentMode() || r.RecoveryControl == nil || r.Capability != cryptox.RecoveryAuthorityCapability || r.Control.Profile != "" {
+			return ErrRecoveryEvidence
+		}
+		client, close, err := w.environmentJournalClient()
+		if err != nil {
+			return err
+		}
+		defer close()
+		sequence, err := strconv.ParseUint(record.Signed.Change.ExpectedSequence, 10, 64)
+		if err != nil {
+			return err
+		}
+		grants := append([]cryptox.SignedGrantWire(nil), r.Before...)
+		found := false
+		for _, grant := range grants {
+			if sameJSONValue(grant, r.Authority) {
+				found = true
+			}
+		}
+		if !found {
+			grants = append(grants, r.Authority)
+		}
+		graph, err = client.VerifyEnvironmentControl(syncclient.EnvironmentControlView{Sequence: sequence, Grants: grants, IssuerRecoveryEvidence: r.RecoveryControl}, r.Authority.Grant.EnvironmentID, true)
+		if err != nil {
+			return err
+		}
+	} else {
+		if r.Capability != "" && r.Capability != cryptox.EnvironmentOriginCapability {
+			return ErrRecoveryEvidence
+		}
+		pin, initial, err := w.originPinAndInitial()
+		if err != nil {
+			return err
+		}
+		graph, err = cryptox.VerifyIssuerEvidenceV2(pin, r.Control, initial...)
+		if err != nil {
+			return err
+		}
 	}
 	if err = graph.VerifyHistoricalGrant(r.Authority); err != nil {
 		return err
@@ -77,7 +112,23 @@ func (w *Workflow) prepareEnvironmentOrigin(ctx context.Context, signed cryptox.
 	if err != nil {
 		return nil, err
 	}
-	return &environmentOriginJournal{Packet: packet, ContentHash: hash, Authority: authority, Before: before, Control: control.IssuerEvidence}, nil
+	record := &environmentOriginJournal{Packet: packet, ContentHash: hash, Authority: authority, Before: before, Control: control.IssuerEvidence}
+	if control.IssuerRecoveryEvidence != nil {
+		if !w.recoveryEnvironmentMode() {
+			return nil, ErrRecoveryEvidence
+		}
+		// 深拷贝候选，HTTP对象不能在持久化后替换原source证明。
+		b, err := json.Marshal(control.IssuerRecoveryEvidence)
+		if err != nil {
+			return nil, err
+		}
+		record.RecoveryControl = &cryptox.IssuerRecoveryProof{}
+		if err = json.Unmarshal(b, record.RecoveryControl); err != nil {
+			return nil, err
+		}
+		record.Capability = cryptox.RecoveryAuthorityCapability
+	}
+	return record, nil
 }
 func (w *Workflow) environmentControl(ctx context.Context, env string) (syncclient.EnvironmentControlView, error) {
 	control, err := w.client.EnvironmentControl(ctx, env)
@@ -87,10 +138,19 @@ func (w *Workflow) environmentControl(ctx context.Context, env string) (syncclie
 	if control.Sequence != w.engine.State().Cloud.Sequence {
 		return control, syncclient.ErrWriteConflict
 	}
-	// A graph proves device/authority origin, not a transition of recovery keys.
-	// Keep the recovery recipient fixed until its independent signed transition exists.
-	if w.state.Root == nil || control.IssuerEvidence.TrustRoot != *w.state.Root {
-		return control, ErrRecoveryEvidence
+	if control.IssuerRecoveryEvidence != nil {
+		root, err := w.environmentRecoveryRecipient()
+		if err != nil {
+			return control, err
+		}
+		if !w.recoveryEnvironmentMode() || control.IssuerRecoveryEvidence.TrustRoot != root {
+			return control, ErrRecoveryEvidence
+		}
+	} else {
+		// 旧P2没有连续恢复证明，仍保持独立原恢复recipient，不自动提升profile。
+		if w.state.Root == nil || control.IssuerEvidence.TrustRoot != *w.state.Root {
+			return control, ErrRecoveryEvidence
+		}
 	}
 	return control, nil
 }
@@ -105,7 +165,13 @@ func (w *Workflow) submitEnvironmentOrigin(ctx context.Context, record *environm
 	if err := w.persist(); err != nil {
 		return err
 	}
-	status, err := w.client.EnvironmentStatusV2(ctx, record.Signed.Change.IdempotencyKey)
+	var status syncclient.EnvironmentChangeStatusV2
+	var err error
+	if r.Capability == cryptox.RecoveryAuthorityCapability {
+		status, err = w.client.EnvironmentStatusV3(ctx, record.Signed.Change.IdempotencyKey)
+	} else {
+		status, err = w.client.EnvironmentStatusV2(ctx, record.Signed.Change.IdempotencyKey)
+	}
 	if err != nil {
 		return err
 	}
@@ -114,27 +180,42 @@ func (w *Workflow) submitEnvironmentOrigin(ctx context.Context, record *environm
 		if status.ContentHash != r.ContentHash {
 			return syncclient.ErrWriteConflict
 		}
-		result, err = w.client.ConfirmEnvironmentChangeV2(ctx, r.Packet, syncclient.Acceptance{Sequence: status.Sequence, Replayed: true})
+		if r.Capability == cryptox.RecoveryAuthorityCapability {
+			result, err = w.client.ConfirmEnvironmentChangeV3(ctx, r.Packet, syncclient.Acceptance{Sequence: status.Sequence, Replayed: true})
+		} else {
+			result, err = w.client.ConfirmEnvironmentChangeV2(ctx, r.Packet, syncclient.Acceptance{Sequence: status.Sequence, Replayed: true})
+		}
 	} else {
-		result, err = w.client.SubmitEnvironmentChangeV2(ctx, r.Packet)
+		if r.Capability == cryptox.RecoveryAuthorityCapability {
+			result, err = w.client.SubmitEnvironmentChangeV3(ctx, r.Packet)
+		} else {
+			result, err = w.client.SubmitEnvironmentChangeV2(ctx, r.Packet)
+		}
 	}
 	if result.Accepted.Sequence > 0 {
 		record.Sequence = result.Accepted.Sequence
 	}
 	record.Applied = result.Applied
 	if saveErr := w.persist(); saveErr != nil {
+		record.Applied = false
 		return errors.Join(syncclient.ErrAcceptedNotApplied, saveErr)
 	}
 	if err != nil {
 		return err
 	}
 	if err = w.refresh(ctx); err != nil {
-		return err
+		record.Applied = false
+		return errors.Join(syncclient.ErrAcceptedNotApplied, err)
 	}
 	if err = w.rememberLabel(record.Signed.Change, record.Sequence); err != nil {
-		return err
+		record.Applied = false
+		return errors.Join(syncclient.ErrAcceptedNotApplied, err)
 	}
-	return w.persist()
+	if err = w.persist(); err != nil {
+		record.Applied = false
+		return errors.Join(syncclient.ErrAcceptedNotApplied, err)
+	}
+	return nil
 }
 func (w *Workflow) RotateEnvironment(ctx context.Context, env, id string) (View, error) {
 	w.mu.Lock()
@@ -182,6 +263,11 @@ func (w *Workflow) RotateEnvironment(ctx context.Context, env, id string) (View,
 	}
 	defer clear(key)
 	change := w.baseChange(env, "rotate", id, authority)
+	recipient, err := w.environmentRecoveryRecipient()
+	if err != nil {
+		return View{}, err
+	}
+	change.RecoveryGeneration = recipient.RecoveryGeneration
 	change.KeyVersion = newVersion
 	name := env
 	if label, ok := w.state.Labels[env]; ok {
@@ -222,7 +308,7 @@ func (w *Workflow) RotateEnvironment(ctx context.Context, env, id string) (View,
 	if ownGeneration == "" {
 		return View{}, localstate.ErrUnauthorized
 	}
-	recovery, err := cryptox.WrapEnvironmentKey(key, cryptox.EnvelopeContext{AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, EnvironmentID: env, KeyVersion: newVersion, RecipientType: "recovery", RecipientID: w.state.AccountID, RecipientGeneration: w.state.Root.RecoveryGeneration, RecipientPublicKey: w.state.Root.RecoveryReceivingPublicKey})
+	recovery, err := cryptox.WrapEnvironmentKey(key, cryptox.EnvelopeContext{AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, EnvironmentID: env, KeyVersion: newVersion, RecipientType: "recovery", RecipientID: w.state.AccountID, RecipientGeneration: recipient.RecoveryGeneration, RecipientPublicKey: recipient.RecoveryReceivingPublicKey})
 	if err != nil {
 		return View{}, err
 	}
