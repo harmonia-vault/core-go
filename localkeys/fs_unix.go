@@ -28,6 +28,9 @@ func CurrentUserID() (string, error) {
 	return strconv.Itoa(os.Geteuid()), nil
 }
 func openSecureFS(c Config) (secureFS, string, error) {
+	return openUnixSecureFS(c, false)
+}
+func openUnixSecureFS(c Config, existingOnly bool) (secureFS, string, error) {
 	owner, err := CurrentUserID()
 	if err != nil {
 		return nil, "", err
@@ -50,7 +53,7 @@ func openSecureFS(c Config) (secureFS, string, error) {
 	parts := strings.Split(strings.TrimPrefix(c.Directory, "/"), "/")
 	for index, part := range parts {
 		next, err := unix.Openat(fd, part, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
-		if errors.Is(err, unix.ENOENT) && index == len(parts)-1 {
+		if !existingOnly && errors.Is(err, unix.ENOENT) && index == len(parts)-1 {
 			if err = unix.Mkdirat(fd, part, 0700); err == nil {
 				if err = unix.Fsync(fd); err == nil {
 					next, err = unix.Openat(fd, part, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
@@ -83,7 +86,11 @@ func openSecureFS(c Config) (secureFS, string, error) {
 		}
 	}
 	fs := &unixFS{dir: fd, uid: uid}
-	lockfd, err := unix.Openat(fd, "vault.lock", unix.O_CREAT|unix.O_RDWR|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0600)
+	lockFlags := unix.O_RDWR | unix.O_NOFOLLOW | unix.O_CLOEXEC
+	if !existingOnly {
+		lockFlags |= unix.O_CREAT
+	}
+	lockfd, err := unix.Openat(fd, "vault.lock", lockFlags, 0600)
 	if err != nil {
 		unix.Close(fd)
 		return nil, "", ErrPermission

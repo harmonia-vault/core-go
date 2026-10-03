@@ -16,6 +16,14 @@ import (
 
 const securePOSIXSchema = "harmonia/secure-posix-provider/v1"
 
+// 仅内部 I/O 接口；正式公开构造器仍只接受受保护 Vault。
+type securePOSIXVault interface {
+	Directory() string
+	Load(string) ([]byte, error)
+	Save(string, []byte) error
+	WriteEnvironmentFragment([]byte) error
+}
+
 type securePOSIXState struct {
 	Schema       string     `json:"schema"`
 	FragmentPath string     `json:"fragmentPath"`
@@ -58,6 +66,12 @@ func validatePOSIXState(state posixState) error {
 // NewSecurePOSIXProvider 将辅助元数据放入 Vault AEAD；不迁移明文 fixture。
 // fragment 必须是同 Vault 目录中的固定 environment.sh，写入沿用受保护目录句柄。
 func NewSecurePOSIXProvider(fragmentPath string, vault *localkeys.Vault) (*POSIXProvider, error) {
+	if vault == nil {
+		return nil, fmt.Errorf("fragment must be bound to protected vault directory")
+	}
+	return loadSecurePOSIXProvider(fragmentPath, vault, true)
+}
+func loadSecurePOSIXProvider(fragmentPath string, vault securePOSIXVault, reapply bool) (*POSIXProvider, error) {
 	if vault == nil || fragmentPath != filepath.Join(vault.Directory(), "environment.sh") {
 		return nil, fmt.Errorf("fragment must be bound to protected vault directory")
 	}
@@ -79,8 +93,10 @@ func NewSecurePOSIXProvider(fragmentPath string, vault *localkeys.Vault) (*POSIX
 			return nil, err
 		}
 		p.state = record.State
-		if err := p.writeFragment(p.state); err != nil {
-			return nil, err
+		if reapply {
+			if err := p.writeFragment(p.state); err != nil {
+				return nil, err
+			}
 		}
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err

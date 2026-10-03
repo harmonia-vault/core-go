@@ -51,6 +51,7 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	requestID := flags.String("request-id", "", "本机共享写幂等ID；可用于write-retry")
 	caFile := flags.String("ca-file", "", "用户明确指定的自托管PEM CA；保留标准HTTPS验证")
 	passwordStdin := flags.Bool("password-stdin", false, "明确从标准输入读取一行密码，绝不从环境或参数读取")
+	offlineLocal := flags.Bool("offline-local", false, "仅logout：后台停止时恢复本机配置，不启动后台或联网")
 	providerPath := flags.String("provider-file", "", "仅用于隔离测试的 JSON 环境文件")
 	fixture := flags.Bool("fixture", false, "显式启用合成测试；禁止作为设备 enrollment")
 	input := flags.String("input", "", "合成 cloud snapshot JSON")
@@ -71,6 +72,21 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	shell := flags.String("shell", "sh", "sh/bash/zsh hook")
 	if err := flags.Parse(args[1:]); err != nil {
 		return err
+	}
+	if *offlineLocal {
+		if command != "logout" || len(flags.Args()) != 0 {
+			return errors.New("--offline-local仅用于显式本机logout")
+		}
+		valid := true
+		flags.Visit(func(f *flag.Flag) {
+			if f.Name != "offline-local" && f.Name != "local-directory" && f.Name != "local-user" {
+				valid = false
+			}
+		})
+		if !valid {
+			return errors.New("离线logout只接受local-directory/local-user，不混用其他参数")
+		}
+		return protectedLocalLogout(ctx, *localDirectory, *localUser, out)
 	}
 	valueArgument := false
 	flags.Visit(func(f *flag.Flag) {

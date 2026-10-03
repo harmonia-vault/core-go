@@ -12,3 +12,7 @@ run = "go test -race ./... -count=1"
 [tasks.cross-compile]
 description = "交叉构建三平台 CLI，不生成安装包"
 run = "bash .mise/scripts/cross-compile.sh"
+
+[tasks.test-offline-local-logout]
+description = "验证受保护离线退出、既有材料与逐变量恢复"
+run = "go test -race -count=1 ./cmd/harmonia ./localkeys ./platform -run 'TestOfflineLogout|TestExistingOnly|TestClosedLogoutProvider|TestLogoutProviderUntracked'"

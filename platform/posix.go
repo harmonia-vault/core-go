@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/harmonia-vault/core-go/localkeys"
 	"github.com/harmonia-vault/core-go/localstate"
 )
 
@@ -137,7 +136,7 @@ type POSIXProvider struct {
 	mu       sync.Mutex
 	path     string
 	baseline map[string]string
-	secret   *localkeys.Vault
+	secret   securePOSIXVault
 	state    posixState
 }
 

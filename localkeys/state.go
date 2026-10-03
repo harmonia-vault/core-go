@@ -18,6 +18,15 @@ func OpenEncryptedStateStore(c Config) (*StateStore, error) {
 	}
 	return &StateStore{vault: v}, nil
 }
+
+// OpenExistingEncryptedStateStore 供显式离线退出；缺材料不能初始化新身份。
+func OpenExistingEncryptedStateStore(c Config) (*StateStore, error) {
+	v, err := OpenExisting(c)
+	if err != nil {
+		return nil, err
+	}
+	return &StateStore{vault: v}, nil
+}
 func (s *StateStore) Vault() *Vault { return s.vault }
 func (s *StateStore) Close() error  { return s.vault.Close() }
 func (s *StateStore) Load() (localstate.State, error) {

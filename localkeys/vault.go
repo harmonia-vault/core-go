@@ -99,10 +99,16 @@ func Open(c Config) (*Vault, error) {
 	if err != nil {
 		return nil, err
 	}
+	return openVault(c, fs, owner, true)
+}
+func openVault(c Config, fs secureFS, owner string, createKey bool) (*Vault, error) {
 	fail := func(err error) (*Vault, error) { fs.Close(); return nil, err }
 	v := &Vault{fs: fs, config: c, ownerID: owner}
 	content, err := fs.Read(keyFile, maxKeyRecordSize)
 	if errors.Is(err, os.ErrNotExist) {
+		if !createKey {
+			return fail(os.ErrNotExist)
+		}
 		// 旧状态仍在时绝不能默默换机器钥，否则会伪装成空 vault。
 		for _, name := range slots {
 			if _, e := fs.Read(name, maxRecordSize); e == nil {
