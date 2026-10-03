@@ -230,10 +230,11 @@ func (s *DAGRecoverySession) query(ctx context.Context, p ProtectedDAGOperation)
 	if p.Kind == "recovered-v2" {
 		op = "recovered-devices-v2"
 	}
-	var out DAGReceipt
-	if e := s.request(ctx, "GET", dagPath(op+"/"+p.OperationID), s.token, nil, &out); e != nil {
-		return out, e
+	wire := dagStatusReceipt{recovered: p.Kind == "recovered-v2"}
+	if e := s.request(ctx, "GET", dagPath(op+"/"+p.OperationID), s.token, nil, &wire); e != nil {
+		return DAGReceipt{}, e
 	}
+	out := wire.value
 	if out.OperationID != p.OperationID {
 		return out, cryptox.ErrInvalidWire
 	}

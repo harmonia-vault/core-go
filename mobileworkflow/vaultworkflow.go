@@ -141,6 +141,7 @@ func clone[T any](value T) T {
 }
 
 type Workflow struct {
+	dagQueryCancel       context.CancelFunc
 	dagPersistenceFailed bool
 	saveNativeCAS        func(string, []byte) error
 	checkNativeState     func(string) error
@@ -357,6 +358,9 @@ func New(config Config) (*Workflow, error) {
 func (w *Workflow) Close() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.dagQueryCancel != nil {
+		w.dagQueryCancel()
+	}
 	w.recoverySession = nil // native registry independently owns this process resource
 	if w.writer != nil {
 		w.writer.Close()
@@ -934,6 +938,9 @@ func (w *Workflow) boot(ctx context.Context) error {
 
 // 网络客户端已经在同epoch清Cloud并置AccountClosed，手机再清原生持久信任资料与进程中的钥。
 func (w *Workflow) invalidateTrust() error {
+	if w.dagQueryCancel != nil {
+		w.dagQueryCancel()
+	}
 	w.state.RecoveryDAG = nil
 	if w.managementPending() {
 		clear(w.state.Management.Pending.Packet)
