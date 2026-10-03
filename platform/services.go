@@ -160,7 +160,7 @@ func WindowsService(c ServiceConfig) (ServiceTemplate, error) {
 	if c.CAFile != "" {
 		arguments = append(arguments, "--ca-file", c.CAFile)
 	}
-	manifest := WindowsServiceManifest{Schema: "harmonia/windows-service/v1", ServiceName: name, Account: account, TargetUserSID: c.UserID, Executable: c.BinaryPath, Arguments: arguments, StateDirectory: c.StateDirectory, StartType: "automatic", RequiredACL: []string{"服务身份只能读写本实例状态目录；其他本地用户不得访问", `只授予目标 HKEY_USERS\` + c.UserID + `\Environment 所需查询/写入权限；禁止授予其他用户 hive`, "二进制和服务配置只能由管理员写入"}, Gates: []string{"正式 Windows daemon 仍关闭；DPAPI/SID/SCM/hive 原生验收完成前不可安装或启动为可信服务", "本实现不安装服务或授予 ACL", "目标用户 hive 未加载时失败；开机无登录的 profile/hive 生命周期尚未实现和验收", "Session 0 广播不能保证进入交互用户会话；现有进程环境不会被外部修改"}}
+	manifest := WindowsServiceManifest{Schema: "harmonia/windows-service/v1", ServiceName: name, Account: account, TargetUserSID: c.UserID, Executable: c.BinaryPath, Arguments: arguments, StateDirectory: c.StateDirectory, StartType: "automatic", RequiredACL: []string{"服务身份只能读写本实例状态目录；其他本地用户不得访问", `只授予目标 HKEY_USERS\` + c.UserID + `\Environment 所需查询/写入权限；禁止授予其他用户 hive`, "二进制和服务配置只能由管理员写入"}, Gates: []string{"正式 Windows daemon 仍关闭；DPAPI/SID/SCM/hive 原生验收完成前不可安装或启动为可信服务", "本实现不安装服务或授予 ACL", "默认适配器在目标 hive 未加载时失败；另有未接入正式入口的受托 token profile lease 源码，无人登录 token/broker 与原生验收尚未完成", "Session 0 广播不能保证进入交互用户会话；现有进程环境不会被外部修改"}}
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return ServiceTemplate{}, err

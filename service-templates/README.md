@@ -31,3 +31,5 @@ python3 service-templates/verify-orbstack-fixture.py \
 ## 真实入网后的来宾 init 重启
 
 `boot-test/README.md` 与对应脚本保存另建隔离来宾的真实原生 SPAKE2→双签入网→设备 boot→签名写入→init 重启验收。`orbstack-boot-result.json` 逐项记录通过与未跑门槛；合成账号的权威数据由真实 Node/SQLite 业务维护，正式加密 Vault 的钥匙在该来宾目标 UID 生成，未迁移宿主钥匙。测试机工具链保留并停机，账号、单元和敏感测试数据清理后不再有可继续同步的设备状态。LXC init 重启不能代替物理内核启动或全 systemd 沙盒证明。
+
+Windows 的 `NewWindowsProfileEnvironment` 目前只提供已核对本地 token 的 profile lease 源码，未接入正式 daemon。无人登录 token 来源、SYSTEM broker 管道/安装和原生登录/注销/重启验收仍未完成；它不改变这些模板的关闭门槛。具体权限与停止清理约束见 workspace 的 `docs/SERVICES.md`。
