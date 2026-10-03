@@ -21,6 +21,9 @@ func (c *Client) recoveryControls() bool {
 	return ok && v.initialRecoveryEvidence != nil
 }
 func (c *Client) controlCapability() string {
+	if c.dagControls() {
+		return cryptox.RecoveryDAGCapability
+	}
 	if c.recoveryControls() {
 		return cryptox.RecoveryAuthorityCapability
 	}
@@ -70,6 +73,9 @@ func (c *Client) verifyControlEvidence(origin cryptox.IssuerProofV2, recovery *c
 }
 
 func (c *Client) requestEnvironmentControl(ctx context.Context, environment string, out *EnvironmentControlView) error {
+	if c.dagControls() {
+		return c.requestDAGEnvironmentControl(ctx, environment, out)
+	}
 	target := c.endpointFor("/issuer-evidence")
 	query := target.Query()
 	query.Set("environmentId", environment)
@@ -90,6 +96,10 @@ func (c *Client) requestEnvironmentControl(ctx context.Context, environment stri
 	return nil
 }
 func (c *Client) requestManagementControl(ctx context.Context, environment string, out *ManagementControl) error {
+	// P4设备管理属于后续切片，不能隐式选择P2/P3控制。
+	if c.dagControls() {
+		return ErrWritePermission
+	}
 	target := c.endpointFor("/grant-management")
 	query := target.Query()
 	query.Set("environmentId", environment)

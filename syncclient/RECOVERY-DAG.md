@@ -12,4 +12,11 @@
 
 `NewEnrollmentV5` 与 `NewApproverV5` 使用原生 BoringSSL SPAKE2。CLI 用 `pair --certificate-version 5` 选择该流程。受保护的原收据支持提交响应丢失后的恢复；普通 CGO0 后台可以持已接受设备钥匙 Boot/Pull，不能在没有原生配对实现时伪造入网。
 
-真实联合测试使用合成邮箱与密码、本机临时目录及回环 HTTPS：首次初始化 A→恢复 B→再恢复 C→C 原生配对两个正式 CLI5（RO、RW）→普通后台 Boot、P4 Pull、原生 IPC 和隔离 shell fragment。覆盖真实恢复 HPKE、AEAD 解密、原请求响应丢失、原收据恢复、RO 拒写、RW 正常下发，以及保护状态重启与 owner 关闭。没有安装宿主服务、导入宿主环境或测试用户真实凭据；Android/iOS UI、Windows SCM 与该新恢复流程尚未联合验收。P4 环境 CRUD、授权管理控制和 manager-reanchor 新 HTTP 流程仍须后续显式接线，不能据本纵链宣称完整产品或生产可用。
+真实联合测试使用合成邮箱与密码、本机临时目录及回环 HTTPS：首次初始化 A→恢复 B→再恢复 C→C 原生配对两个正式 CLI5（RO、RW）→普通后台 Boot、P4 Pull、原生 IPC 和隔离 shell fragment。覆盖真实恢复 HPKE、AEAD 解密、原请求响应丢失、原收据恢复、RO 拒写、RW 正常下发，以及保护状态重启与 owner 关闭。没有安装宿主服务、导入宿主环境或测试用户真实凭据；Android/iOS UI、Windows SCM 与该新恢复流程尚未联合验收。P4 环境 CRUD 现有显式 Go 接口；授权管理控制、移动 P4 环境业务 journal/UI 和 manager-reanchor 新 HTTP 流程仍须后续接线，不能据本纵链宣称完整产品或生产可用。
+
+
+`EnvironmentControl` 在 P4 客户端只请求明确 DAG capability，HTTP `issuerEvidence` 按 P4 单一类型解析，内存 DTO 使用 `IssuerDAGEvidence`。`VerifyEnvironmentControl` 默认检查当前序号、期限和本机当前 Admin/KV/GG；只有明确 `true` 才重验历史业务 record，多参数拒绝。它复验本机固定初始化与 pin、完整 DAG 连续扩展及唯一 actor target，不能把服务器候选当成新的根。
+
+`PrepareEnvironmentChangeV4` 为 create/rotate 生成原域 environment-origin；`SubmitEnvironmentChangeV4` 仅走 `/environment-changes-v4`。`EnvironmentStatusV4` 和 `ConfirmEnvironmentChangeV4` 校验原 hash、接受尾序号、同一 Pull 的完整环境/变量 checkpoint 与来源 origin。rename/delete 仍调用 `SubmitEnvironmentChange` 原域。P4 对 V2/V3 生产入口及尚未接通的 `ManagementControl` 明确拒绝，不能自动降级。
+
+本切片的真实联合测试为 A→恢复 B→再次恢复 C→C 创建/重命名/轮换/删除 Z→原生 V5 PAKE 只授权 D 读取 Z，包含真实 HPKE、数据 AEAD、504 原包重开查询、native Save 故障的 accepted-not-applied 和暂停时签墓碑恢复原值。业务 record 仅在测试的 nativeVault/testadapter 中验证密封原包原则，没有把环境包写入恢复 checked journal。它不构成手机 SDK/Save 或移动 P4 环境工作流的验收。

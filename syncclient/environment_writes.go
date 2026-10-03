@@ -45,6 +45,9 @@ func (c *Client) ConfirmEnvironmentChange(ctx context.Context, signed cryptox.Si
 	return result, nil
 }
 func (c *Client) SubmitEnvironmentChange(ctx context.Context, signed cryptox.SignedEnvironmentChange) (SubmitResult, error) {
+	if c.dagControls() && (signed.Change.Operation == "create" || signed.Change.Operation == "rotate") {
+		return SubmitResult{}, ErrWritePermission
+	}
 	if err := c.validateEnvironmentChange(signed); err != nil {
 		return SubmitResult{}, err
 	}

@@ -21,6 +21,7 @@ type EnvironmentControlView struct {
 	Grants                 []cryptox.SignedGrantWire    `json:"grants"`
 	IssuerEvidence         cryptox.IssuerProofV2        `json:"issuerEvidence"`
 	IssuerRecoveryEvidence *cryptox.IssuerRecoveryProof `json:"issuerRecoveryEvidence,omitempty"`
+	IssuerDAGEvidence      *cryptox.IssuerRecoveryDAG   `json:"issuerDAGEvidence,omitempty"`
 }
 
 func (c *Client) CurrentIssuerEvidence() (cryptox.IssuerProofV2, error) {
@@ -117,7 +118,7 @@ func (c *Client) VerifyEnvironmentControl(out EnvironmentControlView, environmen
 	if (!past && (out.Sequence < old.Sequence || out.Sequence < old.AuthorizationSequence)) || out.Sequence > 9007199254740991 {
 		return nil, cryptox.ErrInvalidWire
 	}
-	p, e := c.verifyControlEvidence(out.IssuerEvidence, out.IssuerRecoveryEvidence, out.Sequence, past)
+	p, e := c.verifyEnvironmentControlEvidence(out, past)
 	if e != nil {
 		return nil, e
 	}
@@ -145,7 +146,7 @@ func (c *Client) VerifyEnvironmentControl(out EnvironmentControlView, environmen
 	if own == nil || own.Grant.Role != "admin" || p.VerifyTarget(*own, c.config.DeviceID, cryptox.EncodeBase64(v.trust.DeviceSigningPublicKey), v.receivingPublicKey) != nil {
 		return nil, ErrWritePermission
 	}
-	if c.recoveryControls() && !past {
+	if (c.recoveryControls() || c.dagControls()) && !past {
 		cached, exists := old.Environments[environment]
 		if !exists || cached.Role != localstate.Admin || own.Grant.KeyVersion != strconv.FormatUint(cached.KeyVersion, 10) || own.Grant.GrantGeneration != strconv.FormatUint(cached.GrantGeneration, 10) {
 			return nil, ErrFullPullRequired
@@ -154,7 +155,7 @@ func (c *Client) VerifyEnvironmentControl(out EnvironmentControlView, environmen
 	return p, nil
 }
 func (c *Client) PrepareEnvironmentChangeV2(ctx context.Context, signed cryptox.SignedEnvironmentChange, key ed25519.PrivateKey) (cryptox.EnvironmentChangeV2, error) {
-	if c.recoveryControls() {
+	if c.recoveryControls() || c.dagControls() {
 		return cryptox.EnvironmentChangeV2{}, ErrWritePermission
 	}
 	return c.prepareEnvironmentChangeOrigin(ctx, signed, key)
@@ -183,7 +184,7 @@ func (c *Client) prepareEnvironmentChangeOrigin(ctx context.Context, signed cryp
 	return cryptox.NewEnvironmentChangeV2(signed, actor, before, key)
 }
 func (c *Client) EnvironmentStatusV2(ctx context.Context, id string) (EnvironmentChangeStatusV2, error) {
-	if c.recoveryControls() {
+	if c.recoveryControls() || c.dagControls() {
 		return EnvironmentChangeStatusV2{}, ErrWritePermission
 	}
 	return c.environmentOriginStatus(ctx, id, "/environment-changes-v2/")
@@ -235,7 +236,7 @@ func (c *Client) validateEnvironmentChangeV2(s cryptox.EnvironmentChangeV2) erro
 }
 func (c *Client) ConfirmEnvironmentChangeV2(ctx context.Context, s cryptox.EnvironmentChangeV2, accepted Acceptance) (SubmitResult, error) {
 	result := SubmitResult{Accepted: accepted}
-	if c.recoveryControls() {
+	if c.recoveryControls() || c.dagControls() {
 		return result, ErrWritePermission
 	}
 	if e := c.validateEnvironmentChangeV2(s); e != nil {
@@ -277,7 +278,7 @@ func (c *Client) ConfirmEnvironmentChangeV2(ctx context.Context, s cryptox.Envir
 	return result, nil
 }
 func (c *Client) SubmitEnvironmentChangeV2(ctx context.Context, s cryptox.EnvironmentChangeV2) (SubmitResult, error) {
-	if c.recoveryControls() {
+	if c.recoveryControls() || c.dagControls() {
 		return SubmitResult{}, ErrWritePermission
 	}
 	if e := c.validateEnvironmentChangeV2(s); e != nil {
