@@ -185,7 +185,7 @@ func (w *Workflow) observeRecoveryClock() error {
 	}
 	now := w.now().Unix()
 	if now < r.CreatedAt-5 || now < r.LastObservedAt-5 {
-		return ErrRecoveryExpired
+		return errors.Join(ErrRecoveryExpired, w.closeRecoverySessionForClock())
 	}
 	changed := false
 	if now > r.LastObservedAt {
@@ -193,8 +193,9 @@ func (w *Workflow) observeRecoveryClock() error {
 		changed = true
 	}
 	if !r.SessionClosed && now >= r.SessionExpiresAt {
-		r.SessionToken = ""
-		r.SessionClosed = true
+		if err := w.closeRecoverySessionForClock(); err != nil {
+			return err
+		}
 		changed = true
 	}
 	if q := r.Rotation; q != nil && !q.DeadlineClosed && q.Challenge != nil && now >= q.Challenge.ExpiresAt {
@@ -269,7 +270,11 @@ func (w *Workflow) validateRecoveryState() error {
 	if _, err = cryptox.DecodeBase64(r.ReceivingPublicKey, 32, 32); err != nil {
 		return err
 	}
-	if _, err = w.verifyRecoveryVault(r.Vault, r.Root, r.Keys); err != nil {
+	if r.SessionClosed {
+		if err = w.validateClosedRecoveryVault(r); err != nil {
+			return err
+		}
+	} else if _, err = w.verifyRecoveryVault(r.Vault, r.Root, r.Keys); err != nil {
 		return err
 	}
 	if r.Vault.RecoveryGeneration != r.RecoveryGeneration || r.Vault.RotationRequired == r.RotationCompleted {

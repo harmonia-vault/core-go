@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/localstate"
 	"github.com/harmonia-vault/core-go/syncclient"
 )
 
@@ -430,7 +431,8 @@ func (w *Workflow) RetryManagement(ctx context.Context, id string) (_ Management
 		if w.state.Management != nil {
 			if done, ok := w.state.Management.History[id]; ok {
 				if e := w.persist(); e != nil {
-					return done, e
+					done.Applied = false
+					return done, errors.Join(syncclient.ErrAcceptedNotApplied, e)
 				}
 				return done, nil
 			}
@@ -537,7 +539,10 @@ func (w *Workflow) RetryManagement(ctx context.Context, id string) (_ Management
 	} else {
 		var fault *syncclient.RequestError
 		current, exists := w.engine.State().Cloud.Environments[r.EnvironmentID]
-		if !errors.As(e, &fault) || fault.Status != 403 || exists && current.Role == "admin" {
+		if errors.Is(e, syncclient.ErrTrustInvalidated) {
+			return out, e
+		}
+		if !errors.As(e, &fault) || fault.Status != 403 || fault.Code != "admin_required" || exists && current.Role == localstate.Admin {
 			return out, errors.Join(syncclient.ErrAcceptedNotApplied, e)
 		}
 	}
@@ -547,7 +552,8 @@ func (w *Workflow) RetryManagement(ctx context.Context, id string) (_ Management
 	s.Pending = nil
 	s.History[id] = out
 	if e = w.persist(); e != nil {
-		return out, e
+		out.Applied = false
+		return out, errors.Join(syncclient.ErrAcceptedNotApplied, e)
 	}
 	return out, nil
 }

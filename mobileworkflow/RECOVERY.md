@@ -68,3 +68,11 @@
 - 合成空初始环境与新码完整清单 unit race 2 主项/9 场景通过，1.408 秒。进程 owner 生命周期 race 4 主项/5 个截止与绑定篡改子项此前通过，1.702 秒。
 - 本批完整 native race：mobileworkflow 4.577 秒、syncclient 6.066 秒通过；源码扫描通过，仍需人工限定公开范围。
 - Android 恢复/强认证 session 及 cert4 恢复后的新管理设备尚未接入或跑实际验收；仅 Go 原生 AES 测试替身和真实 loopback HTTPS 通过。恢复始终 restricted/trustedDevice=false，M2 整体仍未完成。
+
+## 纯时钟回退的永久关闭修复
+
+额外只读审查发现：此前单独回退墙钟超过已见容差、但未到会话截止时，只暂时返回 ErrRecoveryExpired；时钟回正后可重新读取恢复明文。新独立 unit 先实测失败（0.471 秒，clock 回正后 err=nil）。修复将纯回退与实际会话到期都不可逆置 SessionClosed，清随机 bearer、所有恢复环境钥和值事件缓存，关闭附加的进程恢复签名 owner，并通过原生 AES 回调持久化；clock 回正不重新授权。
+
+已关闭记录只保留公开签名来源及原提案/nonce/签名日志，用于诚实辨识未确定的原操作。New 重新核原根/原初始化/来源/封套承诺和 journal，但必须没有环境钥/值事件，不再要求被清的解密钥，也不能开放明文或提交 HTTP。失去 bearer 后不能声称已查询服务器接受结果；原操作元数据仍可见，结果可能保持未知。原生保存失败会返回错误且当前进程仍关闭；原生接入必须沿失效清理边界关闭资源，不能把保存失败当作已经持久成功。
+
+实测：恢复安全定向 native race 2.149 秒通过；真实 HTTPS/TS/临时 SQLite 3 主项/9 场景 race 13.416 秒通过，含新的纯回退无待决/原已签未知两项，以及原七项未知响应、保存门槛和到期 journal 回归。完整 mobileworkflow/syncclient native race 4.769/6.389 秒通过。原 17 场景测试文件未修改；Android 恢复尚未开放。
