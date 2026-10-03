@@ -202,6 +202,9 @@ func (w *Workflow) currentApprovalAuthorities(r *approvalRecord) error {
 func (w *Workflow) ApprovalInfo() (ApprovalInfo, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.approvalV4Pending() {
+		return ApprovalInfo{}, ErrApprovalPending
+	}
 	if w.closed {
 		return ApprovalInfo{}, ErrClosed
 	}
@@ -260,6 +263,9 @@ func (w *Workflow) acceptApprovalStatus(r *approvalRecord, client *syncclient.Ap
 func (w *Workflow) ApprovePairing(ctx context.Context, input ApprovalInput) (ApprovalResult, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.approvalV4Pending() {
+		return ApprovalResult{}, ErrApprovalPending
+	}
 	if w.closed {
 		return ApprovalResult{}, ErrClosed
 	}
@@ -375,6 +381,9 @@ func (w *Workflow) ApprovePairing(ctx context.Context, input ApprovalInput) (App
 func (w *Workflow) RetryApproval(ctx context.Context, id string) (ApprovalResult, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.approvalV4Pending() {
+		return ApprovalResult{}, ErrApprovalPending
+	}
 	if w.closed {
 		return ApprovalResult{}, ErrClosed
 	}
@@ -471,6 +480,9 @@ func (w *Workflow) retryApproval(ctx context.Context, r *approvalRecord) (Approv
 func (w *Workflow) CancelApproval(id string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.approvalV4Pending() {
+		return ErrApprovalPending
+	}
 	if w.closed {
 		return ErrClosed
 	}

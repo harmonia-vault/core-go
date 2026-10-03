@@ -100,6 +100,7 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
+	PendingApprovalV4  *approvalRecordV4             `json:"pendingApprovalV4,omitempty"`
 	RecoveredDevice    *recoveredDeviceRecord        `json:"recoveredDevice,omitempty"`
 	RecoveryAuthority  *recoveryAuthorityRecord      `json:"recoveryAuthority,omitempty"`
 	Management         *managementState              `json:"management,omitempty"`
@@ -319,6 +320,10 @@ func New(config Config) (*Workflow, error) {
 			return nil, err
 		}
 	}
+	if err := workflow.validateApprovalV4(state.PendingApprovalV4); err != nil {
+		workflow.Close()
+		return nil, err
+	}
 	if err := workflow.validateApprovalV3(state.PendingApprovalV3); err != nil {
 		workflow.Close()
 		return nil, err
@@ -408,6 +413,9 @@ func (w *Workflow) checkWithoutManagement() error {
 	}
 	if w.recoveredDevicePending() {
 		return ErrRecoveryPending
+	}
+	if w.approvalV4Pending() {
+		return ErrApprovalPending
 	}
 	if w.enrollmentPending() {
 		return ErrMobileEnrollmentPending
@@ -917,6 +925,7 @@ func (w *Workflow) invalidateTrust() error {
 	w.state.InitialAuthorities = nil
 	w.state.PendingApproval = nil
 	w.state.PendingApprovalV3 = nil
+	w.state.PendingApprovalV4 = nil
 	if r := w.state.EnrollmentV3; r != nil && r.Login != nil {
 		r.Login.Token = ""
 	}
@@ -956,6 +965,9 @@ func (w *Workflow) refresh(ctx context.Context) error {
 	}
 	if w.recoveredDevicePending() {
 		return ErrRecoveryPending
+	}
+	if w.approvalV4Pending() {
+		return ErrApprovalPending
 	}
 	if w.enrollmentPending() {
 		return ErrMobileEnrollmentPending

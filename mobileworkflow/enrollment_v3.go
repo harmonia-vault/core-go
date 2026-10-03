@@ -56,7 +56,7 @@ func (w *Workflow) mobileEnrollmentGate() error {
 	if w.state.Recovery != nil {
 		return ErrRecoveryRestricted
 	}
-	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 || w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+	if w.approvalV4Pending() || w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 || w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
 		return ErrApprovalPending
 	}
 	return nil

@@ -149,7 +149,7 @@ func (w *Workflow) recoveryOnly() error {
 	if len(w.state.SelfRevocation) > 0 {
 		return ErrSelfRevocationPending
 	}
-	if w.state.Root != nil || w.state.Pending != nil || w.state.PendingApproval != nil || w.state.PendingApprovalV3 != nil || w.state.EnrollmentV3 != nil || w.engine.State().AccountClosed {
+	if w.state.Root != nil || w.state.Pending != nil || w.state.PendingApproval != nil || w.state.PendingApprovalV3 != nil || w.state.PendingApprovalV4 != nil || w.state.EnrollmentV3 != nil || w.engine.State().AccountClosed {
 		return ErrRecoveryRestricted
 	}
 	return nil
