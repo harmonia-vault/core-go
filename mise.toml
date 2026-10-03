@@ -68,3 +68,7 @@ run = "go test -race ./syncclient -run '^TestB3a' -count=1 -timeout=90s -json"
 [tasks.test-native-dag-registry]
 description = "原生opaque DAG registry生命周期、立即取消与正常detach的有限race测试"
 run = "go test -race ./mobilebridge -run TestNativeDAG -count=1 -timeout=45s -json"
+
+[tasks.test-mobile-dag-applied-components]
+description = "B3b 原登记确认、最终CAS激活、取消及冷恢复定向组件"
+run = "go test -race ./syncclient ./mobileworkflow -run '^Test(B3b|ConfirmedRecoveredDAG)' -count=1 -timeout=150s -json"

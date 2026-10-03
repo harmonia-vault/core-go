@@ -146,7 +146,7 @@ func (w *Workflow) recoveryOnly() error {
 	if w.dagPersistenceFailed {
 		return ErrDAGPersistence
 	}
-	if w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
+	if w.state.RecoveredDAGDevice != nil || w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
 		return ErrRecoveryRestricted
 	}
 	if w.closed {

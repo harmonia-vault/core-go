@@ -103,6 +103,8 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
+	DAGCASRequired                  bool                          `json:"dagCASRequired,omitempty"`
+	RecoveredDAGDevice              *recoveredDAGDeviceRecord     `json:"recoveredDAGDevice,omitempty"`
 	RecoveryDAGRecoveredPreparation *recoveryDAGPreparationState  `json:"recoveryDAGRecoveredPreparation,omitempty"`
 	RecoveryDAGPreparation          *recoveryDAGPreparationState  `json:"recoveryDAGPreparation,omitempty"`
 	RecoveryDAG                     *recoveryDAGState             `json:"recoveryDAG,omitempty"`
@@ -143,6 +145,8 @@ func clone[T any](value T) T {
 }
 
 type Workflow struct {
+	dagDeviceCancel      context.CancelFunc
+	requiresDAGCAS       bool
 	dagOwnerCancel       context.CancelFunc
 	dagQueryCancel       context.CancelFunc
 	dagPersistenceFailed bool
@@ -267,7 +271,7 @@ func New(config Config) (*Workflow, error) {
 		if state.Root != nil {
 			root := state.Root
 			pub, e := cryptox.DecodeBase64(root.RecoverySigningPublicKey, 32, 32)
-			if e != nil || (state.EnrollmentV3 == nil && state.RecoveredDevice == nil && (root.RootDeviceID != state.DeviceID || root.RootSigningPublicKey != state.SigningPublicKey || root.RootReceivingPublicKey != state.ReceivingPublicKey)) || cryptox.VerifyTrustRoot(state.AccountID, state.AccountGeneration, *root, pub) != nil {
+			if e != nil || (state.EnrollmentV3 == nil && state.RecoveredDevice == nil && state.RecoveredDAGDevice == nil && (root.RootDeviceID != state.DeviceID || root.RootSigningPublicKey != state.SigningPublicKey || root.RootReceivingPublicKey != state.ReceivingPublicKey)) || cryptox.VerifyTrustRoot(state.AccountID, state.AccountGeneration, *root, pub) != nil {
 				return nil, errors.New("protected root binding invalid")
 			}
 		}
@@ -296,6 +300,11 @@ func New(config Config) (*Workflow, error) {
 		return nil, err
 	}
 	workflow := &Workflow{signing: bytes.Clone(config.SigningKey), receiving: bytes.Clone(config.ReceivingPrivateKey), http: client, now: now, state: state, store: store, engine: engine, saveNative: config.SaveProtectedState, saveNativeCAS: config.SaveProtectedStateCAS, checkNativeState: config.CheckProtectedState, protectedSHA256: protectedStateHash(config.ProtectedState)}
+	workflow.requiresDAGCAS = state.DAGCASRequired || state.RecoveryDAG != nil || state.RecoveryDAGPreparation != nil || state.RecoveryDAGRecoveredPreparation != nil || state.RecoveredDAGDevice != nil
+	if err := workflow.validateRecoveredDAGDeviceLocked(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
 	if err := workflow.validateDAGStateLocked(); err != nil {
 		workflow.Close()
 		return nil, err
@@ -361,6 +370,9 @@ func New(config Config) (*Workflow, error) {
 func (w *Workflow) Close() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.dagDeviceCancel != nil {
+		w.dagDeviceCancel()
+	}
 	if w.dagQueryCancel != nil {
 		w.dagQueryCancel()
 	}
@@ -427,7 +439,7 @@ func (w *Workflow) checkWithoutManagement() error {
 	if w.dagPersistenceFailed {
 		return ErrDAGPersistence
 	}
-	if w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
+	if w.state.RecoveredDAGDevice != nil || w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
 		return ErrRecoveryRestricted
 	}
 	if w.closed {
@@ -944,12 +956,16 @@ func (w *Workflow) boot(ctx context.Context) error {
 
 // 网络客户端已经在同epoch清Cloud并置AccountClosed，手机再清原生持久信任资料与进程中的钥。
 func (w *Workflow) invalidateTrust() error {
+	if w.dagDeviceCancel != nil {
+		w.dagDeviceCancel()
+	}
 	if w.dagQueryCancel != nil {
 		w.dagQueryCancel()
 	}
 	if w.dagOwnerCancel != nil {
 		w.dagOwnerCancel()
 	}
+	w.state.RecoveredDAGDevice = nil
 	w.state.RecoveryDAG = nil
 	w.state.RecoveryDAGPreparation = nil
 	w.state.RecoveryDAGRecoveredPreparation = nil
@@ -1203,6 +1219,9 @@ func (j nativeJournal) Save(data []byte) error {
 }
 func (w *Workflow) persist() error {
 	w.state.Cloud = w.engine.State()
+	if w.requiresDAGCAS {
+		return w.saveDAGCandidateLocked(clone(w.state))
+	}
 	encoded, err := json.Marshal(w.state)
 	if err != nil {
 		return err

@@ -50,7 +50,7 @@ func (w *Workflow) mobileEnrollmentGate() error {
 	if w.dagPersistenceFailed {
 		return ErrDAGPersistence
 	}
-	if w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
+	if w.state.RecoveredDAGDevice != nil || w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil {
 		return ErrRecoveryRestricted
 	}
 	if w.closed {
@@ -323,6 +323,9 @@ func (w *Workflow) originVerifier() (*syncclient.PinnedVerifier, error) {
 	generation, err := strconv.ParseUint(w.state.AccountGeneration, 10, 64)
 	if err != nil || generation == 0 || w.state.Root == nil {
 		return nil, ErrNotTrusted
+	}
+	if w.state.RecoveredDAGDevice != nil {
+		return w.recoveredDAGVerifierLocked()
 	}
 	if w.state.RecoveredDevice != nil {
 		return w.recoveredVerifier()

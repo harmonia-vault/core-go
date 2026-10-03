@@ -144,22 +144,29 @@ func samePreparation(a, b syncclient.DAGTransitionPreparation) bool {
 	return ex == nil && ey == nil && bytes.Equal(x, y)
 }
 func (w *Workflow) saveDAGCandidateLocked(candidate protectedState) error {
+	w.requiresDAGCAS = true
+	candidate.DAGCASRequired = true
+	if w.dagPersistenceFailed {
+		return ErrDAGPersistence
+	}
+	if w.saveNativeCAS == nil || w.checkNativeState == nil {
+		return ErrDAGAtomicStoreRequired
+	}
+	if err := w.checkNativeState(w.protectedSHA256); err != nil {
+		w.failDAGPersistenceLocked()
+		return errors.Join(ErrDAGPersistence, err)
+	}
 	encoded, err := json.Marshal(candidate)
 	if err != nil {
 		return err
 	}
 	defer clear(encoded)
 	if len(encoded) > 8<<20 {
+		w.failDAGPersistenceLocked()
 		return ErrDAGProtectedState
 	}
 	if err = w.saveNativeCAS(w.protectedSHA256, encoded); err != nil {
-		w.dagPersistenceFailed = true
-		if w.dagOwnerCancel != nil {
-			w.dagOwnerCancel()
-		}
-		if w.dagQueryCancel != nil {
-			w.dagQueryCancel()
-		}
+		w.failDAGPersistenceLocked()
 		return errors.Join(ErrDAGPersistence, err)
 	}
 	w.state = candidate
