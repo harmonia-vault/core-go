@@ -100,6 +100,7 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
+	Management         *managementState              `json:"management,omitempty"`
 	Version            int                           `json:"version"`
 	Endpoint           string                        `json:"endpoint"`
 	DeviceID           string                        `json:"deviceId"`
@@ -133,20 +134,21 @@ func clone[T any](value T) T {
 }
 
 type Workflow struct {
-	mu         sync.Mutex
-	signing    ed25519.PrivateKey
-	receiving  []byte
-	http       *http.Client
-	now        func() time.Time
-	state      protectedState
-	store      *memoryStore
-	engine     *localstate.Engine
-	client     *syncclient.Client
-	verifier   *syncclient.PinnedVerifier
-	login      *syncclient.LoginResult
-	closed     bool
-	saveNative func([]byte) error
-	writer     *syncclient.Writer
+	recoverySession *RecoverySession
+	mu              sync.Mutex
+	signing         ed25519.PrivateKey
+	receiving       []byte
+	http            *http.Client
+	now             func() time.Time
+	state           protectedState
+	store           *memoryStore
+	engine          *localstate.Engine
+	client          *syncclient.Client
+	verifier        *syncclient.PinnedVerifier
+	login           *syncclient.LoginResult
+	closed          bool
+	saveNative      func([]byte) error
+	writer          *syncclient.Writer
 }
 
 func New(config Config) (*Workflow, error) {
@@ -323,11 +325,16 @@ func New(config Config) (*Workflow, error) {
 		workflow.Close()
 		return nil, err
 	}
+	if err := workflow.validateManagementState(); err != nil {
+		workflow.Close()
+		return nil, err
+	}
 	return workflow, nil
 }
 func (w *Workflow) Close() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	w.recoverySession = nil // native registry independently owns this process resource
 	if w.writer != nil {
 		w.writer.Close()
 		w.writer = nil
@@ -346,6 +353,9 @@ func (w *Workflow) Close() {
 		r.Login.Token = ""
 	}
 	clear(w.state.SelfRevocation)
+	if w.managementPending() {
+		clear(w.state.Management.Pending.Packet)
+	}
 	w.clearRecovery()
 	if w.http != nil {
 		w.http.CloseIdleConnections()
@@ -372,6 +382,15 @@ func (w *Workflow) Logout() error {
 }
 
 func (w *Workflow) check() error {
+	if err := w.checkWithoutManagement(); err != nil {
+		return err
+	}
+	if w.managementPending() {
+		return ErrManagementPending
+	}
+	return nil
+}
+func (w *Workflow) checkWithoutManagement() error {
 	if w.closed {
 		return ErrClosed
 	}
@@ -713,6 +732,9 @@ func (w *Workflow) CompleteInitialization(ctx context.Context, completeCodeReent
 func (w *Workflow) accountPath(suffix string) string {
 	return "/v1/accounts/" + w.state.AccountID + suffix
 }
+
+var errMobileResponseMalformed = errors.New("mobile HTTPS response malformed")
+
 func (w *Workflow) request(ctx context.Context, path, token string, body any, out any) error {
 	endpoint, err := url.Parse(w.state.Endpoint)
 	if err != nil {
@@ -757,8 +779,11 @@ func (w *Workflow) request(ctx context.Context, path, token string, body any, ou
 	}
 	defer response.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(response.Body, (8<<20)+1))
-	if err != nil || len(data) > 8<<20 {
-		return errors.New("mobile HTTPS response exceeds limit")
+	if err != nil {
+		return errors.New("mobile HTTPS response read failed")
+	}
+	if len(data) > 8<<20 {
+		return errors.Join(errMobileResponseMalformed, errors.New("mobile HTTPS response exceeds limit"))
 	}
 	defer clear(data)
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
@@ -771,7 +796,10 @@ func (w *Workflow) request(ctx context.Context, path, token string, body any, ou
 		}
 		return syncclient.NewRequestError(response.StatusCode, code)
 	}
-	return decode(data, out)
+	if err := decode(data, out); err != nil {
+		return errors.Join(errMobileResponseMalformed, err)
+	}
+	return nil
 }
 func decode(data []byte, out any) error {
 	if !utf8.Valid(data) {
@@ -871,6 +899,10 @@ func (w *Workflow) boot(ctx context.Context) error {
 
 // 网络客户端已经在同epoch清Cloud并置AccountClosed，手机再清原生持久信任资料与进程中的钥。
 func (w *Workflow) invalidateTrust() error {
+	if w.managementPending() {
+		clear(w.state.Management.Pending.Packet)
+	}
+	w.state.Management = nil
 	w.state.Root = nil
 	w.state.Pending = nil
 	w.state.InitialAuthorities = nil
@@ -906,6 +938,9 @@ func (w *Workflow) invalidateTrust() error {
 	return err
 }
 func (w *Workflow) refresh(ctx context.Context) error {
+	if w.managementPending() {
+		return ErrManagementPending
+	}
 	if w.state.Recovery != nil {
 		return ErrRecoveryRestricted
 	}

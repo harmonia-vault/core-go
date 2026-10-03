@@ -3,6 +3,7 @@ package mobileworkflow
 import (
 	"bytes"
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -41,6 +42,7 @@ type RecoveredEnvironment struct {
 	Variables  map[string]string `json:"variables"`
 }
 type recoveryGrantEvent struct {
+	OriginHash    string                  `json:"originHash,omitempty"`
 	Sequence      uint64                  `json:"sequence"`
 	Grant         syncclient.SignedGrant  `json:"grant"`
 	Authorization *syncclient.SignedGrant `json:"authorization"`
@@ -64,6 +66,7 @@ type recoveryOriginalInitialization struct {
 }
 
 type recoveryVaultWire struct {
+	EnvelopeEvidence           *recoveryEnvelopeEvidence       `json:"envelopeEvidence,omitempty"`
 	IssuerEvidence             json.RawMessage                 `json:"issuerEvidence,omitempty"`
 	OriginalInitialization     *recoveryOriginalInitialization `json:"originalInitialization,omitempty"`
 	AccountID                  string                          `json:"accountId"`
@@ -115,6 +118,7 @@ type recoveryRotationRecord struct {
 // Only native authenticated AES storage may retain this restricted cache/token.
 // Recovery seeds, codes, password-derived credentials and device private keys are absent.
 type recoveryRecord struct {
+	OriginsRequired    bool                    `json:"originsRequired,omitempty"`
 	SessionHash        string                  `json:"sessionHash"`
 	SessionClosed      bool                    `json:"sessionClosed,omitempty"`
 	LastObservedAt     int64                   `json:"lastObservedAt"`
@@ -336,6 +340,17 @@ func (w *Workflow) validateRecoveryState() error {
 func (w *Workflow) BeginRecovery(ctx context.Context, completeCode string) (RecoveryInfo, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	return w.beginRecovery(ctx, completeCode, false)
+}
+
+// BeginRecoveryWithOrigins requires the exact original initialization commitment
+// and full signed control graph. It never falls back to the legacy initial slice.
+func (w *Workflow) BeginRecoveryWithOrigins(ctx context.Context, completeCode string) (RecoveryInfo, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.beginRecovery(ctx, completeCode, true)
+}
+func (w *Workflow) beginRecovery(ctx context.Context, completeCode string, originsRequired bool, capture ...func(ed25519.PrivateKey) error) (RecoveryInfo, error) {
 	if err := w.recoveryOnly(); err != nil {
 		return RecoveryInfo{}, err
 	}
@@ -387,10 +402,10 @@ func (w *Workflow) BeginRecovery(ctx context.Context, completeCode string) (Reco
 		return RecoveryInfo{}, errors.New("recovery session must be short-lived and restricted")
 	}
 	var vault recoveryVaultWire
-	if err = w.request(ctx, w.accountPath("/recovery-vault?capability=issuer-origin-v1"), session.Token, nil, &vault); err != nil {
-		return RecoveryInfo{}, err
+	if err = w.request(ctx, w.accountPath("/recovery-vault?capability=issuer-origin-v1&envelopeEvidence=recovery-envelope-v1"), session.Token, nil, &vault); err != nil {
+		return RecoveryInfo{}, recoveryVaultError(err)
 	}
-	envKeys, err := w.openRecoveryVault(vault, keys, challenge.RecoveryGeneration, nil)
+	envKeys, err := w.openRecoveryVault(vault, keys, challenge.RecoveryGeneration, nil, originsRequired)
 	if err != nil {
 		return RecoveryInfo{}, err
 	}
@@ -398,22 +413,35 @@ func (w *Workflow) BeginRecovery(ctx context.Context, completeCode string) (Reco
 		return RecoveryInfo{}, errors.New("new recovery session unexpectedly has management capability")
 	}
 	sessionHash := sha256.Sum256([]byte(session.Token))
-	r := &recoveryRecord{SessionHash: hex.EncodeToString(sessionHash[:]), LastObservedAt: created, Version: 1, AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, CreatedAt: created, SessionToken: session.Token, SessionExpiresAt: session.ExpiresAt, RecoveryGeneration: challenge.RecoveryGeneration, SigningPublicKey: cryptox.EncodeBase64(keys.SigningPublic), ReceivingPublicKey: cryptox.EncodeBase64(keys.ReceivingPublic), Root: *vault.TrustRoot, Vault: vault, Keys: envKeys}
+	r := &recoveryRecord{OriginsRequired: originsRequired, SessionHash: hex.EncodeToString(sessionHash[:]), LastObservedAt: created, Version: 1, AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, CreatedAt: created, SessionToken: session.Token, SessionExpiresAt: session.ExpiresAt, RecoveryGeneration: challenge.RecoveryGeneration, SigningPublicKey: cryptox.EncodeBase64(keys.SigningPublic), ReceivingPublicKey: cryptox.EncodeBase64(keys.ReceivingPublic), Root: *vault.TrustRoot, Vault: vault, Keys: envKeys}
 	w.state.Recovery = r
 	w.login = nil
 	if err = w.persist(); err != nil {
 		w.clearRecovery()
 		return RecoveryInfo{}, err
 	}
+	if len(capture) > 0 {
+		if err := capture[0](keys.SigningPrivate); err != nil {
+			return w.recoveryInfo(), err
+		}
+	}
 	return w.recoveryInfo(), nil
 }
-func (w *Workflow) openRecoveryVault(v recoveryVaultWire, keys cryptox.RecoveryKeys, generation string, prior *cryptox.TrustRoot) (map[string]string, error) {
+func (w *Workflow) openRecoveryVault(v recoveryVaultWire, keys cryptox.RecoveryKeys, generation string, prior *cryptox.TrustRoot, originOption ...bool) (map[string]string, error) {
 	if v.AccountID != w.state.AccountID || v.AccountGeneration != w.state.AccountGeneration || v.RecoveryGeneration != generation || v.RecoverySigningPublicKey != cryptox.EncodeBase64(keys.SigningPublic) || v.RecoveryReceivingPublicKey != cryptox.EncodeBase64(keys.ReceivingPublic) || v.TrustRoot == nil || cryptox.VerifyTrustRoot(v.AccountID, v.AccountGeneration, *v.TrustRoot, keys.SigningPublic) != nil {
 		return nil, errors.New("recovered root is not pinned by the locally entered recovery code")
 	}
 	root := v.TrustRoot
 	if root.RecoveryGeneration != generation || root.RecoverySigningPublicKey != v.RecoverySigningPublicKey || root.RecoveryReceivingPublicKey != v.RecoveryReceivingPublicKey || prior != nil && (root.RootDeviceID != prior.RootDeviceID || root.RootSigningPublicKey != prior.RootSigningPublicKey || root.RootReceivingPublicKey != prior.RootReceivingPublicKey) {
 		return nil, errors.New("recovery cannot substitute root device")
+	}
+	originsRequired := w.state.Recovery != nil && w.state.Recovery.OriginsRequired
+	if len(originOption) > 0 {
+		originsRequired = originOption[0]
+	}
+	// Authenticate the exact ciphertext commitment before handling HPKE packets.
+	if err := verifyRecoveryEnvelopes(v, *root, originsRequired); err != nil {
+		return nil, err
 	}
 	envKeys := map[string]string{}
 	for _, env := range v.Environments {
@@ -431,7 +459,7 @@ func (w *Workflow) openRecoveryVault(v recoveryVaultWire, keys cryptox.RecoveryK
 		envKeys[env.EnvironmentID] = cryptox.EncodeBase64(key)
 		clear(key)
 	}
-	if _, err := w.verifyRecoveryVault(v, *root, envKeys); err != nil {
+	if _, err := w.verifyRecoveryVault(v, *root, envKeys, originOption...); err != nil {
 		return nil, err
 	}
 	return envKeys, nil
@@ -537,9 +565,8 @@ func (w *Workflow) recoveryGenesis(v recoveryVaultWire, root cryptox.TrustRoot) 
 	return genesis, accepted, nil
 }
 
-// This candidate is retained only for wire compatibility; this slice never uses
-// it to add genesis grants or trust an issuer. Bound size, shape and duplicate
-// keys now so a future parser cannot reinterpret an ambiguous sealed candidate.
+// Bound every candidate before the explicit origins entry parses it. The legacy
+// initial-only entry never uses this candidate to add an issuer or genesis grant.
 func validateRecoveryEvidenceCandidate(raw json.RawMessage) error {
 	if len(raw) == 0 {
 		return nil
@@ -589,16 +616,30 @@ func validateRecoveryEvidenceCandidate(raw json.RawMessage) error {
 	return visit(0)
 }
 
-// This slice authenticates only direct-root historical issuers, never publicDevices TOFU.
-func (w *Workflow) verifyRecoveryVault(v recoveryVaultWire, root cryptox.TrustRoot, keys map[string]string) ([]RecoveredEnvironment, error) {
+// The origin entry authenticates historical issuers from the committed genesis;
+// the compatibility entry remains strict initial-only. Neither trusts publicDevices.
+func (w *Workflow) verifyRecoveryVault(v recoveryVaultWire, root cryptox.TrustRoot, keys map[string]string, originOption ...bool) ([]RecoveredEnvironment, error) {
 	if err := validateRecoveryEvidenceCandidate(v.IssuerEvidence); err != nil {
 		return nil, err
 	}
 	if v.AccountID != w.state.AccountID || v.AccountGeneration != w.state.AccountGeneration || v.Sequence == 0 || v.Sequence > 9007199254740991 || len(v.Environments) == 0 || len(v.Environments) > 256 || len(v.Environments) != len(keys) || v.TrustRoot == nil || *v.TrustRoot != root || root.RecoveryGeneration != v.RecoveryGeneration || root.RecoverySigningPublicKey != v.RecoverySigningPublicKey || root.RecoveryReceivingPublicKey != v.RecoveryReceivingPublicKey {
 		return nil, errors.New("recovery snapshot account/sequence/root invalid")
 	}
-	_, acceptedGrants, err := w.recoveryGenesis(v, root)
+	originsRequired := w.state.Recovery != nil && w.state.Recovery.OriginsRequired
+	if len(originOption) > 0 {
+		originsRequired = originOption[0]
+	}
+	var acceptedGrants map[string]bool
+	var err error
+	if originsRequired {
+		acceptedGrants, err = w.verifyRecoveryOriginGrants(v, root)
+	} else {
+		_, acceptedGrants, err = w.recoveryGenesis(v, root)
+	}
 	if err != nil {
+		return nil, err
+	}
+	if err := verifyRecoveryEnvelopes(v, root, originsRequired); err != nil {
 		return nil, err
 	}
 	envs := map[string]*RecoveredEnvironment{}
@@ -615,6 +656,12 @@ func (w *Workflow) verifyRecoveryVault(v recoveryVaultWire, root cryptox.TrustRo
 		envs[env.EnvironmentID] = &RecoveredEnvironment{ID: env.EnvironmentID, KeyVersion: env.KeyVersion, Variables: map[string]string{}}
 	}
 	for _, g := range v.CurrentGrants {
+		if originsRequired {
+			e := envs[g.Grant.EnvironmentID]
+			if e == nil || g.Grant.KeyVersion != e.KeyVersion || g.Grant.Role == "none" {
+				continue
+			}
+		}
 		h, err := cryptox.IssuerAuthorityHash(cryptox.SignedGrantWire{Grant: g.Grant, Signature: g.Signature})
 		if err != nil || !acceptedGrants[h] {
 			return nil, ErrRecoveryEvidence
@@ -634,8 +681,10 @@ func (w *Workflow) verifyRecoveryVault(v recoveryVaultWire, root cryptox.TrustRo
 		}
 		seen[event.Sequence] = true
 		last = event.Sequence
-		if err := w.verifyRecoveryGrant(*event.Authorization, root); err != nil {
-			return nil, err
+		if !originsRequired {
+			if err := w.verifyRecoveryGrant(*event.Authorization, root); err != nil {
+				return nil, err
+			}
 		}
 		g := event.Authorization.Grant
 		h, err := cryptox.IssuerAuthorityHash(cryptox.SignedGrantWire{Grant: g, Signature: event.Authorization.Signature})
@@ -721,8 +770,8 @@ func sameRecoveryInitialization(a, b *recoveryOriginalInitialization) bool {
 func (w *Workflow) refreshRecoveryVault(ctx context.Context) error {
 	r := w.state.Recovery
 	var v recoveryVaultWire
-	if err := w.recoveryRequest(ctx, w.accountPath("/recovery-vault?capability=issuer-origin-v1"), nil, &v); err != nil {
-		return err
+	if err := w.recoveryRequest(ctx, w.accountPath("/recovery-vault?capability=issuer-origin-v1&envelopeEvidence=recovery-envelope-v1"), nil, &v); err != nil {
+		return recoveryVaultError(err)
 	}
 	if v.Sequence < r.Vault.Sequence || v.RecoveryGeneration != r.RecoveryGeneration || v.RotationRequired != !r.RotationCompleted || !sameRecoveryInitialization(v.OriginalInitialization, r.Vault.OriginalInitialization) {
 		return errors.New("recovery checkpoint or capability rollback")
@@ -822,6 +871,11 @@ func (w *Workflow) BeginRecoveryRotation(ctx context.Context, id string) (string
 	r.Rotation.Challenge = &status
 	if err = w.persist(); err != nil {
 		return code, errors.Join(ErrRecoveryPending, err)
+	}
+	if w.recoverySession != nil {
+		if err := w.bindRecoverySessionRotation(w.recoverySession); err != nil {
+			return code, err
+		}
 	}
 	return code, nil
 }
@@ -945,6 +999,10 @@ func (w *Workflow) CompleteRecoveryRotation(ctx context.Context, completeNewCode
 	if err = w.persist(); err != nil {
 		return w.recoveryInfo(), err
 	}
+	if w.recoverySession != nil {
+		w.recoverySession.Close()
+		w.recoverySession = nil
+	}
 	if s.State != "complete" {
 		if q.DeadlineClosed || s.ExpiresAt <= w.now().Unix() || w.now().Unix() < q.CreatedAt-5 {
 			return w.recoveryInfo(), ErrRecoveryExpired
@@ -962,8 +1020,8 @@ func (w *Workflow) CompleteRecoveryRotation(ctx context.Context, completeNewCode
 	// Receipt alone is insufficient: fetch the same restricted vault, validate every
 	// signature and unwrap all newly installed recovery envelopes using re-entered keys.
 	var v recoveryVaultWire
-	if err = w.recoveryRequest(ctx, w.accountPath("/recovery-vault?capability=issuer-origin-v1"), nil, &v); err != nil {
-		return w.recoveryInfo(), errors.Join(syncclient.ErrAcceptedNotApplied, err)
+	if err = w.recoveryRequest(ctx, w.accountPath("/recovery-vault?capability=issuer-origin-v1&envelopeEvidence=recovery-envelope-v1"), nil, &v); err != nil {
+		return w.recoveryInfo(), errors.Join(syncclient.ErrAcceptedNotApplied, recoveryVaultError(err))
 	}
 	if v.Sequence < *s.Sequence || v.RotationRequired || len(v.Environments) != len(q.Proposal.Envelopes) || !sameRecoveryInitialization(v.OriginalInitialization, r.Vault.OriginalInitialization) {
 		return w.recoveryInfo(), errors.Join(syncclient.ErrAcceptedNotApplied, errors.New("new recovery capability or full envelope set not applied"))
@@ -1028,6 +1086,10 @@ func (w *Workflow) QueryRecoveryRotation(ctx context.Context) (RecoveryInfo, err
 	return info, nil
 }
 func (w *Workflow) clearRecovery() {
+	if w.recoverySession != nil {
+		w.recoverySession.Close()
+		w.recoverySession = nil
+	}
 	if r := w.state.Recovery; r != nil {
 		r.SessionToken = ""
 		for id := range r.Keys {
