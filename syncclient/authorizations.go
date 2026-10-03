@@ -2,6 +2,7 @@ package syncclient
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"math"
 	"strconv"
@@ -11,7 +12,7 @@ import (
 	"github.com/harmonia-vault/core-go/localstate"
 )
 
-func (v *PinnedVerifier) verifyAuthorizationValues(ctx context.Context, pull Pull, previous localstate.CloudSnapshot) (localstate.CloudSnapshot, error) {
+func (v *PinnedVerifier) verifyAuthorizationValues(ctx context.Context, pull Pull, previous localstate.CloudSnapshot, evidence json.RawMessage) (localstate.CloudSnapshot, error) {
 	if previous.AccountID != "" && (previous.AccountID != v.trust.AccountID || previous.AccountGeneration != v.trust.AccountGeneration) {
 		return localstate.CloudSnapshot{}, errors.New("authorization context belongs to another account generation")
 	}
@@ -66,7 +67,18 @@ func (v *PinnedVerifier) verifyAuthorizationValues(ctx context.Context, pull Pul
 			return localstate.CloudSnapshot{}, errors.New("invalid authorization expiry")
 		}
 		old, exists := previous.Environments[g.EnvironmentID]
-		if !exists || g.Role == "none" || expiry != 0 && !now.Before(time.Unix(int64(expiry), 0)) || old.KeyVersion != keyVersion {
+		if !exists || g.Role == "none" || expiry != 0 && !now.Before(time.Unix(int64(expiry), 0)) {
+			continue
+		}
+		if v.evidenceRoot != nil && len(evidence) > 0 {
+			old, err = v.retainCachedEnvironment(ctx, old, previous, pull, signed, evidence)
+			if err != nil {
+				return localstate.CloudSnapshot{}, err
+			}
+			out.Environments[g.EnvironmentID] = old
+			continue
+		}
+		if old.KeyVersion != keyVersion {
 			continue
 		}
 		old.Values = copyMap(old.Values)

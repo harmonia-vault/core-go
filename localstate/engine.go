@@ -17,12 +17,13 @@ import (
 )
 
 var (
-	ErrReplay       = errors.New("cloud checkpoint moved backwards or changed at the same sequence")
-	ErrAccount      = errors.New("account changed: logout and restore managed values first")
-	ErrLocalSession = errors.New("local account session changed")
-	ErrDataPaused   = errors.New("ordinary cloud data is paused")
-	ErrUnauthorized = errors.New("environment is unavailable or its grant has expired")
-	namePattern     = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
+	ErrReplay          = errors.New("cloud checkpoint moved backwards or changed at the same sequence")
+	ErrAccount         = errors.New("account changed: logout and restore managed values first")
+	ErrLocalSession    = errors.New("local account session changed")
+	ErrDataPaused      = errors.New("ordinary cloud data is paused")
+	ErrUnauthorized    = errors.New("environment is unavailable or its grant has expired")
+	fingerprintPattern = regexp.MustCompile(`^[a-f0-9]{64}$`)
+	namePattern        = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,127}$`)
 )
 
 type Role string
@@ -33,13 +34,23 @@ const (
 	Admin     Role = "Admin"
 )
 
+// EnvironmentSource 固定最后一次完整数据读取的签授权及其指纹。
+// AuthorizationPath 从该来源连续连接到当前授权，不改变数据版本或值。
+// 密码学验证由固定设备根的 syncclient 完成，本包只检查事务不变量。
+type EnvironmentSource struct {
+	AuthorityHash     string   `json:"authorityHash"`
+	Fingerprint       string   `json:"fingerprint"`
+	AuthorizationPath []string `json:"authorizationPath"`
+}
+
 type Environment struct {
-	ID              string            `json:"id"`
-	KeyVersion      uint64            `json:"keyVersion"`
-	GrantGeneration uint64            `json:"grantGeneration"`
-	Role            Role              `json:"role"`
-	ExpiresAt       *time.Time        `json:"expiresAt,omitempty"`
-	Values          map[string]string `json:"values"`
+	ID              string             `json:"id"`
+	KeyVersion      uint64             `json:"keyVersion"`
+	GrantGeneration uint64             `json:"grantGeneration"`
+	Role            Role               `json:"role"`
+	ExpiresAt       *time.Time         `json:"expiresAt,omitempty"`
+	Values          map[string]string  `json:"values"`
+	Source          *EnvironmentSource `json:"source,omitempty"`
 }
 
 type MutationCheckpoint struct {
@@ -49,17 +60,20 @@ type MutationCheckpoint struct {
 
 type CloudSnapshot struct {
 	// IssuerEvidence 由上层固定根全量复验，与本快照同一受保护事务持久化。
-	IssuerEvidence         json.RawMessage               `json:"issuerEvidence,omitempty"`
-	AccountID              string                        `json:"accountId"`
-	AccountGeneration      uint64                        `json:"accountGeneration"`
-	Sequence               uint64                        `json:"sequence"`
+	IssuerEvidence    json.RawMessage `json:"issuerEvidence,omitempty"`
+	AccountID         string          `json:"accountId"`
+	AccountGeneration uint64          `json:"accountGeneration"`
+	// Sequence 与 SeenMutations 只由完整普通数据验证推进。
+	Sequence uint64 `json:"sequence"`
+	// 授权投影推进此序号及当前 grant 检查点，不改来源的数据 KV/GG。
 	AuthorizationSequence  uint64                        `json:"authorizationSequence,omitempty"`
 	EnvironmentCheckpoints map[string]MutationCheckpoint `json:"environmentCheckpoints,omitempty"`
 	DeletedEnvironments    map[string]uint64             `json:"deletedEnvironments,omitempty"`
 	Environments           map[string]Environment        `json:"environments"`
-	GrantCheckpoints       map[string]uint64             `json:"grantCheckpoints,omitempty"`
-	GrantFingerprints      map[string]string             `json:"grantFingerprints,omitempty"`
-	SeenMutations          map[string]MutationCheckpoint `json:"seenMutations,omitempty"`
+	// 以下两个 map 绑定当前授权；Environment.Source 绑定缓存数据来源。
+	GrantCheckpoints  map[string]uint64             `json:"grantCheckpoints,omitempty"`
+	GrantFingerprints map[string]string             `json:"grantFingerprints,omitempty"`
+	SeenMutations     map[string]MutationCheckpoint `json:"seenMutations,omitempty"`
 }
 
 type Activation struct {
@@ -233,6 +247,19 @@ func validateCloud(s CloudSnapshot) error {
 		if env.Role != ReadOnly && env.Role != ReadWrite && env.Role != Admin {
 			return errors.New("invalid environment role")
 		}
+		if env.Source != nil {
+			source := env.Source
+			if len(s.IssuerEvidence) == 0 || !fingerprintPattern.MatchString(source.AuthorityHash) || !fingerprintPattern.MatchString(source.Fingerprint) || len(source.AuthorizationPath) == 0 || len(source.AuthorizationPath) > 512 || source.AuthorizationPath[0] != source.AuthorityHash {
+				return errors.New("invalid cached source metadata")
+			}
+			seen := map[string]bool{}
+			for _, h := range source.AuthorizationPath {
+				if !fingerprintPattern.MatchString(h) || seen[h] {
+					return errors.New("invalid cached source path")
+				}
+				seen[h] = true
+			}
+		}
 		for k, v := range env.Values {
 			if err := validateValue(k, v); err != nil {
 				return err
@@ -308,6 +335,7 @@ func (e *Engine) acceptSnapshot(in CloudSnapshot, now time.Time, epoch *uint64, 
 				// 先按本地到期规则归一化，再比较内容。
 				check := clone(*s)
 				check.Cloud = in
+				check = clone(check)
 				expire(&check, now)
 				if old.AuthorizationSequence == 0 {
 					old.AuthorizationSequence = old.Sequence
@@ -318,6 +346,10 @@ func (e *Engine) acceptSnapshot(in CloudSnapshot, now time.Time, epoch *uint64, 
 				// 明确能力升级后，已验证账本可以附到精确相同的旧缓存。
 				// 仅允许从无账本到有账本；所有数据、授权、指纹和检查点
 				// 必须仍相同。已有账本同序号替换仍按原回放规则拒绝。
+				sources, err := stripFirstSources(old, &check.Cloud)
+				if err != nil {
+					return err
+				}
 				firstEvidence := len(old.IssuerEvidence) == 0 && len(check.Cloud.IssuerEvidence) > 0
 				evidence := check.Cloud.IssuerEvidence
 				if firstEvidence {
@@ -330,6 +362,11 @@ func (e *Engine) acceptSnapshot(in CloudSnapshot, now time.Time, epoch *uint64, 
 				}
 				if firstEvidence {
 					s.Cloud.IssuerEvidence = append(json.RawMessage(nil), evidence...)
+				}
+				for id, source := range sources {
+					env := s.Cloud.Environments[id]
+					env.Source = source
+					s.Cloud.Environments[id] = env
 				}
 				return nil
 			}
@@ -648,10 +685,42 @@ func (e *Engine) AcceptAuthorizationRefreshAtEpoch(in CloudSnapshot, now time.Ti
 		if in.Sequence != old.Sequence || in.AuthorizationSequence < old.Sequence || in.AuthorizationSequence < old.AuthorizationSequence {
 			return ErrReplay
 		}
+		if !sameStateJSON(old.SeenMutations, in.SeenMutations) {
+			return ErrReplay
+		}
+		if in.AuthorizationSequence == maxSequence(old.Sequence, old.AuthorizationSequence) {
+			check := clone(*s)
+			check.Cloud = in
+			check = clone(check)
+			expire(&check, now)
+			original := clone(*s)
+			expire(&original, now)
+			original.Cloud.AuthorizationSequence = maxSequence(old.Sequence, old.AuthorizationSequence)
+			if _, err := stripFirstSources(original.Cloud, &check.Cloud); err != nil {
+				return err
+			}
+			if !sameStateJSON(original.Cloud, check.Cloud) {
+				return ErrReplay
+			}
+		}
 		for id, next := range in.Environments {
 			previous, exists := old.Environments[id]
 			if !exists || previous.KeyVersion != next.KeyVersion {
 				return ErrUnauthorized
+			}
+			if previous.Source != nil {
+				if next.Source == nil || previous.GrantGeneration != next.GrantGeneration || previous.Source.AuthorityHash != next.Source.AuthorityHash || previous.Source.Fingerprint != next.Source.Fingerprint || len(next.Source.AuthorizationPath) < len(previous.Source.AuthorizationPath) {
+					return ErrReplay
+				}
+				for i, h := range previous.Source.AuthorizationPath {
+					if next.Source.AuthorizationPath[i] != h {
+						return ErrReplay
+					}
+				}
+			} else if next.Source != nil {
+				if previous.GrantGeneration != next.GrantGeneration || len(next.Source.AuthorizationPath) < 1 || next.Source.Fingerprint != old.GrantFingerprints[id] || previous.GrantGeneration != old.GrantCheckpoints[id] {
+					return ErrReplay
+				}
 			}
 			for key, value := range next.Values {
 				if previous.Values[key] != value {
@@ -734,4 +803,36 @@ func (e *Engine) CompleteEnrollmentAtEpoch(epoch uint64) error {
 		s.AccountClosed = false
 		return nil
 	})
+}
+
+// 相同序号只允许给精确旧缓存首次附加已验来源，不覆盖已有来源。
+func stripFirstSources(old CloudSnapshot, next *CloudSnapshot) (map[string]*EnvironmentSource, error) {
+	out := map[string]*EnvironmentSource{}
+	for id, env := range next.Environments {
+		prior, ok := old.Environments[id]
+		if !ok || prior.Source != nil || env.Source == nil {
+			continue
+		}
+		source := env.Source
+		if len(source.AuthorizationPath) != 1 || source.AuthorizationPath[0] != source.AuthorityHash || prior.KeyVersion != env.KeyVersion || prior.GrantGeneration != env.GrantGeneration || prior.GrantGeneration != old.GrantCheckpoints[id] || source.Fingerprint != old.GrantFingerprints[id] {
+			return nil, ErrReplay
+		}
+		copied := *source
+		copied.AuthorizationPath = append([]string(nil), source.AuthorizationPath...)
+		out[id] = &copied
+		env.Source = nil
+		next.Environments[id] = env
+	}
+	return out, nil
+}
+func sameStateJSON(a, b any) bool {
+	x, _ := json.Marshal(a)
+	y, _ := json.Marshal(b)
+	return string(x) == string(y)
+}
+func maxSequence(a, b uint64) uint64 {
+	if a > b {
+		return a
+	}
+	return b
 }

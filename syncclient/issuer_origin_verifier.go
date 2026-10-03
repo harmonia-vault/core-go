@@ -340,6 +340,9 @@ func (v *PinnedVerifier) withIssuerEvidence(pull Pull, previous localstate.Cloud
 	return &out, encoded, nil
 }
 func (v *PinnedVerifier) VerifyPull(ctx context.Context, pull Pull, previous localstate.CloudSnapshot) (localstate.CloudSnapshot, error) {
+	if e := v.ValidateStoredIssuerEvidence(previous); e != nil {
+		return localstate.CloudSnapshot{}, e
+	}
 	candidate, evidence, e := v.withIssuerEvidence(pull, previous)
 	if e != nil {
 		return localstate.CloudSnapshot{}, e
@@ -349,18 +352,31 @@ func (v *PinnedVerifier) VerifyPull(ctx context.Context, pull Pull, previous loc
 		return localstate.CloudSnapshot{}, e
 	}
 	out.IssuerEvidence = bytes.Clone(evidence)
+	if len(evidence) > 0 {
+		if e = candidate.initializeCachedSources(&out, evidence); e != nil {
+			return localstate.CloudSnapshot{}, e
+		}
+	}
 	return out, nil
 }
 func (v *PinnedVerifier) VerifyAuthorizationRefresh(ctx context.Context, pull Pull, previous localstate.CloudSnapshot) (localstate.CloudSnapshot, error) {
+	if e := v.ValidateStoredIssuerEvidence(previous); e != nil {
+		return localstate.CloudSnapshot{}, e
+	}
 	candidate, evidence, e := v.withIssuerEvidence(pull, previous)
 	if e != nil {
 		return localstate.CloudSnapshot{}, e
 	}
-	out, e := candidate.verifyAuthorizationValues(ctx, pull, previous)
+	out, e := candidate.verifyAuthorizationValues(ctx, pull, previous, evidence)
 	if e != nil {
 		return localstate.CloudSnapshot{}, e
 	}
 	out.IssuerEvidence = bytes.Clone(evidence)
+	if len(evidence) > 0 {
+		if e = candidate.ValidateStoredIssuerEvidence(out); e != nil {
+			return localstate.CloudSnapshot{}, e
+		}
+	}
 	return out, nil
 }
 
@@ -370,6 +386,11 @@ func (v *PinnedVerifier) ValidateStoredIssuerEvidence(previous localstate.CloudS
 		return cryptox.ErrInvalidWire
 	}
 	if len(previous.IssuerEvidence) == 0 {
+		for _, env := range previous.Environments {
+			if env.Source != nil {
+				return errors.New("cached source requires a protected issuer ledger")
+			}
+		}
 		if v.evidenceRoot == nil {
 			return nil
 		}
@@ -436,8 +457,21 @@ func (v *PinnedVerifier) validateIssuerCachedTargets(previous localstate.CloudSn
 	for _, t := range p.Targets {
 		targets[t.EnvironmentID] = t.AuthorityHash
 	}
+	ledger, e := newCachedSourceLedger(p, proof)
+	if e != nil {
+		return e
+	}
 	projection := previous.AuthorizationSequence > previous.Sequence
 	for id, env := range previous.Environments {
+		if env.Source != nil {
+			if env.ID != id {
+				return cryptox.ErrInvalidWire
+			}
+			if e = v.validateSourceTarget(previous, env, ledger); e != nil {
+				return e
+			}
+			continue
+		}
 		s, ok := proof.Authority(targets[id])
 		g := s.Grant
 		b, e := g.SigningBytes()
