@@ -36,14 +36,25 @@ func ShellQuote(value string) (string, error) {
 	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'", nil
 }
 
+func posixScopePrefix(identity string) string {
+	sum := sha256.Sum256([]byte(identity))
+	return "__HARMONIA_" + strings.ToUpper(hex.EncodeToString(sum[:8])) + "_"
+}
+
+// writeShellRestore 只写固定、已验证的变量名；原值来自当前 shell，不来自文件或云端。
+func writeShellRestore(out *strings.Builder, prefix, name string, indent string) {
+	seen, exists, value := prefix+"SEEN_"+name, prefix+"EXISTS_"+name, prefix+"VALUE_"+name
+	last := prefix + "REV_" + name
+	fmt.Fprintf(out, "%sif [ \"${%s-}\" = 1 ]; then\n%s  if [ \"${%s-}\" = x ]; then\n%s    export %s=\"${%s-}\"\n%s  else\n%s    unset %s\n%s  fi\n%s  unset %s %s %s %s\n%sfi\n", indent, seen, indent, exists, indent, name, value, indent, indent, name, indent, indent, seen, exists, value, last, indent)
+}
+
 // RenderPOSIXFragment 每个 shell 自己记录首次接管的值。released 逐 key 恢复，绝不恢复整个文件。
 func RenderPOSIXFragment(identity string, desired map[string]string, released []string) ([]byte, error) {
 	return renderPOSIXFragment(identity, desired, released, false, nil)
 }
 
 func renderPOSIXFragment(identity string, desired map[string]string, released []string, paused bool, revisions map[string]uint64) ([]byte, error) {
-	sum := sha256.Sum256([]byte(identity))
-	prefix := "__HARMONIA_" + strings.ToUpper(hex.EncodeToString(sum[:8])) + "_"
+	prefix := posixScopePrefix(identity)
 	keys := make([]string, 0, len(desired))
 	for name, value := range desired {
 		if !ValidName(name) {
@@ -91,10 +102,24 @@ func renderPOSIXFragment(identity string, desired map[string]string, released []
 	}
 	sort.Strings(keys)
 	for _, name := range keys {
-		seen, exists, value := prefix+"SEEN_"+name, prefix+"EXISTS_"+name, prefix+"VALUE_"+name
-		last := prefix + "REV_" + name
-		fmt.Fprintf(&out, "if [ \"${%s-}\" = 1 ]; then\n  if [ \"${%s-}\" = x ]; then\n    export %s=\"${%s-}\"\n  else\n    unset %s\n  fi\n  unset %s %s %s %s\nfi\n", seen, exists, name, value, name, seen, exists, value, last)
+		writeShellRestore(&out, prefix, name, "")
 	}
+	// 函数留在这个 shell 的内存中；卸载删除文件后仍能恢复自己首次接管的原值。
+	// Released 累积键也保留，覆盖尚未消费过删除通知的 shell。
+	allKeys := make([]string, 0, len(desired)+len(releasedSet))
+	for name := range desired {
+		allKeys = append(allKeys, name)
+	}
+	for name := range releasedSet {
+		allKeys = append(allKeys, name)
+	}
+	sort.Strings(allKeys)
+	fmt.Fprintf(&out, "%sRELEASE() {\n", prefix)
+	for _, name := range allKeys {
+		writeShellRestore(&out, prefix, name, "  ")
+	}
+	out.WriteString("  return 0\n}\n")
+	fmt.Fprintf(&out, "%sLOADED=1\n", prefix)
 	return []byte(out.String()), nil
 }
 
@@ -247,6 +272,7 @@ func (p *POSIXProvider) writeFragment(state posixState) error {
 
 // RenderShellHook 只生成供用户审查的片段，不编辑启动文件。
 // sh 无可移植的 prompt hook，因此只提供开始会话及显式刷新。
+// 只有整个固定状态目录消失、父目录仍可访问时自动恢复；单个片段缺失不代表卸载。
 func RenderShellHook(shell, fragmentPath string) (string, error) {
 	if !filepath.IsAbs(fragmentPath) {
 		return "", fmt.Errorf("fragment path must be absolute")
@@ -255,14 +281,27 @@ func RenderShellHook(shell, fragmentPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	base := "harmonia_refresh() { [ ! -r " + quoted + " ] || . " + quoted + "; }\nharmonia_refresh\n"
+	directory, _ := ShellQuote(filepath.Dir(fragmentPath))
+	parent, _ := ShellQuote(filepath.Dir(filepath.Dir(fragmentPath)))
+	prefix := posixScopePrefix(fragmentPath)
+	refresh, release, loaded := prefix+"REFRESH", prefix+"RELEASE", prefix+"LOADED"
+	var out strings.Builder
+	fmt.Fprintf(&out, "%s() {\n", refresh)
+	fmt.Fprintf(&out, "  case \"$#:${1-}\" in\n    1:--release)\n      if [ \"${%s-}\" = 1 ]; then %s; fi\n      return 0 ;;\n    0:) ;;\n    *) return 2 ;;\n  esac\n", loaded, release)
+	fmt.Fprintf(&out, "  if [ -r %s ] && [ ! -L %s ]; then\n    . %s || return $?\n  elif [ ! -e %s ] && [ ! -L %s ] && [ ! -e %s ] && [ ! -L %s ] && [ -d %s ] && [ -r %s ] && [ -x %s ]; then\n    if [ \"${%s-}\" = 1 ]; then %s; fi\n  fi\n  return 0\n}\n", quoted, quoted, quoted, quoted, quoted, directory, directory, parent, parent, parent, loaded, release)
+	// 兼容显式入口；prompt 挂固定 scope 函数，避免另一个 scope 改写该别名。
+	fmt.Fprintf(&out, "harmonia_refresh() { %s \"$@\"; }\n%s\n", refresh, refresh)
+	base := out.String()
 	switch shell {
 	case "sh":
 		return "# sh 会话开始刷新；之后可显式调用 harmonia_refresh。\n" + base, nil
 	case "bash":
-		return base + "if [ \"${__HARMONIA_BASH_HOOK_INSTALLED-}\" != 1 ]; then\n  __HARMONIA_BASH_HOOK_INSTALLED=1\nif [[ $(declare -p PROMPT_COMMAND 2>/dev/null) == 'declare -a '* ]]; then\n  PROMPT_COMMAND=(harmonia_refresh \"${PROMPT_COMMAND[@]}\")\nelse\n  PROMPT_COMMAND=\"harmonia_refresh${PROMPT_COMMAND:+; $PROMPT_COMMAND}\"\nfi\nfi\n", nil
+		marker := prefix + "BASH_HOOK_INSTALLED"
+		// Bash 5.1 才执行 PROMPT_COMMAND 的所有数组元素。旧版保留原数组内容，
+		// 同时把固定 scope 命令串接在第一个元素；空数组在 nounset 下也必须可用。
+		return base + fmt.Sprintf("if [ \"${%s-}\" != 1 ]; then\n  %s=1\nif [[ $(declare -p PROMPT_COMMAND 2>/dev/null) == 'declare -a '* ]]; then\n  if (( BASH_VERSINFO[0] < 5 || ( BASH_VERSINFO[0] == 5 && BASH_VERSINFO[1] < 1 ) )); then\n    PROMPT_COMMAND=(\"%s${PROMPT_COMMAND[0]:+; ${PROMPT_COMMAND[0]}}\" ${PROMPT_COMMAND[@]+\"${PROMPT_COMMAND[@]}\"})\n  else\n    PROMPT_COMMAND=(%s ${PROMPT_COMMAND[@]+\"${PROMPT_COMMAND[@]}\"})\n  fi\nelse\n  PROMPT_COMMAND=\"%s${PROMPT_COMMAND:+; $PROMPT_COMMAND}\"\nfi\nfi\n", marker, marker, refresh, refresh, refresh), nil
 	case "zsh":
-		return base + "autoload -Uz add-zsh-hook\nadd-zsh-hook precmd harmonia_refresh\n", nil
+		return base + "autoload -Uz add-zsh-hook\nadd-zsh-hook precmd " + refresh + "\n", nil
 	default:
 		return "", fmt.Errorf("unsupported shell")
 	}
