@@ -1,0 +1,1085 @@
+{
+  "version": 2,
+  "scope": "Go-only B2 v2; preparation also blocks legacy recovery and enrollment shared gates; native/UI capability remain closed",
+  "bases": [
+    {
+      "repository": "workspace",
+      "commit": "92853660b2ed787e4cb2e257b91f7b2fd29a0c15",
+      "archiveSHA256": "53b9ff893610aaa45564a9a06ba2e439ea84922669f7fb37dc302e4975558c91",
+      "bytes": 727040
+    },
+    {
+      "repository": "core-go",
+      "commit": "dc28eb87c5cc49051210dece33e17cb83c8fe9e0",
+      "archiveSHA256": "4755aeac1555ac996fdb93e35196e6bcc1f92d8be14d4f141f5745c89094c834",
+      "bytes": 3727360
+    },
+    {
+      "repository": "server",
+      "commit": "d27fb2a98b86d2b657869830f00c1e8d07402aed",
+      "archiveSHA256": "675e23a0a0d0d1fdb2312f8d5b58479ed0ee72dcf4944b43cb9a9ef627d893a3",
+      "bytes": 2017280
+    },
+    {
+      "repository": "protocol",
+      "commit": "3168864b5228913e4286ba8d2fcca9f3f3574b6b",
+      "archiveSHA256": "2997003b74982b24cecbe8849c439ee9e0f721fbfe063c99889fbcd96acb2404",
+      "bytes": 972800
+    }
+  ],
+  "overlay": {
+    "name": "B1 unchanged frozen candidate",
+    "manifestSHA256": "52e4a969dcad089f53a2e2333bf3f47afa3de10bf9c1a94f2cb299066387b811",
+    "subsequentlyPublishedCore": "d02f6a532dfe6c7c3534fe8194ef6946f4b14925",
+    "publicationNote": "仅 B1 overlay 字节与该发布中的 B1 相同；本测试未改用全部新 P4 source。"
+  },
+  "toolchain": {
+    "go": "go1.26.4 darwin/arm64",
+    "node": "24.16.0",
+    "nativeBuildTag": false
+  },
+  "componentRace": {
+    "logSHA256": "ddaa18a345e7f470669367afd2967690d17c14adba3c307eae4cde90466d74ee",
+    "sourceInventorySHA256": "fc3a803e9e64d664b603f8d5b737da700173843faeeda4db9f607888951ddd86",
+    "testResults": {
+      "pass": 108
+    },
+    "packages": [
+      {
+        "Package": "github.com/harmonia-vault/core-go/syncclient",
+        "Action": "pass",
+        "Elapsed": 11.543
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+        "Action": "pass",
+        "Elapsed": 16.218
+      }
+    ]
+  },
+  "affectedFourPackageRace": {
+    "logSHA256": "6d141959a0cf9e9bd082036b77e29aa6e1c4e9059e80cafe563cf6e67558cf31",
+    "sourceInventorySHA256": "fc3a803e9e64d664b603f8d5b737da700173843faeeda4db9f607888951ddd86",
+    "testResults": {
+      "pass": 574
+    },
+    "packages": [
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+        "Action": "pass",
+        "Elapsed": 1.3439999999999999
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge",
+        "Action": "pass",
+        "Elapsed": 16.041
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/syncclient",
+        "Action": "pass",
+        "Elapsed": 60.766
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+        "Action": "pass",
+        "Elapsed": 85.128
+      }
+    ]
+  },
+  "https": {
+    "status": "NOT_RERUN_ON_V2",
+    "scope": "保留 v1 三个真实 TS/SQLite HTTPS 场景的原源码结果；不追认为 v2，也未新增场景。",
+    "sourceInventorySHA256": "615b55cb75cca7c5c1459c790cdd19d08146a076e4c8ef583f25c6cf0d6e7142",
+    "priorResults": {
+      "logSHA256": "2f95dbbbfe8309a312f0af96dc3789e75089794ac62514bac582483d68f3d996",
+      "testResults": {
+        "pass": 4
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/workspace/acceptance",
+          "Action": "pass",
+          "Elapsed": 11.086
+        }
+      ],
+      "startedUTC": "2026-10-03T16:09:01.200961+00:00",
+      "originalScenarioCount": 3,
+      "testNodesIncludingParent": 4,
+      "scenarios": [
+        {
+          "name": "prepared-reentry-sealed-applied-across-workflows",
+          "status": "PASS",
+          "elapsedSeconds": 4.17,
+          "routesByPhase": {
+            "owner-open": {
+              "GET protocol-info": 1,
+              "GET recovery-vault-v2": 1,
+              "POST recovery-challenges": 1,
+              "POST recovery-sessions": 1
+            },
+            "prepare": {
+              "GET recovery-vault-v2": 1,
+              "POST recovery-authority-challenges-v2": 1
+            },
+            "query-and-submit": {
+              "GET recovery-authority-transitions-v2/original": 1,
+              "GET recovery-vault-v2": 1,
+              "POST recovery-authority-transitions-v2": 1
+            },
+            "same-applied-retry": {
+              "GET recovery-vault-v2": 1
+            }
+          }
+        },
+        {
+          "name": "accepted-response-loss-save-failure-cold-original-query",
+          "status": "PASS",
+          "elapsedSeconds": 3.71,
+          "routesByPhase": {
+            "accepted-query-save-fails": {
+              "GET recovery-authority-transitions-v2/original": 1
+            },
+            "cold-current-code-original-query": {
+              "GET protocol-info": 1,
+              "GET recovery-authority-transitions-v2/original": 2,
+              "GET recovery-vault-v2": 2,
+              "POST recovery-challenges": 1,
+              "POST recovery-sessions": 1
+            },
+            "owner-open": {
+              "GET protocol-info": 1,
+              "GET recovery-vault-v2": 1,
+              "POST recovery-challenges": 1,
+              "POST recovery-sessions": 1
+            },
+            "prepare": {
+              "GET recovery-vault-v2": 1,
+              "POST recovery-authority-challenges-v2": 1
+            },
+            "submit-response-lost": {
+              "GET recovery-authority-transitions-v2/original": 1,
+              "POST recovery-authority-transitions-v2": 1
+            }
+          }
+        },
+        {
+          "name": "lost-challenge-same-id-retry-cold-prepared-interrupted",
+          "status": "PASS",
+          "elapsedSeconds": 1.86,
+          "routesByPhase": {
+            "challenge-response-lost": {
+              "GET recovery-vault-v2": 1,
+              "POST recovery-authority-challenges-v2": 1
+            },
+            "owner-open": {
+              "GET protocol-info": 1,
+              "GET recovery-vault-v2": 1,
+              "POST recovery-challenges": 1,
+              "POST recovery-sessions": 1
+            },
+            "same-intent-challenge-retry": {
+              "GET recovery-vault-v2": 1,
+              "POST recovery-authority-challenges-v2": 1
+            }
+          }
+        }
+      ]
+    }
+  },
+  "vet": {
+    "status": "PASS",
+    "exitCode": 0,
+    "packages": [
+      "syncclient",
+      "mobileworkflow",
+      "mobilebridge",
+      "mobilebridge/internal/recoverysessions"
+    ],
+    "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "consumerCompile": {
+    "logSHA256": "0cbb57cfbc91ee5bde69ba947b6ab24fe6b2abdea8d3c8da8efea258218c7ead",
+    "sourceInventorySHA256": "fc3a803e9e64d664b603f8d5b737da700173843faeeda4db9f607888951ddd86",
+    "testResults": {},
+    "packages": [
+      {
+        "Package": "github.com/harmonia-vault/core-go/appsecurity",
+        "Action": "pass",
+        "Elapsed": 0.357
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/cryptox/tools/issuer-vector",
+        "Action": "skip",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/androidfixture",
+        "Action": "skip",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/genericcontroller",
+        "Action": "skip",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/managementpeer",
+        "Action": "skip",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/recoverycontroller",
+        "Action": "skip",
+        "Elapsed": 0
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/cmd/harmonia",
+        "Action": "pass",
+        "Elapsed": 0.313
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/cryptox",
+        "Action": "pass",
+        "Elapsed": 0.371
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+        "Action": "pass",
+        "Elapsed": 0.333
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/crosscontroller",
+        "Action": "pass",
+        "Elapsed": 0.437
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobilebridge",
+        "Action": "pass",
+        "Elapsed": 0.449
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/localstate",
+        "Action": "pass",
+        "Elapsed": 0.646
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/localkeys",
+        "Action": "pass",
+        "Elapsed": 0.653
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/localipc",
+        "Action": "pass",
+        "Elapsed": 0.691
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+        "Action": "pass",
+        "Elapsed": 0.41
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/pairing",
+        "Action": "pass",
+        "Elapsed": 0.465
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/platform",
+        "Action": "pass",
+        "Elapsed": 0.502
+      },
+      {
+        "Package": "github.com/harmonia-vault/core-go/syncclient",
+        "Action": "pass",
+        "Elapsed": 0.561
+      }
+    ],
+    "packageCount": 18,
+    "actualTestsRun": 0
+  },
+  "runtimeInputs": [
+    {
+      "repository": "workspace",
+      "path": "acceptance/mobile_dag_transition_test.go",
+      "baseSHA256": null,
+      "sha256": "0483be670322478df8e3af862f7e4224b4dff4893f6cf7d7c64095941376935b",
+      "bytes": 10405
+    },
+    {
+      "repository": "workspace",
+      "path": "mise.toml",
+      "baseSHA256": "ced36ecb461f9ffb53cf396e4f068acdd1be7a79968c61102482c8b78dfd666d",
+      "sha256": "97eef61d8a68b9d4caff6fcfbeae96bcc998119b0f90616a5946a9306414beeb",
+      "bytes": 1380
+    },
+    {
+      "repository": "core-go",
+      "path": "mise.toml",
+      "baseSHA256": "bd5e449d0e08e72ea101600466076472f48fb0a4cbfb4b118b15c485524840b3",
+      "sha256": "f1cadf12f27e8e3934cd8a83161a7e4ab052e69c563a0a8898d35325dcf062c9",
+      "bytes": 2415
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/enrollment_v3.go",
+      "baseSHA256": "9f9a144b08efb15749c81fee7ba35fe41800139ac1e1d7f8f175c87ac28fd949",
+      "sha256": "1ad6e4afc9fca23ba7409d9bf29ef65b4f86d932349ab3136943c2a650be3d69",
+      "bytes": 13319
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery.go",
+      "baseSHA256": "ec18287f7dd1b538055a23329a31f4b2619678638b3f777bb7bc23bc51ab4aee",
+      "sha256": "bce27282a6e2b1de630674f7680840e2a32ac245d5bceb2d8112d9d873c5d123",
+      "bytes": 49321
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_lease.go",
+      "baseSHA256": "9c5b8f12840911a444c66f0ac33eb777f92985c563984ccd52d0f619dd2db9c8",
+      "sha256": "dc5a405ff006c963656a36bbf7696f1374e1405729d26b40b55c41fdba9a9516",
+      "bytes": 4191
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_lease_test.go",
+      "baseSHA256": "6fde2fd224df1aaa08e3de38d142bd24478d9848366e0abbaa9d963d48560d01",
+      "sha256": "6f4c164e22c96ee306c357e4f08d6bfea7728127c4fa8fbfd8a1f48b0dac7c73",
+      "bytes": 2751
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_owner.go",
+      "baseSHA256": "20d4490610a1df7cb4273039c2465e0ecff5edbc9b6544ab662366c8be28fc0b",
+      "sha256": "e4fa672c064eef2d4a034af68918fdf45c0214eeb43c2b4c0e54c8c735f8b94d",
+      "bytes": 10108
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_owner_test.go",
+      "baseSHA256": "61d2e1ad1df05e4a29d286e2c5a14b9a48676e3140db104d9845c812ca267a5f",
+      "sha256": "6954e0885438a47e108307a23cb93b80b1d807e6a257623b3730be1eeb2a05e3",
+      "bytes": 11219
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_prepare_gates_test.go",
+      "baseSHA256": null,
+      "sha256": "8523336068a27b4a3ffb4e9f51f571cd861837c1e9a44dbfc7d13603c93d5b39",
+      "bytes": 6107
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_prepare_state.go",
+      "baseSHA256": null,
+      "sha256": "8f4708aa0a7fad59ad5de5d87369f7934afb2cea0a052c4028422aa6b47d6553",
+      "bytes": 7062
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_prepare_state_test.go",
+      "baseSHA256": null,
+      "sha256": "41324247749a05bddb2f68dad1cfe0abd8bc1e662c2962efaff4bd1138777970",
+      "bytes": 14430
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_query.go",
+      "baseSHA256": "a7db466c5cb97bd5ccf1ada23d389949a2a9a96a0c0115bdae14f3cdce4b4044",
+      "sha256": "945538a50ab8f0eea142a5ea09f0889d78cb939b3c9973f627a02f178124ab82",
+      "bytes": 6357
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_state.go",
+      "baseSHA256": "200ccba7079e6e5dec87f1209a6468cc5bf9f5edc30fbafd9d733730e5d98a3d",
+      "sha256": "698c91c991639fc35fad9a870801950c46dd1799ff07d3f5ee3d4d8dd00833b8",
+      "bytes": 9174
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_transition.go",
+      "baseSHA256": null,
+      "sha256": "fcf72746c37b5a991e81c22ad4c88d533ae0130abaaa8e9ecbeea8d51d8aefaa",
+      "bytes": 12381
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/recovery_dag_transition_test.go",
+      "baseSHA256": null,
+      "sha256": "41d35150276ec5af6ee5e909a5d51f75298f5989a85dba367852f74eaac9dbf1",
+      "bytes": 5877
+    },
+    {
+      "repository": "core-go",
+      "path": "mobileworkflow/vaultworkflow.go",
+      "baseSHA256": "b3561347c2eae36ad6e232b0ed72eb4f811ff6f44816da868a554c9de2586e3d",
+      "sha256": "1e806fc1f6d448efeaeb5ec321ee98296c0ee0315412ddd717a5a63e59438a08",
+      "bytes": 52190
+    },
+    {
+      "repository": "core-go",
+      "path": "syncclient/recovery_dag_binding.go",
+      "baseSHA256": "e5f259dc978177096281cc58e3f1d265cc2a668bd802715bdb0f88edbc884e09",
+      "sha256": "41db0be3395fdd67982b6b50cd2d3e7891526add55efb50fbda8934fbafd36f7",
+      "bytes": 3226
+    },
+    {
+      "repository": "core-go",
+      "path": "syncclient/recovery_dag_client.go",
+      "baseSHA256": "286a3e797044b14c3cf5b91e107818889ebeb6144832ec6440baacd769151210",
+      "sha256": "06a2db941f3700d981e2c4fa3a033b833ef2c56ae344398473577b85c9bd5f61",
+      "bytes": 21756
+    },
+    {
+      "repository": "core-go",
+      "path": "syncclient/recovery_dag_operations.go",
+      "baseSHA256": "31cd6ff41defb77385c3bad4bfd295d0f8ccf4d43f0549cfe1a85d074a28bcb3",
+      "sha256": "1daf4a3461fa98cdd1490a633c96225d0113cbd74d79c9fb0503fd14ee50b577",
+      "bytes": 26387
+    },
+    {
+      "repository": "core-go",
+      "path": "syncclient/recovery_dag_preparation.go",
+      "baseSHA256": null,
+      "sha256": "26c8354ff7cdf5ce3542aa0ef1000ee81c9fbb8372e2fab55b9555665faa7164",
+      "bytes": 12766
+    },
+    {
+      "repository": "core-go",
+      "path": "syncclient/recovery_dag_preparation_test.go",
+      "baseSHA256": null,
+      "sha256": "d44a220b0f88e34aa2f0b98e55a5ffeecd4706004d82add3cb1a20349e2460d0",
+      "bytes": 12238
+    }
+  ],
+  "sourceInventorySHA256": "fc3a803e9e64d664b603f8d5b737da700173843faeeda4db9f607888951ddd86",
+  "sourceInventoryFiles": 503,
+  "history": [
+    {
+      "run": "b2-compile-first.jsonl",
+      "status": "PASS",
+      "reason": "初步编译；非最终源码、0 测试。",
+      "logSHA256": "ac0dd75054dd68d47c2b332e75d61a511047db8a93b48995d3b240d9789e8ade",
+      "testResults": {},
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 0.74
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 1.067
+        }
+      ],
+      "startedUTC": "2026-10-03T15:32:01.674953+00:00",
+      "sourceSnapshot": "未保留逐轮完整源码快照；仅诊断历史，不追认为最终源码结果。"
+    },
+    {
+      "run": "b2-compile-second.jsonl",
+      "status": "PASS",
+      "reason": "owner 高层接线编译；非最终源码、0 测试。",
+      "logSHA256": "10211ef2c7514d423c056f507dc16fbc9aea4ffe2e40fbc1c9f0f7bd34fa4adb",
+      "testResults": {},
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 0.362
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 0.46
+        }
+      ],
+      "startedUTC": "2026-10-03T15:35:26.790538+00:00",
+      "sourceSnapshot": "未保留逐轮完整源码快照；仅诊断历史，不追认为最终源码结果。"
+    },
+    {
+      "run": "b2-components-first.jsonl",
+      "status": "FAIL",
+      "reason": "测试编译字段名错误及误用 all-admin 公有向量；未证明 old-recovery preparation。",
+      "logSHA256": "571a04dce130e5468a6bdc5cc36db07f5cb9b44464d9fca1ee32634cb1d3f8d2",
+      "testResults": {
+        "fail": 2
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "fail",
+          "Elapsed": 0,
+          "FailedBuild": "github.com/harmonia-vault/core-go/mobileworkflow [github.com/harmonia-vault/core-go/mobileworkflow.test]"
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "fail",
+          "Elapsed": 0.842
+        }
+      ],
+      "sourceSnapshot": "未保留逐轮完整源码快照；仅诊断历史，不追认为最终源码结果。"
+    },
+    {
+      "run": "b2-components-second.jsonl",
+      "status": "FAIL",
+      "reason": "定向负例替换值恰与合成向量原 session hash 相同；失败原日志保留。",
+      "logSHA256": "7371ca56d28c03b417fe41acd673db2308a70c72573b18205bf03869cd686106",
+      "testResults": {
+        "pass": 39,
+        "fail": 5
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "fail",
+          "Elapsed": 9.084
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "fail",
+          "Elapsed": 9.951
+        }
+      ],
+      "startedUTC": "2026-10-03T15:47:16.166972+00:00",
+      "sourceSnapshot": "未保留逐轮完整源码快照；仅诊断历史，不追认为最终源码结果。"
+    },
+    {
+      "run": "b2-components-third.jsonl",
+      "status": "PASS",
+      "reason": "修正测试输入后 50 个定向节点通过；尚未加入最终受控换代/竞争/容量测试。",
+      "logSHA256": "ae98fc82dca63d3984094070654284594b6b110312422e2c4de6bbcfceb6afc0",
+      "testResults": {
+        "pass": 50
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 10.405
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 11.605
+        }
+      ],
+      "startedUTC": "2026-10-03T15:47:56.904879+00:00",
+      "sourceSnapshot": "未保留逐轮完整源码快照；仅诊断历史，不追认为最终源码结果。"
+    },
+    {
+      "run": "b2-https-compile.jsonl",
+      "status": "PASS",
+      "reason": "HTTPS 包编译；0 测试。",
+      "logSHA256": "beefa7f2d7a3dca99e3a785d675856944dfae75008254d2b2fb33349d300087a",
+      "testResults": {},
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/workspace/acceptance",
+          "Action": "pass",
+          "Elapsed": 0.746
+        }
+      ],
+      "startedUTC": "2026-10-03T15:51:43.179697+00:00",
+      "sourceSnapshot": "未保留逐轮完整源码快照；仅诊断历史，不追认为最终源码结果。"
+    },
+    {
+      "run": "b2-https-first.jsonl",
+      "status": "PASS",
+      "reason": "三个实际原事务场景首轮通过；后续收紧重复 Applied 校验后按最终源码重验。",
+      "logSHA256": "99f1aad9fefdf3bdcf5d6a594028678764d55da73f4c01eac34382e6c791d5f7",
+      "testResults": {
+        "pass": 4
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/workspace/acceptance",
+          "Action": "pass",
+          "Elapsed": 11.988
+        }
+      ],
+      "startedUTC": "2026-10-03T15:52:35.208115+00:00",
+      "sourceInventorySHA256": "a706fb22369d1b1ad9595b2fdc13260a5da561a1abc31968e6f93f0d14c9228d"
+    },
+    {
+      "run": "b2-components-before-error-classification.jsonl",
+      "status": "PASS",
+      "reason": "错误分类收紧前 72 节点；另有该版本源码 inventory。",
+      "logSHA256": "e2d34a9174b772dc1cd43364d9a94fce647c7641e4e3f296e9c96fdada532862",
+      "testResults": {
+        "pass": 72
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 10.974
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 13.837
+        }
+      ],
+      "startedUTC": "2026-10-03T15:55:54.635250+00:00",
+      "sourceInventorySHA256": "93162a4217bfd10c7e4b6910eac723f10f5872bb086430169c25e49d3009ce35"
+    },
+    {
+      "run": "b2-regression-before-error-classification.jsonl",
+      "status": "PASS",
+      "reason": "错误分类收紧前四包 538 节点。",
+      "logSHA256": "fe2169782878a973fa5807e6c710ca17c19d4b13d05d22c1a015f990f4089b4d",
+      "testResults": {
+        "pass": 538
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+          "Action": "pass",
+          "Elapsed": 1.305
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge",
+          "Action": "pass",
+          "Elapsed": 15.865
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 60.902
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 83.297
+        }
+      ],
+      "startedUTC": "2026-10-03T15:56:51.335420+00:00",
+      "sourceInventorySHA256": "93162a4217bfd10c7e4b6910eac723f10f5872bb086430169c25e49d3009ce35"
+    },
+    {
+      "run": "b2-https-before-error-classification.jsonl",
+      "status": "PASS",
+      "reason": "错误分类收紧前三个场景通过。",
+      "logSHA256": "39d94a28d1e60b0db580c69898ea888f3261cb1601e7080caf5ae0a7687381c3",
+      "testResults": {
+        "pass": 4
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/workspace/acceptance",
+          "Action": "pass",
+          "Elapsed": 11.245
+        }
+      ],
+      "startedUTC": "2026-10-03T15:56:53.286780+00:00",
+      "sourceInventorySHA256": "93162a4217bfd10c7e4b6910eac723f10f5872bb086430169c25e49d3009ce35"
+    },
+    {
+      "run": "b2-consumer-compile-before-error-classification.jsonl",
+      "status": "PASS",
+      "reason": "错误分类收紧前 18 包编译，0 测试。",
+      "logSHA256": "221800813c6709549f55550a2dacbca71e2fd6e56c6aa78e86d07a821853c83f",
+      "testResults": {},
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/appsecurity",
+          "Action": "pass",
+          "Elapsed": 0.408
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/cryptox/tools/issuer-vector",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/androidfixture",
+          "Action": "skip",
+          "Elapsed": 0.001
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/genericcontroller",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/managementpeer",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/recoverycontroller",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/localipc",
+          "Action": "pass",
+          "Elapsed": 0.381
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/crosscontroller",
+          "Action": "pass",
+          "Elapsed": 0.398
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/cmd/harmonia",
+          "Action": "pass",
+          "Elapsed": 0.583
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/cryptox",
+          "Action": "pass",
+          "Elapsed": 0.609
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge",
+          "Action": "pass",
+          "Elapsed": 0.487
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+          "Action": "pass",
+          "Elapsed": 0.607
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/platform",
+          "Action": "pass",
+          "Elapsed": 0.399
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/pairing",
+          "Action": "pass",
+          "Elapsed": 0.459
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 0.496
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 0.653
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/localkeys",
+          "Action": "pass",
+          "Elapsed": 1.1320000000000001
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/localstate",
+          "Action": "pass",
+          "Elapsed": 1.685
+        }
+      ],
+      "startedUTC": "2026-10-03T15:59:05.836904+00:00",
+      "sourceInventorySHA256": "93162a4217bfd10c7e4b6910eac723f10f5872bb086430169c25e49d3009ce35"
+    },
+    {
+      "run": "b2-components-final.jsonl",
+      "status": "PASS",
+      "reason": "最终 87 节点。",
+      "logSHA256": "83e5ad1ef466137c88fb27b49dd43d2fc1125af076b2e1558027774be6644eb1",
+      "testResults": {
+        "pass": 87
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 10.907
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 13.78
+        }
+      ],
+      "startedUTC": "2026-10-03T16:07:47.758725+00:00",
+      "sourceInventorySHA256": "615b55cb75cca7c5c1459c790cdd19d08146a076e4c8ef583f25c6cf0d6e7142"
+    },
+    {
+      "run": "b2-regression-final.jsonl",
+      "status": "PASS",
+      "reason": "最终四包 553 节点。",
+      "logSHA256": "7196304d6226e8bf86502109066c675a6488cff04b507fcdb0cffdf2ce79da51",
+      "testResults": {
+        "pass": 553
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+          "Action": "pass",
+          "Elapsed": 1.292
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge",
+          "Action": "pass",
+          "Elapsed": 15.764
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 61.075
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 83.261
+        }
+      ],
+      "startedUTC": "2026-10-03T16:09:01.197414+00:00",
+      "sourceInventorySHA256": "615b55cb75cca7c5c1459c790cdd19d08146a076e4c8ef583f25c6cf0d6e7142"
+    },
+    {
+      "run": "b2-https-final.jsonl",
+      "status": "PASS",
+      "reason": "最终三个实际原事务场景。",
+      "logSHA256": "2f95dbbbfe8309a312f0af96dc3789e75089794ac62514bac582483d68f3d996",
+      "testResults": {
+        "pass": 4
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/workspace/acceptance",
+          "Action": "pass",
+          "Elapsed": 11.086
+        }
+      ],
+      "startedUTC": "2026-10-03T16:09:01.200961+00:00",
+      "sourceInventorySHA256": "615b55cb75cca7c5c1459c790cdd19d08146a076e4c8ef583f25c6cf0d6e7142"
+    },
+    {
+      "run": "b2-consumer-compile-final.jsonl",
+      "status": "PASS",
+      "reason": "18 个 Go 消费包编译，0 测试；不冒充原生 SDK build。",
+      "logSHA256": "ba0e5718975ddfcf91152df6d98773d0be3453d52c187e032e348acc062c4e9a",
+      "testResults": {},
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/appsecurity",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/cryptox",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/cryptox/tools/issuer-vector",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/localipc",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/localstate",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/localkeys",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/cmd/harmonia",
+          "Action": "pass",
+          "Elapsed": 0.001
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/androidfixture",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/crosscontroller",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/genericcontroller",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/managementpeer",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/cmd/recoverycontroller",
+          "Action": "skip",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/pairing",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/platform",
+          "Action": "pass",
+          "Elapsed": 0
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge",
+          "Action": "pass",
+          "Elapsed": 0.447
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 0.407
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 0.43
+        }
+      ],
+      "startedUTC": "2026-10-03T16:08:54.944701+00:00",
+      "sourceInventorySHA256": "615b55cb75cca7c5c1459c790cdd19d08146a076e4c8ef583f25c6cf0d6e7142"
+    },
+    {
+      "run": "gates-before-fix.jsonl",
+      "status": "FAIL",
+      "logSHA256": "cc41ed4c7b6bb14046bd4e907bfb6bb6f3506901fb6e571f9add3fc498c5250a",
+      "testResults": {
+        "fail": 21
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "fail",
+          "Elapsed": 2.271
+        }
+      ],
+      "changedSourceManifestSHA256": "f0dfc78ae11407a500806b241e478aed9f5521f361a41409efe784f3b49acd3b"
+    },
+    {
+      "run": "gates-components-final.jsonl",
+      "status": "PASS",
+      "logSHA256": "ddaa18a345e7f470669367afd2967690d17c14adba3c307eae4cde90466d74ee",
+      "sourceInventorySHA256": "fc3a803e9e64d664b603f8d5b737da700173843faeeda4db9f607888951ddd86",
+      "testResults": {
+        "pass": 108
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 11.543
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 16.218
+        }
+      ]
+    },
+    {
+      "run": "gates-regression-final.jsonl",
+      "status": "PASS",
+      "logSHA256": "6d141959a0cf9e9bd082036b77e29aa6e1c4e9059e80cafe563cf6e67558cf31",
+      "sourceInventorySHA256": "fc3a803e9e64d664b603f8d5b737da700173843faeeda4db9f607888951ddd86",
+      "testResults": {
+        "pass": 574
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge/internal/recoverysessions",
+          "Action": "pass",
+          "Elapsed": 1.3439999999999999
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobilebridge",
+          "Action": "pass",
+          "Elapsed": 16.041
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/syncclient",
+          "Action": "pass",
+          "Elapsed": 60.766
+        },
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "pass",
+          "Elapsed": 85.128
+        }
+      ]
+    }
+  ],
+  "unrun": [
+    "native ABI/provider all-writer CAS/epoch integration",
+    "Android/iOS device or Simulator runtime",
+    "SDK authentication/background/Logout/Forget registry hook",
+    "certificate-5 explicit environment/role/expiry device enrollment and Boot/Pull",
+    "P4 management and legacy protected-source upgrade",
+    "server authoritative terminal closure of an unaccepted preparation",
+    "CI, Release, installer distribution, online deployment"
+  ],
+  "notes": [
+    "新恢复码仅在 prepared CAS 成功后返回；完整重输匹配公钥后同一次 whole-state CAS 转 sealed。",
+    "prepare 原 session/basis/ID 不可替换；冷启动无原 RAM owner 时保留 interrupted，不宣称 expired/applied。",
+    "accepted 冷查询使用完整当前码新受限会话，仅查原包；RotationRequired 仍 true。",
+    "所有凭据、code、bearer、私钥、真实保护明文和 TLS 材料仅合成测试内存/临时私有夹具，不在此证据中。",
+    "公开公有向量用于组件负例；真实 HTTPS 另有独立账号/SQLite、标准 TLS 校验。",
+    "v1真实场景使用每步新 Workflow，未覆盖保留有效 w.login 的同实例组合；review 找到旧共享 gate 漏 preparation，修前组件实际 FAIL，v2 将该组合加入回归。"
+  ],
+  "priorCandidate": {
+    "manifestSHA256": "83c02d7162cc245a272ca0802a178c6d1d5e0eb0a94e3260918d0d12bc4edcf4",
+    "status": "BLOCKED by review: preparation missing in recoveryOnly/mobileEnrollmentGate despite passing prior tests",
+    "sourceInventorySHA256": "615b55cb75cca7c5c1459c790cdd19d08146a076e4c8ef583f25c6cf0d6e7142",
+    "all22OriginalCandidateFilesUnchanged": true
+  },
+  "gateRegression": {
+    "beforeFix": {
+      "logSHA256": "cc41ed4c7b6bb14046bd4e907bfb6bb6f3506901fb6e571f9add3fc498c5250a",
+      "testResults": {
+        "fail": 21
+      },
+      "packages": [
+        {
+          "Package": "github.com/harmonia-vault/core-go/mobileworkflow",
+          "Action": "fail",
+          "Elapsed": 2.271
+        }
+      ],
+      "changedSourceManifestSHA256": "f0dfc78ae11407a500806b241e478aed9f5521f361a41409efe784f3b49acd3b"
+    },
+    "afterFix": {
+      "testNodes": 21,
+      "status": "PASS",
+      "sameInstanceLegacyCalls": 14,
+      "coldInfoCalls": 4,
+      "phases": {
+        "intent": {
+          "loginRequests": 1,
+          "legacyRequests": 0,
+          "ordinarySaves": 0,
+          "cas": 0
+        },
+        "prepared": {
+          "loginRequests": 1,
+          "legacyRequests": 0,
+          "ordinarySaves": 0,
+          "cas": 0
+        }
+      }
+    },
+    "preconditions": "实际 Workflow.Login API 对合成 httptest TLS 响应完成客户端校验；同实例 w.login 仍有效；完整合成码格式有效；通过真实 private CAS adapter 保存已严格验证的公有 intent/prepared。该组件不调用真实 TS 账号服务，不冒充完整 Open-owner/Begin-transition 或 SDK 路径。",
+    "fix": "recoveryOnly 与 mobileEnrollmentGate 各增加 RecoveryDAGPreparation != nil；无其它业务门槛改动。"
+  }
+}

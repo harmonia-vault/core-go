@@ -105,6 +105,9 @@ func (w *Workflow) QueryRecoveryDAGOriginal(parent context.Context, completeCurr
 		return result, ErrDAGQueryBusy
 	}
 	binding, err := w.dagBindingLocked()
+	if err == nil && w.state.RecoveryDAGPreparation != nil {
+		err = ErrDAGPreparationInterrupted
+	}
 	if err == nil && w.state.RecoveryDAG == nil {
 		err = ErrDAGOriginalRequired
 	}

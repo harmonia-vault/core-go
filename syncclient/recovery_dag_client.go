@@ -20,6 +20,7 @@ import (
 var ErrDAGRecoveryState = errors.New("restricted DAG recovery state unavailable")
 
 type DAGRecoveryConfig struct {
+	Preparation       DAGTransitionPreparationStore
 	Endpoint          string
 	HTTPClient        *http.Client
 	AccountID         string
@@ -221,7 +222,7 @@ func (s *DAGRecoverySession) request(ctx context.Context, method, path string, t
 	}
 	response, e := s.http.Do(r)
 	if e != nil {
-		return errors.New("HTTPS DAG recovery request failed")
+		return ErrDAGRequestUnavailable
 	}
 	defer response.Body.Close()
 	if response.Header.Get("Harmonia-Protocol-Major") != "2" {

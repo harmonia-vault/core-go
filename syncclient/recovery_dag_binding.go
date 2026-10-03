@@ -27,6 +27,9 @@ func (DAGRecoveryBinding) MarshalText() ([]byte, error) { return nil, ErrDAGReco
 func (s *DAGRecoverySession) VerifiedBinding() (DAGRecoveryBinding, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.verifiedBindingLocked()
+}
+func (s *DAGRecoverySession) verifiedBindingLocked() (DAGRecoveryBinding, error) {
 	if err := s.live(); err != nil {
 		return DAGRecoveryBinding{}, err
 	}

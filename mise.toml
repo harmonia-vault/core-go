@@ -36,3 +36,11 @@ run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge
 [tasks.test-mobile-dag-owner-components]
 description = "B1 只读 owner/binding/lease 定向组件"
 run = "go test -race ./syncclient ./mobileworkflow -run 'TestDAGVerifiedBinding|TestDAGOwner' -count=1 -timeout=90s -json"
+
+[tasks.test-mobile-dag-transition-components]
+description = "B2 prepare 原 ID、原子提升、冷中断与受控换代的有界 Go 组件"
+run = "go test -race ./syncclient ./mobileworkflow -run 'Test(DAGPreparation|MobileDAGPreparation|MobileDAGTransition)' -count=1 -timeout=90s -json"
+
+[tasks.test-mobile-dag-transition]
+description = "B2 连续恢复有限接线与现有 S1/S2a/B1/cert4/registry 的受影响 race 回归"
+run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"

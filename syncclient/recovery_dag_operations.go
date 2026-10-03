@@ -76,8 +76,19 @@ func (s *DAGRecoverySession) BeginTransition(ctx context.Context, id string) (st
 	if e := s.refresh(ctx); e != nil {
 		return "", e
 	}
+	var preparation DAGTransitionPreparation
+	if s.config.Preparation != nil {
+		var err error
+		preparation, err = s.saveOriginalIntent(id)
+		if err != nil {
+			return "", err
+		}
+	}
 	var c DAGTransitionChallenge
 	if e := s.request(ctx, "POST", dagPath("recovery-authority-challenges-v2"), s.token, map[string]string{"operationId": id, "authorizationKind": "old-recovery", "chainMode": "continuous"}, &c); e != nil {
+		if s.config.Preparation != nil {
+			return "", errors.Join(ErrDAGPreparationPending, e)
+		}
 		return "", e
 	}
 	head, e := s.proof.RecoveryCheckpoint()
@@ -110,6 +121,16 @@ func (s *DAGRecoverySession) BeginTransition(ctx context.Context, id string) (st
 		return "", e
 	}
 	defer clearRecoveryKeys(&keys)
+	if s.config.Preparation != nil {
+		preparation.Phase = "prepared"
+		preparation.Challenge = &c
+		preparation.NewRecoveryGeneration = next
+		preparation.NewSigningPublicKey = cryptox.EncodeBase64(keys.SigningPublic)
+		preparation.NewReceivingPublicKey = cryptox.EncodeBase64(keys.ReceivingPublic)
+		if e = s.config.Preparation.SaveTransitionPreparation(preparation); e != nil {
+			return "", e
+		}
+	}
 	s.transitionChallenge = &c
 	s.newGeneration = next
 	s.newSigning = cryptox.EncodeBase64(keys.SigningPublic)
@@ -126,6 +147,15 @@ func (s *DAGRecoverySession) SealTransition(ctx context.Context, completeNewCode
 		return ProtectedDAGOperation{}, ErrDAGRecoveryState
 	}
 	c := *s.transitionChallenge
+	if s.config.Preparation != nil {
+		p, err := s.config.Preparation.LoadTransitionPreparation()
+		if err != nil {
+			return ProtectedDAGOperation{}, err
+		}
+		if ValidateDAGTransitionPreparation(p) != nil || p.Phase != "prepared" || !sameJSON(p.Challenge, &c) || p.NewRecoveryGeneration != s.newGeneration || p.NewSigningPublicKey != s.newSigning || p.NewReceivingPublicKey != s.newReceiving {
+			return ProtectedDAGOperation{}, ErrDAGPreparationConflict
+		}
+	}
 	seed, e := cryptox.DecodeRecoveryCode(completeNewCode)
 	if e != nil {
 		return ProtectedDAGOperation{}, e
@@ -142,7 +172,7 @@ func (s *DAGRecoverySession) SealTransition(ctx context.Context, completeNewCode
 		}
 	}()
 	if cryptox.EncodeBase64(keys.SigningPublic) != s.newSigning || cryptox.EncodeBase64(keys.ReceivingPublic) != s.newReceiving {
-		return ProtectedDAGOperation{}, errors.New("complete new recovery code does not match displayed code")
+		return ProtectedDAGOperation{}, ErrDAGNewCodeMismatch
 	}
 	sub := cryptox.RecoveryTransitionSubmissionV2{EnvironmentManifest: c.EnvironmentManifest, AuthoritySet: []cryptox.RecoveryAdminAuthority{}, IssuerEvidence: nil, Envelopes: []cryptox.RecoveryEnvelope{}, LegacyState: nil}
 	root := s.vault.TrustRoot

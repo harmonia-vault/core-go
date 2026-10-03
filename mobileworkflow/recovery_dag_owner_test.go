@@ -102,7 +102,7 @@ func b1OwnerFixture(t *testing.T) (Config, *Workflow, *dagNativeSlot, *DAGRecove
 	if err != nil {
 		t.Fatal(err)
 	}
-	target := &dagOwnerTarget{e, ctx, j}
+	target := &dagOwnerTarget{entry: e, ctx: ctx, journal: j}
 	if err = e.port.attach(target); err != nil {
 		t.Fatal(err)
 	}

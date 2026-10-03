@@ -14,9 +14,10 @@ type dagOwnerPort struct {
 	target *dagOwnerTarget
 }
 type dagOwnerTarget struct {
-	entry   *dagOwnerEntry
-	ctx     context.Context
-	journal *syncclient.CheckedDAGJournal
+	entry       *dagOwnerEntry
+	ctx         context.Context
+	journal     *syncclient.CheckedDAGJournal
+	preparation syncclient.DAGTransitionPreparationStore
 }
 
 func (p *dagOwnerPort) attach(t *dagOwnerTarget) error {
@@ -92,6 +93,9 @@ type dagOwnerIdentity struct {
 }
 
 func (w *Workflow) attachDAGOwner(cancel context.CancelFunc) (dagOwnerIdentity, error) {
+	return w.attachDAGOwnerState(cancel, false)
+}
+func (w *Workflow) attachDAGOwnerState(cancel context.CancelFunc, allowPending bool) (dagOwnerIdentity, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.dagQueryCancel != nil || w.dagOwnerCancel != nil {
@@ -102,8 +106,14 @@ func (w *Workflow) attachDAGOwner(cancel context.CancelFunc) (dagOwnerIdentity, 
 		return dagOwnerIdentity{}, err
 	}
 	// B1 只安装全新只读 owner；sealed 原包必须走 S2a，不可提升 fresh query。
-	if w.state.RecoveryDAG != nil {
+	if w.state.RecoveryDAGPreparation != nil && !allowPending {
+		return dagOwnerIdentity{}, ErrDAGPreparationInterrupted
+	}
+	if w.state.RecoveryDAG != nil && !allowPending {
 		return dagOwnerIdentity{}, ErrDAGOwnerBinding
+	}
+	if err := w.validateDAGStateLocked(); err != nil {
+		return dagOwnerIdentity{}, err
 	}
 	w.dagOwnerCancel = cancel
 	return dagOwnerIdentity{b, w.state.DeviceID, w.state.SigningPublicKey, w.state.ReceivingPublicKey, w.protectedSHA256}, nil
@@ -112,4 +122,36 @@ func (w *Workflow) detachDAGOwner() {
 	w.mu.Lock()
 	w.dagOwnerCancel = nil
 	w.mu.Unlock()
+}
+
+func (p *dagOwnerPort) LoadTransitionPreparation() (syncclient.DAGTransitionPreparation, error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	t, err := p.active()
+	if err != nil {
+		return syncclient.DAGTransitionPreparation{}, err
+	}
+	if t.preparation == nil {
+		return syncclient.DAGTransitionPreparation{}, ErrDAGProtectedState
+	}
+	value, err := t.preparation.LoadTransitionPreparation()
+	if err != nil && !errors.Is(err, errDAGJournalAbsent) {
+		t.entry.invalidate()
+	}
+	return value, err
+}
+func (p *dagOwnerPort) SaveTransitionPreparation(value syncclient.DAGTransitionPreparation) error {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	t, err := p.active()
+	if err != nil {
+		return err
+	}
+	if t.preparation == nil {
+		return ErrDAGProtectedState
+	}
+	if err = t.preparation.SaveTransitionPreparation(value); err != nil {
+		t.entry.invalidate()
+	}
+	return err
 }

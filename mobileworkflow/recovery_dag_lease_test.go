@@ -24,7 +24,7 @@ func TestDAGOwnerPortSaveFailureInvalidatesBeforeRetire(t *testing.T) {
 	}
 	s := &b1Session{port: &e.port}
 	e.session = s
-	target := &dagOwnerTarget{e, ctx, j}
+	target := &dagOwnerTarget{entry: e, ctx: ctx, journal: j}
 	if err = e.port.attach(target); err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestDAGOwnerPortDetachDrainsAndCannotReattachOldTarget(t *testing.T) {
 	}
 	s := &b1Session{port: &e.port}
 	e.session = s
-	target := &dagOwnerTarget{e, ctx, j}
+	target := &dagOwnerTarget{entry: e, ctx: ctx, journal: j}
 	if err = e.port.attach(target); err != nil {
 		t.Fatal(err)
 	}

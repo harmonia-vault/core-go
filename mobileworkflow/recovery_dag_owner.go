@@ -40,6 +40,7 @@ type dagOwnerSession interface {
 }
 type dagOwnerTimer interface{ Stop() bool }
 type dagOwnerEntry struct {
+	phase     string
 	registry  *DAGRecoveryRegistry
 	port      dagOwnerPort
 	session   dagOwnerSession // 仅当前 busy 操作或 idle 的 exactly-once 清理使用
@@ -66,7 +67,7 @@ func (e *dagOwnerEntry) closeOwner() {
 }
 
 // 独立 typed RAM registry；无安装外部 session/handle 或任意 operation callback API。
-// B1 只有 Open/Info/Clear/Close，不提供 Begin/Seal/Retry/换代。
+// B1 的 Open/Info/Clear/Close 保持只读；B2 仅经封闭 typed transition 方法换代。
 type DAGRecoveryRegistry struct {
 	mu       sync.Mutex
 	scope    DAGOwnerScope
@@ -238,7 +239,7 @@ func (w *Workflow) runDAGOwner(parent context.Context, r *DAGRecoveryRegistry, s
 			info = syncclient.DAGRecoveryInfo{RotationRequired: true}
 		}
 	}()
-	identity, err := w.attachDAGOwner(e.invalidate)
+	identity, err := w.attachDAGOwnerState(e.invalidate, !opening)
 	if err != nil {
 		return info, err
 	}
@@ -250,7 +251,11 @@ func (w *Workflow) runDAGOwner(parent context.Context, r *DAGRecoveryRegistry, s
 	if err != nil {
 		return info, err
 	}
-	target = &dagOwnerTarget{entry: e, ctx: ctx, journal: journal}
+	preparation, err := w.newDAGPreparationStore()
+	if err != nil {
+		return info, err
+	}
+	target = &dagOwnerTarget{entry: e, ctx: ctx, journal: journal, preparation: preparation}
 	if err = e.port.attach(target); err != nil {
 		target = nil
 		return info, err
@@ -261,7 +266,7 @@ func (w *Workflow) runDAGOwner(parent context.Context, r *DAGRecoveryRegistry, s
 		httpClient, now := w.http, w.now
 		w.mu.Unlock()
 		var session *syncclient.DAGRecoverySession
-		session, err = syncclient.OpenDAGRecoverySession(ctx, syncclient.DAGRecoveryConfig{Endpoint: identity.Binding.Endpoint, HTTPClient: httpClient, AccountID: identity.Binding.AccountID, AccountGeneration: identity.Binding.AccountGeneration, Now: now, Journal: &e.port}, string(code))
+		session, err = syncclient.OpenDAGRecoverySession(ctx, syncclient.DAGRecoveryConfig{Endpoint: identity.Binding.Endpoint, HTTPClient: httpClient, AccountID: identity.Binding.AccountID, AccountGeneration: identity.Binding.AccountGeneration, Now: now, Journal: &e.port, Preparation: &e.port}, string(code))
 		if err != nil {
 			return info, err
 		}
@@ -271,7 +276,7 @@ func (w *Workflow) runDAGOwner(parent context.Context, r *DAGRecoveryRegistry, s
 	if err != nil {
 		return info, err
 	}
-	if verified.Profile != cryptox.RecoveryDAGCapability || verified.Endpoint != identity.Binding.Endpoint || verified.AccountID != identity.Binding.AccountID || verified.AccountGeneration != identity.Binding.AccountGeneration || !verified.RotationRequired || verified.PendingID != "" || verified.PendingKind != "" || verified.PendingHash != "" {
+	if verified.Profile != cryptox.RecoveryDAGCapability || verified.Endpoint != identity.Binding.Endpoint || verified.AccountID != identity.Binding.AccountID || verified.AccountGeneration != identity.Binding.AccountGeneration || opening && (!verified.RotationRequired || verified.PendingID != "" || verified.PendingKind != "" || verified.PendingHash != "") {
 		return info, ErrDAGOwnerBinding
 	}
 	if opening {
@@ -286,7 +291,7 @@ func (w *Workflow) runDAGOwner(parent context.Context, r *DAGRecoveryRegistry, s
 	if err != nil {
 		return info, err
 	}
-	if !info.RotationRequired || info.TrustedDevice {
+	if info.RotationRequired != e.binding.RotationRequired || info.TrustedDevice {
 		return info, ErrDAGOwnerBinding
 	}
 	if err = e.port.OwnerAlive(); err != nil {

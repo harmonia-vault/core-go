@@ -84,12 +84,15 @@ func (w *Workflow) dagBindingLocked() (syncclient.DAGJournalBinding, error) {
 }
 func (w *Workflow) validateDAGStateLocked() error {
 	r := w.state.RecoveryDAG
-	if r == nil {
+	if r == nil && w.state.RecoveryDAGPreparation == nil {
 		return nil
 	}
 	b, err := w.dagBindingLocked()
 	if err != nil {
 		return err
+	}
+	if r == nil {
+		return w.validateDAGPreparationLocked(b, nil)
 	}
 	if r.Version != 1 || r.Profile != cryptox.RecoveryDAGCapability || r.Endpoint != b.Endpoint || r.AccountID != b.AccountID || r.AccountGeneration != b.AccountGeneration || r.OwnerEpoch != b.OwnerEpoch || r.DeviceID != w.state.DeviceID || r.SigningPublicKey != w.state.SigningPublicKey || r.ReceivingPublicKey != w.state.ReceivingPublicKey {
 		return ErrDAGProtectedState
@@ -98,7 +101,10 @@ func (w *Workflow) validateDAGStateLocked() error {
 	if err != nil {
 		return err
 	}
-	return w.validateDAGDeviceLocked(p)
+	if err = w.validateDAGDeviceLocked(p); err != nil {
+		return err
+	}
+	return w.validateDAGPreparationLocked(b, &p)
 }
 func (w *Workflow) validateDAGDeviceLocked(p syncclient.ProtectedDAGOperation) error {
 	if p.Recovered != nil {
@@ -155,23 +161,17 @@ func (s mobileDAGStore) CompareAndSwapDAGJournal(b syncclient.DAGJournalBinding,
 	candidate := clone(w.state)
 	candidate.Cloud = w.engine.State()
 	candidate.RecoveryDAG = &recoveryDAGState{Version: 1, Profile: cryptox.RecoveryDAGCapability, Endpoint: b.Endpoint, AccountID: b.AccountID, AccountGeneration: b.AccountGeneration, DeviceID: w.state.DeviceID, SigningPublicKey: w.state.SigningPublicKey, ReceivingPublicKey: w.state.ReceivingPublicKey, OwnerEpoch: b.OwnerEpoch, Journal: bytes.Clone(next)}
-	encoded, err := json.Marshal(candidate)
-	if err != nil {
-		return err
+	if preparation := w.state.RecoveryDAGPreparation; preparation != nil {
+		prepared, err := syncclient.DecodeDAGTransitionPreparation(preparation.Record)
+		if err != nil {
+			return err
+		}
+		if err = syncclient.ValidateDAGPreparationPromotion(prepared, p); err != nil {
+			return err
+		}
+		candidate.RecoveryDAGPreparation = nil
 	}
-	defer clear(encoded)
-	if len(encoded) > 8<<20 {
-		return ErrDAGProtectedState
-	}
-	if err = w.saveNativeCAS(w.protectedSHA256, encoded); err != nil {
-		// 失败不能推进 RAM，也不能在 callback 内 Close 活 session。bridge 先失效
-		// lease/cancel context，再由最外层操作解锁后 retire；此对象拒绝后续保存。
-		w.dagPersistenceFailed = true
-		return errors.Join(ErrDAGPersistence, err)
-	}
-	w.state = candidate
-	w.protectedSHA256 = protectedStateHash(encoded)
-	return nil
+	return w.saveDAGCandidateLocked(candidate)
 }
 
 // 仅 Go 高层内部使用；S1 没有导出方法接收外部 signed packet 或生成 live session。
@@ -194,6 +194,9 @@ func (w *Workflow) RecoveryDAGPendingInfo() (RecoveryDAGPendingInfo, error) {
 	}
 	if w.dagPersistenceFailed {
 		return info, ErrDAGPersistence
+	}
+	if w.state.RecoveryDAGPreparation != nil {
+		return info, ErrDAGPreparationInterrupted
 	}
 	if w.state.RecoveryDAG == nil {
 		return info, nil
