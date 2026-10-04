@@ -23,11 +23,12 @@ var dagNativeFields = map[string][]string{
 	"retryDAGRecoveredDevice":   {"operationId", "contentHash"},
 	"applyDAGRecoveredDevice":   {"operationId", "contentHash"},
 	"restoreDAGRecoveredDevice": {}, "pullDAGRecoveredDevice": {},
-	"dagRecoveryResolutionInfo":   {},
-	"queryDAGRecoveryResolution":  {"operationId", "targetHash"},
-	"closeDAGRecoveryOriginal":    {"operationId", "targetHash"},
-	"openDAGRecoveryAfterClosure": {},
-	"cancelDAGRecoveryOwner":      {}, // 只由native处理本slot RAM；ExecuteDAGRecovery不执行此非domain命令。
+	"dagRecoveryResolutionInfo":      {},
+	"dagRecoveryResolutionDiscovery": {},
+	"queryDAGRecoveryResolution":     {"operationId", "targetHash"},
+	"closeDAGRecoveryOriginal":       {"operationId", "targetHash"},
+	"openDAGRecoveryAfterClosure":    {},
+	"cancelDAGRecoveryOwner":         {}, // 只由native处理本slot RAM；ExecuteDAGRecovery不执行此非domain命令。
 }
 
 func parseNativeDAGCommand(raw string) (workflowCommand, error) {
@@ -240,6 +241,12 @@ func (v *VaultWorkflow) ExecuteDAGRecovery(raw string, completeCode []byte) (res
 		}
 	case "dagRecoveredEnrollmentChoices", "sealDAGRecoveredDevice", "retryDAGRecoveredDevice", "dagRecoveredDeviceInfo":
 		data, operationErr, metadataErr = v.executeNativeDAGRecovered(ctx, r, c)
+	case "dagRecoveryResolutionDiscovery":
+		var info mobileworkflow.RecoveryDAGResolutionDiscovery
+		info, operationErr = v.workflow.RecoveryDAGResolutionDiscoveryInfo()
+		if operationErr == nil {
+			data, metadataErr = nativeDAGResolutionDiscovery(info)
+		}
 	case "dagRecoveryResolutionInfo", "queryDAGRecoveryResolution", "closeDAGRecoveryOriginal", "openDAGRecoveryAfterClosure":
 		data, operationErr, metadataErr = v.executeNativeDAGResolution(ctx, r, c, completeCode)
 	case "applyDAGRecoveredDevice", "restoreDAGRecoveredDevice", "pullDAGRecoveredDevice":
