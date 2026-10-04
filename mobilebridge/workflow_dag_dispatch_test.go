@@ -14,6 +14,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -27,6 +28,12 @@ func TestNativeDAGCommandStrictFieldsAndCodeBoundary(t *testing.T) {
 		raw := dagCommand(op)
 		if op == "openDAGRecoveryOwner" {
 			raw = raw[:len(raw)-1] + `,"email":"actor@example.invalid","password":"synthetic-only"}`
+		}
+		if op == "sealDAGRecoveredDevice" {
+			raw = recoveredNativeCommand(op, map[string]string{"expectedSequence": "2", "recoveryHeadHash": strings.Repeat("a", 64), "selections": `[{"environmentId":"env","keyVersion":"1","role":"ro","expiresAt":"0"}]`})
+		}
+		if op == "retryDAGRecoveredDevice" || op == "applyDAGRecoveredDevice" {
+			raw = recoveredNativeCommand(op, map[string]string{"operationId": "original-id", "contentHash": strings.Repeat("b", 64)})
 		}
 		size := int64(0)
 		if codeRequired(op) {

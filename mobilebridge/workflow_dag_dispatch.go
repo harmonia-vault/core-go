@@ -18,6 +18,11 @@ var dagNativeFields = map[string][]string{
 	"openDAGRecoveryOwner": {"email", "password"},
 	"dagRecoveryOwnerInfo": {}, "dagRecoveryPreparationInfo": {}, "dagRecoveryPendingInfo": {},
 	"beginDAGRecoveryTransition": {}, "sealDAGRecoveryTransition": {}, "retryDAGRecoveryTransition": {}, "queryDAGRecoveryOriginal": {},
+	"dagRecoveredEnrollmentChoices": {}, "dagRecoveredDeviceInfo": {},
+	"sealDAGRecoveredDevice":    {"expectedSequence", "recoveryHeadHash", "selections"},
+	"retryDAGRecoveredDevice":   {"operationId", "contentHash"},
+	"applyDAGRecoveredDevice":   {"operationId", "contentHash"},
+	"restoreDAGRecoveredDevice": {}, "pullDAGRecoveredDevice": {},
 	"cancelDAGRecoveryOwner": {}, // 只由native处理本slot RAM；ExecuteDAGRecovery不执行此非domain命令。
 }
 
@@ -100,7 +105,7 @@ func ValidateDAGRecoveryCommand(raw string, codeLength int64) error {
 	} else if codeLength != 0 {
 		return errInput
 	}
-	return nil
+	return validateNativeDAGRecoveredCommand(c)
 }
 func nativeDAGInfo(x syncclient.DAGRecoveryInfo) (map[string]any, error) {
 	if x.TrustedDevice {
@@ -172,6 +177,7 @@ func (v *VaultWorkflow) ExecuteDAGRecovery(raw string, completeCode []byte) (res
 	var code string
 	var operationErr error
 	var metadataErr error
+	trusted := false
 	switch c.operation {
 	case "openDAGRecoveryOwner":
 		// 最新已审高层scope helper接入前，不能把RAM-only Login当持久跨认证scope。
@@ -225,6 +231,11 @@ func (v *VaultWorkflow) ExecuteDAGRecovery(raw string, completeCode []byte) (res
 		if operationErr == nil {
 			data, metadataErr = nativeDAGQuery(info)
 		}
+	case "dagRecoveredEnrollmentChoices", "sealDAGRecoveredDevice", "retryDAGRecoveredDevice", "dagRecoveredDeviceInfo":
+		data, operationErr, metadataErr = v.executeNativeDAGRecovered(ctx, r, c)
+	case "applyDAGRecoveredDevice", "restoreDAGRecoveredDevice", "pullDAGRecoveredDevice":
+		data, operationErr, metadataErr = v.executeNativeDAGApplied(ctx, r, c)
+		trusted = operationErr == nil && metadataErr == nil
 	default:
 		return "", errInput
 	}
@@ -237,7 +248,7 @@ func (v *VaultWorkflow) ExecuteDAGRecovery(raw string, completeCode []byte) (res
 	if err = v.checkProtected(v.protectedSHA256); err != nil {
 		return "", err
 	}
-	out := map[string]any{"version": 1, "profile": cryptox.RecoveryDAGCapability, "operation": c.operation, "trustedDevice": false, "ok": operationErr == nil}
+	out := map[string]any{"version": 1, "profile": cryptox.RecoveryDAGCapability, "operation": c.operation, "trustedDevice": trusted, "ok": operationErr == nil}
 	if operationErr != nil {
 		if !nativeDAGSoftCandidate(c.operation, operationErr) {
 			return "", operationErr
@@ -259,6 +270,12 @@ func (v *VaultWorkflow) ExecuteDAGRecovery(raw string, completeCode []byte) (res
 			fixed = "CODE_ALREADY_PREPARED"
 		}
 		out["error"] = map[string]any{"code": fixed, "ownerRetained": true, "retryOriginal": true}
+		if c.operation == "sealDAGRecoveredDevice" || c.operation == "retryDAGRecoveredDevice" {
+			projection, e = v.projectNativeDAGRecoveredState()
+			if e != nil {
+				return "", e
+			}
+		}
 		out["data"] = projection
 	} else {
 		if data != nil {
@@ -267,6 +284,9 @@ func (v *VaultWorkflow) ExecuteDAGRecovery(raw string, completeCode []byte) (res
 		if code != "" {
 			out["recoveryCode"] = code
 		}
+	}
+	if ctx.Err() != nil || r.dead.Load() || v.saveFailed.Load() {
+		return "", errClosed
 	}
 	return encode(out)
 }
@@ -303,7 +323,7 @@ func nativeDAGSoftCandidate(operation string, err error) bool {
 	if operation == "sealDAGRecoveryTransition" && errors.Is(err, syncclient.ErrDAGNewCodeMismatch) || operation == "beginDAGRecoveryTransition" && errors.Is(err, mobileworkflow.ErrDAGCodeAlreadyPrepared) {
 		return fault == nil
 	}
-	if !(operation == "beginDAGRecoveryTransition" && errors.Is(err, syncclient.ErrDAGPreparationPending) || operation == "retryDAGRecoveryTransition" && errors.Is(err, syncclient.ErrEnrollmentPending)) {
+	if !(operation == "beginDAGRecoveryTransition" && errors.Is(err, syncclient.ErrDAGPreparationPending) || operation == "retryDAGRecoveryTransition" && errors.Is(err, syncclient.ErrEnrollmentPending) || operation == "sealDAGRecoveredDevice" && errors.Is(err, syncclient.ErrDAGPreparationPending) || operation == "retryDAGRecoveredDevice" && errors.Is(err, syncclient.ErrEnrollmentPending)) {
 		return false
 	}
 	// 不复制domain的HTTP可重试规则。只有此typed sentinel可候选；
