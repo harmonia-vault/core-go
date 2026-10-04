@@ -51,3 +51,7 @@ API 依据：[NtCreateFile](https://learn.microsoft.com/en-us/windows/win32/api/
 ## 后续构建阻塞已解决
 
 以上两次编译失败保留为历史结果。进一步定位到 Linux 构建容器的 tmpfs 材料占用接近 2 GiB 限额；迁到既有磁盘、保持源码/工具链/资源限制后，含 SPAKE2 的 Windows ARM64 候选在 111.744 秒内构建通过，未新增 OOM kill。详见 [原因、上游资料与对照验证](WINDOWS-NATIVE-BUILD-STORAGE.md)。新映像尚未安装到服务，真实凭据流程、设备 Boot/Pull 与 P7 仍未完成。
+
+## 原生映像已安装，普通 CLI 仍阻塞
+
+后续已完成固定原生映像升级、正式 stop/start 和服务身份回读，均有实际通过证据。普通用户正式 login 则失败，当前定位为读取服务进程时 Win32 错误码 5。详见 [最新分项结果](WINDOWS-NATIVE-IPC-BLOCKER.md)；以上“尚未安装”等表述保留为各历史阶段结果。P7 仍未完成。

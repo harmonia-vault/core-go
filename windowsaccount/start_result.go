@@ -31,16 +31,17 @@ func startResult(stage string, err error) StartResult {
 }
 
 // mayStartReceipt permits one explicitly requested start of a currently stopped
-// service. The only continuation covered here is the old/new durable start-service
+// service, including a completed explicit StopInstalled operation. The only
+// interrupted-start continuation covered here is the old/new durable start-service
 // intent with current Demand start; it never treats a running or unknown state as
 // permission to start again. Automatic/crash recovery is not implemented here.
 func mayStartReceipt(r Receipt, state, startType uint32) (resume bool, allowed bool) {
 	const stopped, demand, disabled = 1, 3, 4
-	if r.Stage != "installed-disabled" || !r.ServiceCreated || state != stopped {
+	if (r.Stage != "installed-disabled" && r.Stage != "stopped-disabled") || !r.ServiceCreated || state != stopped {
 		return false, false
 	}
 	if r.Pending == "" {
-		return false, startType == disabled && r.LastStart == nil
+		return false, startType == disabled && (r.Stage == "stopped-disabled" || r.LastStart == nil)
 	}
 	if r.Pending != "start-service" || startType != demand {
 		return false, false

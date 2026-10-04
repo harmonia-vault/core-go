@@ -71,3 +71,32 @@ func TestStartResultKeepsNumericCodeWithoutErrorText(t *testing.T) {
 		}
 	}
 }
+
+func TestExplicitStoppedServiceMayStartAgain(t *testing.T) {
+	base := Receipt{Stage: "stopped-disabled", ServiceCreated: true, LastStart: &StartResult{Stage: "enable-automatic", Succeeded: true}}
+	if resume, allowed := mayStartReceipt(base, 1, 4); resume || !allowed {
+		t.Fatal("completed explicit stop could not start")
+	}
+	for _, state := range []uint32{0, 2, 3, 4} {
+		if _, allowed := mayStartReceipt(base, state, 4); allowed {
+			t.Fatal("non-stopped service accepted")
+		}
+	}
+	for _, mode := range []uint32{0, 2, 3} {
+		if _, allowed := mayStartReceipt(base, 1, mode); allowed {
+			t.Fatal("non-disabled service accepted")
+		}
+	}
+	for _, pending := range []string{"disable-and-drain", "enable-automatic", "start-service"} {
+		r := base
+		r.Pending = pending
+		if _, allowed := mayStartReceipt(r, 1, 4); allowed {
+			t.Fatal("incomplete receipt accepted")
+		}
+	}
+	base.Pending = "start-service"
+	base.LastStart = &StartResult{Stage: "wait-running"}
+	if resume, allowed := mayStartReceipt(base, 1, 3); !resume || !allowed {
+		t.Fatal("stopped service explicit-start continuation rejected")
+	}
+}
