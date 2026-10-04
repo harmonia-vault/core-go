@@ -13,7 +13,7 @@ import tempfile
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--go", default="go")
-    parser.add_argument("--output", type=pathlib.Path, help="新输出文件；省略时使用本包忽略目录下独占临时目录")
+    parser.add_argument("--output", type=pathlib.Path, help="新输出文件；省略时使用遵循 TMPDIR 的独占临时目录")
     args = parser.parse_args()
     if platform.system() != "Linux" or platform.machine() != "aarch64":
         raise RuntimeError("当前构建入口仅验收 Linux ARM64")
@@ -25,9 +25,8 @@ def main():
     library = package / "native/windows-arm64/libcrypto.a"
     if hashlib.file_digest(library.open("rb"), "sha256").hexdigest() != metadata["artifacts"]["libcrypto.a"]["sha256"]:
         raise RuntimeError("本地静态库 SHA256 不匹配")
-    cache = package / ".cache"
-    cache.mkdir(exist_ok=True)
-    work = pathlib.Path(tempfile.mkdtemp(prefix="windows-arm64-test-", dir=cache))
+    # 与原生依赖构建一致，允许调用者通过 TMPDIR 选择磁盘目录。
+    work = pathlib.Path(tempfile.mkdtemp(prefix="harmonia-windows-arm64-test-"))
     output = (args.output or work / "pairing.test.exe").absolute()
     if output.exists() or output.is_symlink():
         raise RuntimeError("测试输出文件已存在；不覆盖")

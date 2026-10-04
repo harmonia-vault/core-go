@@ -47,3 +47,7 @@ API 依据：[NtCreateFile](https://learn.microsoft.com/en-us/windows/win32/api/
 复用已存在且哈希匹配的固定 BoringSSL Windows ARM64 静态库与 LLVM-mingw 工具链，未重建依赖、安装工具或下载替代版本。以本分支代码提交 `b29fad11ed1dee9cd1c745bfb9bfcb2134bb5f2c` 构建 `harmonia_boringssl,harmonia_windows_account_candidate`、CGO1 候选，限制 Go 并发为 2。
 
 本次 **FAIL**：259.37 秒，exit 1，Go `runtime` 编译进程报 `signal: killed`。没有取得足够证据确认具体终止原因，不把推测的资源耗尽写成已证事实。没有重复构建、扩大 VM 或生成新 Windows 映像；含原生 PAKE 的候选安装、真实凭据流程和设备 Boot/Pull 均 **UNRUN**。原 v9 CGO0 服务保持运行，成功的空账号无人登录重启结果不受此构建失败影响。
+
+## 后续构建阻塞已解决
+
+以上两次编译失败保留为历史结果。进一步定位到 Linux 构建容器的 tmpfs 材料占用接近 2 GiB 限额；迁到既有磁盘、保持源码/工具链/资源限制后，含 SPAKE2 的 Windows ARM64 候选在 111.744 秒内构建通过，未新增 OOM kill。详见 [原因、上游资料与对照验证](WINDOWS-NATIVE-BUILD-STORAGE.md)。新映像尚未安装到服务，真实凭据流程、设备 Boot/Pull 与 P7 仍未完成。

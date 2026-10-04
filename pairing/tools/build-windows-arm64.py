@@ -68,7 +68,8 @@ def main():
     cmake_numbers = tuple(int(n) for n in cmake_version.split()[-1].split(".")[:2])
     if cmake_numbers < (3, 22):
         raise RuntimeError("CMake 版本不满足固定上游要求")
-    work = pathlib.Path(tempfile.mkdtemp(prefix="harmonia-bssl-windows-arm64-", dir="/tmp"))
+    # 遵循 TMPDIR；大体积工具链与中间文件应放在磁盘，避免耗尽容器 tmpfs 配额。
+    work = pathlib.Path(tempfile.mkdtemp(prefix="harmonia-bssl-windows-arm64-"))
     record = {"boringsslCommit": PIN, "symbolPrefix": PREFIX, "toolchainAsset": ASSET, "toolchainAssetSHA256": ASSET_SHA,
               "goVersion": go_version, "cmakeVersion": cmake_version, "ninjaVersion": ninja_version,
               "profile": "boringssl-spake2-edwards25519-draft02-v1", "temporaryDirectory": str(work)}

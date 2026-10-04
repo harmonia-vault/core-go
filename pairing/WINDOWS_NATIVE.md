@@ -13,6 +13,21 @@
 
 只有显式 `harmonia_boringssl` 标签、CGo 和 `windows/arm64` 同时存在才选用 Windows 原生实现。默认无 CGo、无标签及其它 Windows 架构返回 `ErrUnavailable`；macOS、Linux 与现有 Android/iOS 条件保持兼容。
 
+## 构建目录与容器内存
+
+先确认临时目录所在文件系统。Linux 的 `/tmp` 可能是 tmpfs，其文件也占用容器内存；`GOMEMLIMIT` 只约束 Go 运行时管理的内存，无法回收仍保留的工具链文件。两个 Windows 构建入口均遵循标准 `TMPDIR`。在既有磁盘文件系统内创建本任务独占目录，并仅对本次命令设置 `TMPDIR`、`GOTMPDIR` 和 `GOCACHE`；无需改内存、交换或容器安全设置。
+
+```sh
+harmonia_build_root=$(mktemp -d /var/tmp/harmonia-win-build.XXXXXXXX)
+mkdir "$harmonia_build_root/tmp" "$harmonia_build_root/cache"
+TMPDIR="$harmonia_build_root/tmp" \
+GOTMPDIR="$harmonia_build_root/tmp" \
+GOCACHE="$harmonia_build_root/cache" \
+mise run native-build-windows-arm64 -- --source-archive /path/to/fixed-source.tar.gz
+```
+
+`/var/tmp` 也须先确认确为磁盘。源码目录、原生产物与后续 Go 构建输出同样不要放在接近内存上限的 tmpfs；后续编译命令继续使用同一组目录。已有库与工具链可复用，不能为清内存删除唯一产物或无关目录。具体失败与修复证据见 [Windows 构建存储验证](../docs/WINDOWS-NATIVE-BUILD-STORAGE.md)。
+
 ## 构建静态库
 
 在 Linux ARM64 新测试目录执行。显式传入已经存在、位于固定提交且没有跟踪改动的 BoringSSL Git 源码；入口不会重置该目录。
@@ -28,7 +43,7 @@ mise run native-build-windows-arm64 -- --source /path/to/fixed-boringssl
 mise run native-build-windows-arm64 -- --source-archive /path/to/fixed-source.tar.gz
 ```
 
-入口在独占 `/tmp/harmonia-bssl-windows-arm64-*` 目录下载官方工具链，先校验 SHA256 再执行。固定归档经成员路径检查后使用 GNU tar 流式解压。CMake 构建 `crypto` 与 `crypto_test`，并行数为2；检查四个 SPAKE2 符号前缀、ARM64 PE 与系统 DLL 边界。工具链、上游源码和失败日志保留在私有临时目录，不写系统 PATH，不运行安装器。
+入口在遵循 `TMPDIR` 的独占 `harmonia-bssl-windows-arm64-*` 临时目录下载官方工具链，先校验 SHA256 再执行。固定归档经成员路径检查后使用 GNU tar 流式解压。CMake 构建 `crypto` 与 `crypto_test`，并行数为2；检查四个 SPAKE2 符号前缀、ARM64 PE 与系统 DLL 边界。工具链、上游源码和失败日志保留在私有临时目录，不写系统 PATH，不运行安装器。
 
 默认静态库输出为忽略目录 `native/windows-arm64/libcrypto.a`，附带许可证和私有构建记录。已有输出目录会被拒绝，不自动覆盖；已有公共头文件必须与固定源码逐字节一致。临时工具链清理后须重新构建。二进制与私有记录均不提交公开仓库。
 
