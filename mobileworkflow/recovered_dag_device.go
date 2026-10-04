@@ -111,7 +111,7 @@ func (w *Workflow) recoveredDAGVerifierLocked() (*syncclient.PinnedVerifier, err
 func (w *Workflow) validateRecoveredDAGDeviceLocked() error {
 	r := w.state.RecoveredDAGDevice
 	if r == nil {
-		if w.state.DAGWrites != nil {
+		if w.state.DAGWrites != nil || w.state.DAGEnvironments != nil {
 			return ErrDAGProtectedState
 		}
 		return nil
@@ -179,7 +179,10 @@ func (w *Workflow) validateRecoveredDAGDeviceLocked() error {
 			return ErrDAGProtectedState
 		}
 	}
-	return w.validateDAGWritesLocked()
+	if err := w.validateDAGWritesLocked(); err != nil {
+		return err
+	}
+	return w.validateDAGEnvironmentsLocked()
 }
 func (w *Workflow) checkRecoveredDAGNativeLocked() error {
 	if w.closed || w.engine == nil {
