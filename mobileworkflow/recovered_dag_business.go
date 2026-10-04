@@ -326,6 +326,10 @@ func (w *Workflow) runDAGWrite(ctx context.Context, in syncclient.WriteRequest) 
 		w.mu.Unlock()
 		return out, syncclient.ErrPaused
 	}
+	if w.dagManagementPending() {
+		w.mu.Unlock()
+		return out, ErrManagementPending
+	}
 	p, e := w.recoveredDAGOriginalLocked(w.state.RecoveredDAGDevice.Original)
 	if e != nil {
 		w.mu.Unlock()

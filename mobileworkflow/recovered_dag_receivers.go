@@ -3,6 +3,7 @@ package mobileworkflow
 import (
 	"context"
 	"errors"
+	"sort"
 	"strconv"
 
 	"github.com/harmonia-vault/core-go/cryptox"
@@ -58,6 +59,13 @@ func (w *Workflow) verifyDAGReceiverHistory(c *syncclient.Client) (*dagReceiverB
 	if j == nil {
 		return b, nil
 	}
+	type checkpoint struct {
+		sequence uint64
+		control  *syncclient.ManagementControl
+		grant    *cryptox.SignedGrantWire
+	}
+	points := []checkpoint{}
+	ordered := newDAGReceiverBounds()
 	for _, control := range j.ReceiverControls {
 		proof, e := c.VerifyManagementControl(control, true)
 		if e != nil {
@@ -66,11 +74,74 @@ func (w *Workflow) verifyDAGReceiverHistory(c *syncclient.Client) (*dagReceiverB
 		if _, ok := proof.(*cryptox.VerifiedRecoveryDAG); !ok {
 			return nil, ErrDAGProtectedState
 		}
-		if e = b.remember(control); e != nil {
+		if e = ordered.remember(control); e != nil {
+			return nil, e
+		} // 原保存次序的下降仍拒绝。
+		copy := control
+		points = append(points, checkpoint{sequence: control.Sequence, control: &copy})
+	}
+	// 自己已确认的原grant必须同共享receiver历史一起约束后到目录。
+	// 包/基点来自原native业务journal，不将历史签包伪造为当前目录。
+	if management := w.state.DAGManagement; management != nil {
+		for id, r := range management.Records {
+			if r == nil {
+				return nil, ErrDAGProtectedState
+			}
+			if r.Sequence == 0 {
+				continue
+			}
+			t, e := c.RestoreGrantUpdate(r.Packet)
+			if e != nil {
+				return nil, e
+			}
+			hash, e := t.ContentHash()
+			if e != nil || id != t.ID() || hash != r.ContentHash || !r.Attempted || r.Canceled || r.Sequence <= t.ControlCheckpoint().Sequence || r.Sequence > 9007199254740991 {
+				return nil, ErrDAGProtectedState
+			}
+			g := t.OriginalGrant()
+			points = append(points, checkpoint{sequence: r.Sequence, grant: &g})
+		}
+	}
+	sort.SliceStable(points, func(i, k int) bool {
+		if points[i].sequence == points[k].sequence {
+			return points[i].grant != nil && points[k].grant == nil
+		}
+		return points[i].sequence < points[k].sequence
+	})
+	for _, point := range points {
+		var e error
+		if point.control != nil {
+			e = b.remember(*point.control)
+		} else {
+			e = b.rememberConfirmedGrant(*point.grant, point.sequence)
+		}
+		if e != nil {
 			return nil, e
 		}
 	}
 	return b, nil
+}
+
+func (b *dagReceiverBounds) rememberConfirmedGrant(g cryptox.SignedGrantWire, sequence uint64) error {
+	grant := g.Grant
+	gg, e := strconv.ParseUint(grant.GrantGeneration, 10, 64)
+	if e != nil || gg == 0 || strconv.FormatUint(gg, 10) != grant.GrantGeneration {
+		return cryptox.ErrInvalidWire
+	}
+	hash, e := syncclient.GrantContentHash(g)
+	if e != nil {
+		return e
+	}
+	prior := b.subjects[grant.EnvironmentID][grant.SubjectDeviceID]
+	if sequence < b.sequence[grant.EnvironmentID] || gg < prior.Generation || gg == prior.Generation && hash != prior.Fingerprint {
+		return syncclient.ErrGrantUpdateConflict
+	}
+	if b.subjects[grant.EnvironmentID] == nil {
+		b.subjects[grant.EnvironmentID] = map[string]managementBound{}
+	}
+	b.subjects[grant.EnvironmentID][grant.SubjectDeviceID] = managementBound{Generation: gg, Fingerprint: hash}
+	b.sequence[grant.EnvironmentID] = sequence
+	return nil
 }
 
 // 同一 seq/KV 的有效 receiver 集必须逐签包精确相同。历史复验允许原已封存

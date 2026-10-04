@@ -565,6 +565,10 @@ func (w *Workflow) runDAGEnvironment(ctx context.Context, op, authorityEnv, env,
 		w.mu.Unlock()
 		return out, syncclient.ErrPaused
 	}
+	if w.dagManagementPending() {
+		w.mu.Unlock()
+		return out, ErrManagementPending
+	}
 	p, e := w.recoveredDAGOriginalLocked(w.state.RecoveredDAGDevice.Original)
 	if e != nil {
 		w.mu.Unlock()

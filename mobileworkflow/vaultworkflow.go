@@ -103,6 +103,7 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
+	DAGManagement                   *dagManagementJournal         `json:"dagManagement,omitempty"`
 	DAGEnvironments                 *dagEnvironmentJournal        `json:"dagEnvironments,omitempty"`
 	DAGWrites                       *dagWriteJournal              `json:"dagWrites,omitempty"`
 	RecoveryDAGResolution           *recoveryDAGResolutionState   `json:"recoveryDAGResolution,omitempty"`
@@ -972,6 +973,7 @@ func (w *Workflow) invalidateTrust() error {
 	if w.dagOwnerCancel != nil {
 		w.dagOwnerCancel()
 	}
+	w.state.DAGManagement = nil
 	w.state.DAGEnvironments = nil
 	w.state.DAGWrites = nil
 	w.state.RecoveredDAGDevice = nil

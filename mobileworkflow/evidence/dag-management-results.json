@@ -1,0 +1,53 @@
+{
+  "productionSourceReviewSha256": "0fb1833471c7f5674352d8701670c94a273e183c14eabc6ebc1cd0354e6197c9",
+  "compile": {
+    "result": "PASS",
+    "scope": "three affected packages, no tests"
+  },
+  "targetedRace": {
+    "components01": "three unaffected main tests PASS; workflow test timed out at 240 seconds, no assertion failure before timeout",
+    "components02": "only confirmed-none/shared-receiver/cold main PASS",
+    "mainSeconds": 139.72,
+    "packageSeconds": 141.349,
+    "productDeadlineSeconds": 30,
+    "testBudgetSeconds": 240
+  },
+  "https": {
+    "joint01": {
+      "result": "FAIL",
+      "packageSeconds": 95.896,
+      "reason": "test mistook nil Go error with ok:false/original pending for successful attempted cancel"
+    },
+    "joint02": {
+      "result": "UNCONFIRMED",
+      "reason": "exec-server transport interrupted, no terminal event; task scoped process/fixture absence checked before next attempt"
+    },
+    "joint03": {
+      "result": "PASS",
+      "mainSeconds": 142.86,
+      "packageSeconds": 144.297,
+      "race": false,
+      "scope": "actual Node SQLite HTTPS, mature continuous recovery and native V5 BoringSSL PAKE/HPKE; grant-management original receipt, roles/expiry, original ID cold retry, per-env none, CAS zeroPOST"
+    },
+    "handleDeadlineSeconds": 30,
+    "testBudgetSeconds": 240
+  },
+  "vet": {
+    "result": "PASS",
+    "exitCode": 0,
+    "packages": [
+      "syncclient",
+      "mobileworkflow",
+      "mobilebridge"
+    ]
+  },
+  "unrun": [
+    "Android system authentication/ABI/AAR/SDK",
+    "Flutter product/UI path",
+    "global device revocation",
+    "manager reanchor or old-source upgrade"
+  ],
+  "capabilitiesOpened": false,
+  "frozenManifestSHA256": "50afdcaa08dd8bfe8f56906a359e1cb98e88d9b4cc24b29d3b7ae2ff9503ad63",
+  "validationLayers": "Shared Go behavior and real HTTPS interfaces; platform authentication and lifecycle are separate. No mobile role/expiry permutation matrix is required."
+}

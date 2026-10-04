@@ -245,6 +245,10 @@ func (t *GrantUpdateTransaction) ProtectedBytes() ([]byte, error) {
 	return data, e
 }
 func (c *Client) PrepareGrantUpdate(ctx context.Context, in GrantUpdateIntent, key ed25519.PrivateKey) (*GrantUpdateTransaction, error) {
+	return c.prepareGrantUpdate(ctx, in, key, nil)
+}
+
+func (c *Client) prepareGrantUpdate(ctx context.Context, in GrantUpdateIntent, key ed25519.PrivateKey, controlBarrier func(ManagementControl) error) (*GrantUpdateTransaction, error) {
 	if c.config.Engine.State().Paused {
 		return nil, ErrPaused
 	}
@@ -270,6 +274,11 @@ func (c *Client) PrepareGrantUpdate(ctx context.Context, in GrantUpdateIntent, k
 	_, own, e := c.verifyManagementControl(control)
 	if e != nil {
 		return nil, e
+	}
+	if controlBarrier != nil {
+		if e = controlBarrier(cloneManagementControl(control)); e != nil {
+			return nil, e
+		}
 	}
 	var target *ManagementSubject
 	for i := range control.Subjects {
@@ -401,7 +410,7 @@ func (t *GrantUpdateTransaction) Status(ctx context.Context) (GrantStatus, error
 	return status, nil
 }
 func (t *GrantUpdateTransaction) Submit(ctx context.Context) (Acceptance, error) {
-	return t.submit(ctx, nil)
+	return t.submit(ctx, nil, nil)
 }
 
 // SubmitWithBarrier 在本次权限/代际检查后、HTTP写请求前调用原生持久化屏障。
@@ -409,9 +418,9 @@ func (t *GrantUpdateTransaction) SubmitWithBarrier(ctx context.Context, beforePo
 	if beforePost == nil {
 		return Acceptance{}, cryptox.ErrInvalidWire
 	}
-	return t.submit(ctx, beforePost)
+	return t.submit(ctx, beforePost, nil)
 }
-func (t *GrantUpdateTransaction) submit(ctx context.Context, beforePost func() error) (Acceptance, error) {
+func (t *GrantUpdateTransaction) submit(ctx context.Context, beforePost func() error, controlBarrier func(ManagementControl) error) (Acceptance, error) {
 	if t.client.dagControls() && beforePost == nil {
 		return Acceptance{}, ErrWriteJournal
 	}
@@ -428,6 +437,11 @@ func (t *GrantUpdateTransaction) submit(ctx context.Context, beforePost func() e
 	_, actor, e := t.client.verifyManagementControl(fresh)
 	if e != nil {
 		return Acceptance{}, e
+	}
+	if controlBarrier != nil {
+		if e = controlBarrier(cloneManagementControl(fresh)); e != nil {
+			return Acceptance{}, e
+		}
 	}
 	expiry, _ := strconv.ParseInt(t.record.Signed.Grant.ExpiresAt, 10, 64)
 	ceiling, _ := strconv.ParseInt(actor.Grant.ExpiresAt, 10, 64)
