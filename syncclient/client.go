@@ -80,10 +80,11 @@ type Config struct {
 	Now               func() time.Time
 }
 type Client struct {
-	endpoint *url.URL
-	http     *http.Client
-	config   Config
-	epoch    uint64
+	endpoint       *url.URL
+	http           *http.Client
+	config         Config
+	epoch          uint64
+	verifiedCommit *verifiedPullCommit
 }
 
 func New(config Config) (*Client, error) { return newClient(config, true) }
@@ -142,6 +143,9 @@ func (c *Client) endpointFor(suffix string) *url.URL {
 	return &u
 }
 func (c *Client) request(ctx context.Context, method string, u *url.URL, body any, out any) error {
+	if err := c.checkVerifiedCommitContext(ctx); err != nil {
+		return err
+	}
 	if c.config.Engine.State().SessionEpoch != c.epoch {
 		return localstate.ErrLocalSession
 	}
@@ -270,6 +274,9 @@ func (c *Client) pullWithHistory(ctx context.Context, previous localstate.CloudS
 		if errors.Is(err, localstate.ErrDataPaused) {
 			return Pull{}, c.acceptLateAuthorizationProjection(ctx, result, previous)
 		}
+		return Pull{}, err
+	}
+	if err = c.commitVerifiedPull(ctx, result); err != nil {
 		return Pull{}, err
 	}
 	return result, nil

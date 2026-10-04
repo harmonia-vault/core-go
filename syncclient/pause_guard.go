@@ -26,5 +26,8 @@ func (c *Client) acceptLateAuthorizationProjection(ctx context.Context, result P
 	if err = c.config.Engine.AcceptAuthorizationRefreshAtEpoch(verified, c.config.Now(), c.epoch); err != nil {
 		return err
 	}
+	if err = c.commitVerifiedPull(ctx, result); err != nil {
+		return errors.Join(ErrPaused, err)
+	}
 	return ErrPaused
 }

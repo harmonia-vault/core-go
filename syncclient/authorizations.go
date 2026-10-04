@@ -130,5 +130,8 @@ func (c *Client) RefreshAuthorizations(ctx context.Context) (Pull, error) {
 	if err = c.config.Engine.AcceptAuthorizationRefreshAtEpoch(verified, c.config.Now(), c.epoch); err != nil {
 		return Pull{}, err
 	}
+	if err = c.commitVerifiedPull(ctx, pull); err != nil {
+		return Pull{}, err
+	}
 	return pull, nil
 }

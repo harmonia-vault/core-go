@@ -111,6 +111,9 @@ func (w *Workflow) recoveredDAGVerifierLocked() (*syncclient.PinnedVerifier, err
 func (w *Workflow) validateRecoveredDAGDeviceLocked() error {
 	r := w.state.RecoveredDAGDevice
 	if r == nil {
+		if w.state.DAGWrites != nil {
+			return ErrDAGProtectedState
+		}
 		return nil
 	}
 	if r.Version != 1 || r.Profile != cryptox.RecoveryDAGCapability || !w.state.DAGCASRequired || w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil || w.state.Pending != nil || w.state.Recovery != nil || w.state.RecoveryAuthority != nil || w.state.RecoveredDevice != nil || w.state.EnrollmentV3 != nil || w.state.PendingApproval != nil || w.state.PendingApprovalV3 != nil || w.state.PendingApprovalV4 != nil || w.state.Management != nil || len(w.state.WriteJournal) > 0 || len(w.state.EnvironmentWrites) > 0 || len(w.state.InitialAuthorities) > 0 || len(w.state.SelfRevocation) > 0 || w.state.Root == nil || w.engine.State().AccountClosed {
@@ -176,7 +179,7 @@ func (w *Workflow) validateRecoveredDAGDeviceLocked() error {
 			return ErrDAGProtectedState
 		}
 	}
-	return nil
+	return w.validateDAGWritesLocked()
 }
 func (w *Workflow) checkRecoveredDAGNativeLocked() error {
 	if w.closed || w.engine == nil {

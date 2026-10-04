@@ -451,7 +451,7 @@ func (w *Writer) Execute(ctx context.Context, c *Client, r WriteRequest) (WriteR
 			}
 			item.Sequence = result.Accepted.Sequence
 			if saveErr := w.save(); saveErr != nil {
-				return recordResult(*record), saveErr
+				return recordResult(*record), errors.Join(saveErr, err)
 			}
 		}
 		if err != nil {
@@ -460,7 +460,7 @@ func (w *Writer) Execute(ctx context.Context, c *Client, r WriteRequest) (WriteR
 				_, refreshErr := c.RefreshAuthorizations(ctx)
 				cancelWriteRecord(record)
 				if saveErr := w.save(); saveErr != nil {
-					return recordResult(*record), saveErr
+					return recordResult(*record), errors.Join(saveErr, err, refreshErr)
 				}
 				return recordResult(*record), errors.Join(ErrWritePermission, err, refreshErr)
 			}
