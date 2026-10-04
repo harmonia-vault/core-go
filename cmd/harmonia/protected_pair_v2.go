@@ -69,6 +69,9 @@ func protectedPairV2(ctx context.Context, o protectedOptions, r commandRuntime, 
 			enrollment.Close()
 			return err
 		}
+		if r.pairingProgress != nil {
+			r.pairingProgress(key, code)
+		}
 		if _, err = enrollment.Begin(ctx, o.approver, key, code); err != nil {
 			enrollment.Close()
 			return err
@@ -101,7 +104,7 @@ func protectedPairV2(ctx context.Context, o protectedOptions, r commandRuntime, 
 		return err
 	}
 	defer result.Verifier.Close()
-	if err = engine.CompleteEnrollmentAtEpoch(engine.State().SessionEpoch); err != nil {
+	if err = engine.CompleteEnrollmentAtEpoch(protectedEnrollmentEpoch(engine, r)); err != nil {
 		return err
 	}
 	if err = saveReceiptV2(vault, session, keys, result.Receipt, true); err != nil {

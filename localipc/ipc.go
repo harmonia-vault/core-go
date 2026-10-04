@@ -38,6 +38,8 @@ type Endpoint struct {
 	Directory  string
 	UserID     string
 	ServiceSID string
+	// AccountServiceConfig 只来自本机 CLI/服务参数，绝不属于网络或 IPC JSON。
+	AccountServiceConfig string
 }
 type Request struct {
 	Version       int               `json:"version"`
@@ -47,6 +49,7 @@ type Request struct {
 	Value         *string           `json:"value,omitempty"`
 	Priority      *int              `json:"priority,omitempty"`
 	RequestID     string            `json:"requestId,omitempty"`
+	Account       *AccountRequest   `json:"account,omitempty"`
 	Selected      map[string]string `json:"selected,omitempty"`
 }
 type Status struct {
@@ -64,6 +67,7 @@ type Response struct {
 	Status  *Status            `json:"status,omitempty"`
 	Values  map[string]string  `json:"values,omitempty"`
 	Write   *SharedWriteResult `json:"write,omitempty"`
+	Account *AccountState      `json:"account,omitempty"`
 }
 type Config struct {
 	Endpoint       Endpoint
@@ -77,6 +81,7 @@ type Config struct {
 	// OnLogout 由后台 owner 停止旧同步并清除本地设备/会话资料；IPC 不持有 Vault。
 	OnLogout    func(context.Context) error
 	OnlineWrite func(context.Context, SharedWriteRequest) (SharedWriteResult, error)
+	Account     AccountHandler
 }
 
 // nativeHandleConn 串行化原生句柄身份查询与 Close，避免查询过程中句柄被释放。
@@ -104,21 +109,25 @@ type nativeListener struct {
 	cleanup func() error
 }
 type Server struct {
-	config       Config
-	listener     nativeListener
-	operations   operationGate
-	connections  sync.Mutex
-	open         map[net.Conn]bool
-	closing      bool
-	workers      sync.WaitGroup
-	stopOnce     sync.Once
-	cleanupOnce  sync.Once
-	cleanupError error
+	config                Config
+	listener              nativeListener
+	operations            operationGate
+	connections           sync.Mutex
+	open                  map[net.Conn]bool
+	closing               bool
+	workers               sync.WaitGroup
+	stopOnce              sync.Once
+	cleanupOnce           sync.Once
+	cleanupError          error
+	authenticationCleanup error
 }
 
 // Listen 不打开第二个状态文件；后台调用方应持有唯一 Store 的生命周期锁。
 // 用户退出 CLI 仅关闭其连接，后台服务的上下文由服务管理器掌握。
 func Listen(config Config) (*Server, error) {
+	if config.Account != nil && !accountTransportAvailable(config.Endpoint) {
+		return nil, ErrIdentity
+	}
 	if config.Engine == nil || config.Provider == nil {
 		return nil, errors.New("IPC requires a background engine and isolated provider")
 	}
@@ -182,18 +191,40 @@ func (s *Server) Serve(ctx context.Context) error {
 			defer func() { s.observe(diagnostic) }()
 			deadline := time.Now().Add(s.config.Timeout)
 			_ = conn.SetDeadline(deadline)
-			if err := authorizeNative(conn, s.config.Endpoint, false); err != nil {
-				diagnostic.Failure = diagnosticFailure(err)
-				return
+			if s.config.Endpoint.AccountServiceConfig == "" {
+				if err := authorizeNative(conn, s.config.Endpoint, false); err != nil {
+					diagnostic.Failure = diagnosticFailure(err)
+					return
+				}
 			}
 			diagnostic.Stage = StageRequestRead
 			var request Request
+			defer func() {
+				if request.Account != nil {
+					clear(request.Account.Credential)
+				}
+			}()
 			if err := readFrame(conn, &request, maxRequestBytes); err != nil {
 				diagnostic.Failure = diagnosticFailure(err)
 				_ = writeFrame(conn, Response{Version: Version, Code: "invalid_request"}, maxResponseBytes)
 				return
 			}
-			if isSharedWrite(request.Command) {
+			if s.config.Endpoint.AccountServiceConfig != "" {
+				// 最后一个完整帧已经读完；此处绑定该消息的线程 identification token。
+				lease, authErr := authenticateFrameNative(conn, s.config.Endpoint, true)
+				if authErr != nil {
+					diagnostic.Failure = FailureIdentity
+					return
+				}
+				defer func() {
+					if lease.Close() != nil {
+						s.connections.Lock()
+						s.authenticationCleanup = ErrUnavailable
+						s.connections.Unlock()
+					}
+				}()
+			}
+			if isSharedWrite(request.Command) || request.Command == "account" {
 				diagnostic.Budget = time.Minute
 				deadline = time.Now().Add(time.Minute)
 				_ = conn.SetDeadline(deadline)
@@ -227,7 +258,7 @@ func (s *Server) Close() error {
 			s.cleanupError = s.listener.cleanup()
 		}
 	})
-	return s.cleanupError
+	return errors.Join(s.cleanupError, s.authenticationCleanup)
 }
 
 // Reconcile 与命令共用串行操作锁，供后台定时器与已验证撤销处理调用。
@@ -239,6 +270,12 @@ func (s *Server) Reconcile(ctx context.Context, now time.Time) error {
 	return s.config.Engine.Reconcile(ctx, s.config.Provider, now)
 }
 func validateRequest(r Request) error {
+	if r.Account != nil || r.Command == "account" {
+		if r.Version != Version || r.Command != "account" || r.Account == nil || r.EnvironmentID != "" || r.Name != "" || r.Value != nil || r.Priority != nil || r.RequestID != "" || len(r.Selected) != 0 {
+			return ErrProtocol
+		}
+		return validateAccountRequest(*r.Account)
+	}
 	if isSharedWrite(r.Command) {
 		return validateSharedRequest(r)
 	}
@@ -315,6 +352,9 @@ func (s *Server) dispatchObserved(ctx context.Context, r Request, diagnostic *Di
 		execution := time.Now()
 		defer func() { diagnostic.Execution = time.Since(execution) }()
 	}
+	if r.Command == "account" {
+		return s.dispatchAccount(ctx, r)
+	}
 	now := s.config.Now()
 	engine := s.config.Engine
 	if isSharedWrite(r.Command) {
@@ -388,9 +428,12 @@ func (s *Server) dispatchObserved(ctx context.Context, r Request, diagnostic *Di
 
 // Call 每次只发送一个命令。断连后的结果可能已持久化；调用方可查询 status
 // 并重试同一幂等本地操作，不应因没收到回复就假定后台没有执行。
-func Call(ctx context.Context, endpoint Endpoint, request Request) (Response, error) {
+func Call(ctx context.Context, endpoint Endpoint, request Request) (out Response, callErr error) {
 	if request.Version == 0 {
 		request.Version = Version
+	}
+	if request.Command == "account" && !accountTransportAvailable(endpoint) {
+		return Response{}, ErrIdentity
 	}
 	if validateRequest(request) != nil {
 		return Response{}, ErrProtocol
@@ -404,7 +447,7 @@ func Call(ctx context.Context, endpoint Endpoint, request Request) (Response, er
 	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
 	defer stop()
 	timeout := 5 * time.Second
-	if isSharedWrite(request.Command) {
+	if isSharedWrite(request.Command) || request.Command == "account" {
 		timeout = time.Minute
 	}
 	deadline := time.Now().Add(timeout)
@@ -412,7 +455,18 @@ func Call(ctx context.Context, endpoint Endpoint, request Request) (Response, er
 		deadline = end
 	}
 	_ = conn.SetDeadline(deadline)
-	if authorizeNative(conn, endpoint, true) != nil {
+	if endpoint.AccountServiceConfig != "" {
+		lease, authErr := authenticateFrameNative(conn, endpoint, false)
+		if authErr != nil {
+			return Response{}, ErrIdentity
+		}
+		defer func() {
+			if lease.Close() != nil {
+				out = Response{}
+				callErr = ErrIdentity
+			}
+		}()
+	} else if authorizeNative(conn, endpoint, true) != nil {
 		return Response{}, ErrIdentity
 	}
 	if err = writeFrame(conn, request, maxRequestBytes); err != nil {
@@ -432,6 +486,7 @@ func writeFrame(w io.Writer, value any, maximum uint32) error {
 }
 func writeFrameObserved(w io.Writer, value any, maximum uint32, diagnostic *Diagnostic) error {
 	data, err := json.Marshal(value)
+	defer clear(data)
 	if err != nil || len(data) == 0 || uint64(len(data)) > uint64(maximum) {
 		return ErrProtocol
 	}
@@ -459,6 +514,7 @@ func readFrame(r io.Reader, dst any, maximum uint32) error {
 		return ErrProtocol
 	}
 	data := make([]byte, length)
+	defer clear(data)
 	if _, err := io.ReadFull(r, data); err != nil {
 		return transportError(PhaseReadBody, err)
 	}

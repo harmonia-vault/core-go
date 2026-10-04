@@ -27,12 +27,13 @@ type UserEnvironmentStore interface {
 }
 
 type WindowsProvider struct {
-	mu            sync.Mutex
-	store         UserEnvironmentStore
-	originals     map[string]registryOriginal
-	statePath     string
-	secret        *localkeys.Vault
-	notifyPending bool
+	mu               sync.Mutex
+	store            UserEnvironmentStore
+	originals        map[string]registryOriginal
+	statePath        string
+	secret           *localkeys.Vault
+	notifyPending    bool
+	reconcileTracked map[string]bool
 }
 
 func NewWindowsProvider(expectedSID string, store UserEnvironmentStore) (*WindowsProvider, error) {
@@ -61,7 +62,7 @@ func (p *WindowsProvider) Snapshot(ctx context.Context, names []string) (map[str
 			return nil, err
 		}
 		folded := strings.ToUpper(name)
-		if _, saved := p.originals[folded]; !saved {
+		if old, saved := p.originals[folded]; !saved || old.Released && !p.reconcileTracked[folded] {
 			p.originals[folded] = registryOriginal{Present: exists, Value: value}
 		}
 		if exists {
@@ -109,6 +110,9 @@ func (p *WindowsProvider) Apply(ctx context.Context, changes []localstate.Change
 		}
 		folded := strings.ToUpper(change.Name)
 		original, saved := p.originals[folded]
+		if saved && original.Released && !change.Release && !p.reconcileTracked[folded] {
+			saved = false
+		}
 		if !saved {
 			value, exists, err := p.store.Read(change.Name)
 			if err != nil {
@@ -132,12 +136,19 @@ func (p *WindowsProvider) Apply(ctx context.Context, changes []localstate.Change
 			} else if err := p.store.Delete(change.Name); err != nil {
 				return err
 			}
-			delete(p.originals, folded)
+			original.Released = true
+			p.originals[folded] = original
 			if err := p.save(); err != nil {
-				p.originals[folded] = original
 				return err
 			}
 			continue
+		}
+		if original.Released {
+			original.Released = false
+			p.originals[folded] = original
+			if err := p.save(); err != nil {
+				return err
+			}
 		}
 		if change.Value == nil {
 			if err := p.store.Delete(change.Name); err != nil {

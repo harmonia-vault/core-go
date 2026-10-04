@@ -9,8 +9,9 @@ import (
 )
 
 type registryOriginal struct {
-	Present bool          `json:"present"`
-	Value   RegistryValue `json:"value"`
+	Present  bool          `json:"present"`
+	Value    RegistryValue `json:"value"`
+	Released bool          `json:"released,omitempty"`
 }
 type windowsOriginalState struct {
 	Marker        string                      `json:"marker"`

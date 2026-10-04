@@ -125,6 +125,12 @@ type Provider interface {
 	Apply(context.Context, []Change) error
 }
 
+// OriginalLifecycleProvider按engine已持久保存的原值集合回收provider释放标记。
+// provider的原值不能在engine最终提交之前丢失，否则释放失败重试会误收集新值。
+type OriginalLifecycleProvider interface {
+	PrepareOriginals(context.Context, []string) error
+}
+
 // PauseAwareProvider 让 shell fragment 停止普通纠正，同时保留撤销恢复动作。
 type PauseAwareProvider interface {
 	SetPaused(context.Context, bool) error
@@ -563,6 +569,15 @@ func (e *Engine) Reconcile(ctx context.Context, p Provider, now time.Time) error
 	}
 	if lifecycle, ok := p.(PauseAwareProvider); ok {
 		if err := lifecycle.SetPaused(ctx, s.Paused); err != nil {
+			return err
+		}
+	}
+	if lifecycle, ok := p.(OriginalLifecycleProvider); ok {
+		tracked := make([]string, 0, len(s.Originals))
+		for name := range s.Originals {
+			tracked = append(tracked, name)
+		}
+		if err := lifecycle.PrepareOriginals(ctx, tracked); err != nil {
 			return err
 		}
 	}

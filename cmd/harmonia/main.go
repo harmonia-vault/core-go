@@ -36,9 +36,20 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	if len(args) == 0 {
 		return errors.New("用法：harmonia <login|pair|daemon|status|activate|priority|deactivate|override-set|override-remove|pause|resume|logout|export|exec> --local-directory <受保护目录>；合成测试另用 --fixture --state")
 	}
+	if args[0] == "daemon-user-service" || args[0] == "restore-user-service" {
+		if !accountServiceCandidateEnabled || len(args) != 3 || args[1] != "--config" {
+			return errors.New("Windows普通账号服务尚未通过完整原生验收；默认关闭")
+		}
+		if args[0] == "restore-user-service" {
+			return restoreAccountServiceLocal(ctx, args[2])
+		}
+		return protectedAccountServiceDaemon(ctx, args[2], runtimeOptions)
+	}
 	command := args[0]
 	flags := flag.NewFlagSet(command, flag.ContinueOnError)
 	flags.SetOutput(errOut)
+	accountConfig := flags.String("windows-account-config", "", "Windows普通账号服务固定配置；实验构建限定")
+	pairingID := flags.String("pairing-id", "", "原配对申请ID")
 	statePath := flags.String("state", "", "当前用户的私有 fixture 状态文件")
 	localDirectory := flags.String("local-directory", "", "受保护机器状态目录；与明文fixture互斥")
 	serverAddress := flags.String("server", "", "用户明确指定的自托管 HTTPS 地址")
@@ -100,6 +111,23 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 		}
 		return protectedLocalLogout(ctx, *localDirectory, *localUser, out)
 	}
+	var accountEP *localipc.Endpoint
+	if *accountConfig != "" {
+		if !accountServiceCandidateEnabled || *localDirectory != "" || *statePath != "" || *fixture || *providerPath != "" || *input != "" || *ipcDirectory != "" || *localUser != "" || *ipcServiceSID != "" || *windowsService != "" || *fragment != "" || *caFile != "" {
+			return errors.New("账号服务配置不能混用其它状态/身份/信任路径")
+		}
+		ep, e := accountClientEndpoint(*accountConfig)
+		if e != nil {
+			return e
+		}
+		accountEP = &ep
+		if command == "login" || command == "pair" || command == "pair-status" || command == "pair-cancel" {
+			return protectedAccountServiceAccount(ctx, *accountConfig, protectedOptions{command: command, server: *serverAddress, email: *email, approver: *approver, certificateVersion: *certificateVersion, passwordStdin: *passwordStdin}, *pairingID, runtimeOptions, out, errOut)
+		}
+		*ipcDirectory = ep.Directory
+		*localUser = ep.UserID
+		*ipcServiceSID = ep.ServiceSID
+	}
 	valueArgument := false
 	flags.Visit(func(f *flag.Flag) {
 		if f.Name == "value" {
@@ -124,7 +152,7 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 		}
 		runtimeOptions.httpClient = client
 	}
-	protectedIPC := false
+	protectedIPC := accountEP != nil
 	if *localDirectory != "" {
 		if *fixture || *statePath != "" || *providerPath != "" || *input != "" {
 			return errors.New("受保护目录不能混用明文 fixture/state/provider-file 输入")
@@ -175,6 +203,9 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 			return errors.New("IPC CLI 需要明确 --local-directory 或隔离 --fixture")
 		}
 		endpoint, err := ipcEndpoint(*ipcDirectory, *localUser, *ipcServiceSID)
+		if accountEP != nil {
+			endpoint = *accountEP
+		}
 		if err != nil {
 			return err
 		}

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Microsoft/go-winio"
+	"github.com/harmonia-vault/core-go/windowsaccount"
 	"golang.org/x/sys/windows"
 )
 
@@ -68,6 +69,24 @@ func listenNative(endpoint Endpoint) (nativeListener, error) {
 	if err != nil {
 		return nativeListener{}, err
 	}
+	var cleanup func() error
+	if endpoint.AccountServiceConfig != "" {
+		locked, e := loadAccountEndpoint(endpoint)
+		if e != nil {
+			return nativeListener{}, e
+		}
+		cleanup = locked.Close
+		if windowsaccount.VerifyOwnService(locked.Configuration.Plan) != nil {
+			_ = cleanup()
+			return nativeListener{}, ErrIdentity
+		}
+	}
+	good := false
+	defer func() {
+		if !good && cleanup != nil {
+			_ = cleanup()
+		}
+	}()
 	if !currentIdentity(endpoint.ServiceSID, true) {
 		return nativeListener{}, ErrIdentity
 	}
@@ -76,7 +95,8 @@ func listenNative(endpoint Endpoint) (nativeListener, error) {
 	if err != nil {
 		return nativeListener{}, ErrUnavailable
 	}
-	return nativeListener{Listener: listener}, nil
+	good = true
+	return nativeListener{Listener: listener, cleanup: cleanup}, nil
 }
 func dialNative(ctx context.Context, endpoint Endpoint) (net.Conn, error) {
 	name, err := windowsEndpoint(endpoint)
