@@ -30,3 +30,15 @@
 探针只执行现有产品校验所用的读取 API，输出固定阶段、数值错误码和布尔结果；没有读取秘密、复制 token、模拟登录或改变权限。当前只能确认查询进程被拒绝，尚未确认 Windows 进程权限的完整成因。不扩大权限或跳过 peer 校验；后续必须解决普通 CLI 对真实服务的认证合同，并定向验证后才能继续配对。
 
 原普通账号 DPAPI/槽绑定与空账号无人登录启动证据沿用 [v9 记录](WINDOWS-SCM-V9.md)。不同版本的这些局部通过不能拼成当前产品全链通过。测试传输首轮自身的 nil-map 失败另行保留，修正测试传输后才取得正式 CLI login 的实际失败。原始截图、VM/账号标识、运行数据库、测试密钥和私有执行脚本均不公开。
+
+## 后续只读定位：同账号的不同登录上下文
+
+实际普通用户探针直接连接正式命名管道，并用同一已依赖的 go-winio 句柄调用 `GetNamedPipeServerProcessId`。pipe PID、前后 SCM PID 完全一致，pipe 服务会话为 0。独立只读管理观察确认该 PID 的安装映像、目标普通用户 SID、已启用的精确服务 SID 和 Session 0 均正确。普通查询方同一用户 SID、非管理员、Session 1；双方登录 SID 不同。因此这是操作系统拒绝跨登录上下文的查询，不是查错进程或用户 SID 不匹配。管理观察仅用于定位，不能替代产品中的普通用户认证。
+
+实际服务进程 DACL 仅允许服务登录 SID 完全访问和管理员 `0x1400`；普通交互账号既没有该登录 SID，也不是管理员。服务 token 的 DACL 允许 SYSTEM/精确服务 SID 完全访问、管理员查询，并将 owner 权限限制为 READ_CONTROL。该普通账号即使是 token owner，仍没有 TOKEN_QUERY。
+
+当前 `OpenProcess` 请求已经只有 `PROCESS_QUERY_LIMITED_INFORMATION` (`0x1000`)。[OpenProcess](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess) 会按进程安全描述符检查它；[QueryFullProcessImageNameW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-queryfullprocessimagenamew) 和 [OpenProcessToken](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocesstoken) 都需要该权限，后者还独立检查 token 的请求权限。降低到零权限不能完成现有身份核验。
+
+保持当前全部认证条件，至少需让精确目标用户 SID 获得该服务进程的 `PROCESS_QUERY_LIMITED_INFORMATION` (`0x1000`) 和服务 token 的 `TOKEN_QUERY` (`0x8`)。这是尚未授权的新权限，本次没有添加。反向客户端进程查询及完整双向认证尚未复验，因此不声称上述两项单独就足够。没有启用 SeDebugPrivilege、复制 token、改变安装/系统 ACL 或跳过失败。
+
+核对了 [Microsoft go-winio v0.6.2](https://github.com/microsoft/go-winio/blob/v0.6.2/pipe.go) 的真实句柄与 SQOS 处理，以及 [.NET NamedPipeClientStream](https://github.com/dotnet/runtime/blob/main/src/libraries/System.IO.Pipes/src/System/IO/Pipes/NamedPipeClientStream.Windows.cs) 的 CurrentUserOnly owner 检查。后者只保证 owner 相同，不能直接替换本产品的固定 SCM 服务、映像和服务 SID 约束。尚未找到经过验证、保留这些约束且不需新权限的替代方案；Windows 产品登录/配对仍然阻塞。此次未改产品代码或重跑已通过的升级。
