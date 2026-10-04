@@ -1,0 +1,112 @@
+{
+  "exactCleanup": {
+    "accountNameAndUIDAbsent": true,
+    "groupNameAndGIDAbsent": true,
+    "newServiceCARebootOrAccount": false,
+    "oldScopeUnchanged": true,
+    "onlyThreePassDiagnosticObjectsRemoved": true,
+    "originalFailureEvidenceRootsPreserved": true,
+    "seconds": 0.722,
+    "status": "PASS",
+    "syntheticUIDGID": 31042
+  },
+  "formalUninstallContinuation": {
+    "UIDProcessCount": 0,
+    "cgroupEmpty": true,
+    "offlineChild": {
+      "attempted": true,
+      "exitCode": 0,
+      "faultCategory": "NONE",
+      "stderrBytes": 0,
+      "stdoutBytes": 41
+    },
+    "oldScopeMatchesAcceptedRebootWitness": true,
+    "originalFailureReclassified": false,
+    "programBinaryAndCAAbsent": true,
+    "seconds": 1.659,
+    "singleFormalInvocation": true,
+    "stateAndIPCDirectoriesAbsent": true,
+    "status": "PASS",
+    "unitEnableLinkReceiptJournalAndGuardAbsent": true,
+    "unitNotFound": true
+  },
+  "independentSyntheticRealShell": {
+    "formalUninstallRepeated": false,
+    "fragmentOnlyRetainsConfiguration": true,
+    "inheritedEnvironment": "env -i; fixed PATH/LANG/LC_ALL only",
+    "oldScopeUnchanged": true,
+    "originalRetiredShellResumed": false,
+    "ownedDirectoryDeletionRestoresOriginalValue": true,
+    "ownedDirectoryDeletionUnsetsToolAddedKey": true,
+    "seconds": 0.776,
+    "shell": "/bin/sh",
+    "source": "direct public RenderPOSIXFragment/RenderShellHook",
+    "status": "PASS",
+    "temporaryDirectoryAbsent": true,
+    "unrelatedSyntheticKeyPreserved": true
+  },
+  "limitations": [
+    "Original final uninstall failure cause remains unconfirmed.",
+    "Original post-reboot same-shell automatic restore remains UNRUN; independent synthetic shell does not replace it.",
+    "No full lifecycle was rerun and no deployment/release is implied.",
+    "Shared administrative directories/locks and known failure/build staging are retained."
+  ],
+  "originalFailureCause": "UNCONFIRMED",
+  "originalRun": {
+    "causeConfirmed": false,
+    "completedBeforeFailure": {
+      "acceptedReceiptSealed": true,
+      "legacyFormalOfflineUninstall": true,
+      "nativePAKEConfirmed": true,
+      "newExecInstalledDisabled": true,
+      "normalRebootRequestReturned": true,
+      "normalStopHTTPRequests": 0,
+      "oneFullReboot": "PASS",
+      "postRebootBootHTTP200": 1,
+      "postRebootPullHTTP200": 1,
+      "sameFirstShellExplicitRelease": true,
+      "startBootHTTP200": 1,
+      "startPullHTTP200": 3,
+      "targetUIDLoginSessionsAfterReboot": 0
+    },
+    "fixedFailureStage": "formal-offline-uninstall-server-unavailable",
+    "fixedFault": "linux_install_state_invalid",
+    "fixtureStoppedCleanly": true,
+    "hostPortClosed": true,
+    "samePostRebootShellAutoRestore": "UNRUN; original process retired after failure",
+    "seconds": 26.089,
+    "status": "FAIL"
+  },
+  "overallOriginalRun": "FAIL retained",
+  "privacy": {
+    "privateLeafContentsPublished": false,
+    "realBusinessEnvironmentVariablesImportedOrPublished": false,
+    "realCredentialsOrUserDataUsed": false,
+    "secretsTokensEmailsEndpointsOrPrivatePathsIncluded": false
+  },
+  "productionDeployment": false,
+  "rawEvidenceSHA256": {
+    "exactCleanup": "c3c1233e6506cc3dfdbd9ada33108cc9ae01bf88f8b7a3d8afbac7c01b05d6f4",
+    "formalUninstallContinuation": "aa55e8c46a44ecd7b27c0969d7d174a421722648c511feb2c6dbe517a016d25c",
+    "independentShell": "0142e2cf30b618c37cdf6d1015b02c6d1397205b46974b6ed824707684601c6f",
+    "originalRuntime": "56c4468db920004832ae05729d9072ea04ef42fd1e6c4da4f00446a263cbc798"
+  },
+  "scope": "isolated Ubuntu ARM64 complete-kernel VM; Linux systemd installer P5 segmented validation",
+  "sources": {
+    "independentShellRenderer": "c5866f59299cbb6838c3f753dda7aaefeb7fcf82",
+    "installerAndNativeCLI": "78d7dd845307abb9566cf8a6d0711c4977841c11",
+    "nativeCLI": {
+      "CGO": true,
+      "certificateVersion": 3,
+      "pairing": "BoringSSL native PAKE",
+      "sha256": "5eeab302306a48af7000cc463c7c51f0c24b7bd04445b4cecf424ab433520690"
+    },
+    "privateUninstallObserver": {
+      "changes": "four reviewed test-only Go files; formal coordinator guards and control flow retained",
+      "productionAPI": false,
+      "sha256": "d324ce0b7dcd7274d4b667ed2cb402bc153e069cde2faec98530c50e2901bb06"
+    },
+    "server": "36ab16fbaadacd766548e201c05acd5e80ccb89b"
+  },
+  "version": 1
+}
