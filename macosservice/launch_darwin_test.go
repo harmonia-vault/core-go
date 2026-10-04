@@ -45,3 +45,29 @@ func TestV6ObservedJobRequiresFullIdentityAndNonStartingState(t *testing.T) {
 		}
 	}
 }
+
+func TestDisabledStatusNamedWordsPreserveMeaning(t *testing.T) {
+	label := paths(Target{UID: 501}).Label
+	for _, tc := range []struct {
+		word     string
+		disabled bool
+	}{{"disabled", true}, {"enabled", false}, {"true", true}, {"false", false}} {
+		t.Run(tc.word, func(t *testing.T) {
+			body := "disabled services = {\n\"" + label + "-other\" => disabled\n\"" + label + "\" => " + tc.word + "\n}\n"
+			present, value, err := disabledStatus([]byte(body), 0, label)
+			if err != nil || !present || value != tc.disabled {
+				t.Fatal("固定词值语义错误", present, value, err)
+			}
+			present, _, err = disabledStatus([]byte(body), 0, label+".missing")
+			if err != nil || present {
+				t.Fatal("非精确label被当成目标", present, err)
+			}
+		})
+	}
+	for _, entry := range []string{"disabled extra", "Enabled", "disabled,", "disabled\n\"" + label + "\" => true", "disabled\n\"" + label + "\" => enabled"} {
+		body := "disabled services = {\n\"" + label + "\" => " + entry + "\n}\n"
+		if _, _, err := disabledStatus([]byte(body), 0, label); err == nil {
+			t.Fatal("额外词/非规范拼写/重复alias被接受")
+		}
+	}
+}

@@ -89,7 +89,7 @@ func observedCommand(result boundedCommand, l layout, t Target) (jobSnapshot, er
 	return observedJob(result.stdout, 0, l, t)
 }
 
-var disabledLine = regexp.MustCompile(`^"([^"\\]+)"\s+=>\s+(true|false)$`)
+var disabledLine = regexp.MustCompile(`^"([^"\\]+)"\s+=>\s+(true|false|enabled|disabled)$`)
 
 func disabledStatus(b []byte, exit int, label string) (bool, bool, error) {
 	if exit != 0 || len(b) > 256<<10 || bytes.IndexByte(b, 0) >= 0 {
@@ -112,7 +112,8 @@ func disabledStatus(b []byte, exit int, label string) (bool, bool, error) {
 		}
 		seen[m[1]] = true
 		if m[1] == label {
-			present, value = true, m[2] == "true"
+			// 两组固定拼写语义一致：true/disabled 禁启动，false/enabled 允许启动。
+			present, value = true, m[2] == "true" || m[2] == "disabled"
 		}
 	}
 	return present, value, nil
