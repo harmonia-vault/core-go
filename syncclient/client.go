@@ -188,8 +188,11 @@ func (c *Client) request(ctx context.Context, method string, u *url.URL, body an
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return c.rejection(response, bootRoute)
 	}
-	const maximum = 8 << 20
-	data, err := io.ReadAll(io.LimitReader(response.Body, maximum+1))
+	maximum := 8 << 20
+	if strings.HasSuffix(u.Path, "/pairing-requests-v3") || strings.HasSuffix(u.Path, "/pairing-requests-v4") {
+		maximum = maxPendingPairingsJSON
+	}
+	data, err := io.ReadAll(io.LimitReader(response.Body, int64(maximum)+1))
 	if err != nil {
 		return errors.New("could not read server response")
 	}
