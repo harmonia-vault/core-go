@@ -35,6 +35,9 @@ func TestNativeDAGCommandStrictFieldsAndCodeBoundary(t *testing.T) {
 		if op == "retryDAGRecoveredDevice" || op == "applyDAGRecoveredDevice" {
 			raw = recoveredNativeCommand(op, map[string]string{"operationId": "original-id", "contentHash": strings.Repeat("b", 64)})
 		}
+		if op == "queryDAGRecoveryResolution" || op == "closeDAGRecoveryOriginal" {
+			raw = recoveredNativeCommand(op, map[string]string{"operationId": "original-id", "targetHash": strings.Repeat("c", 64)})
+		}
 		size := int64(0)
 		if codeRequired(op) {
 			size = 1

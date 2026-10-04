@@ -23,7 +23,11 @@ var dagNativeFields = map[string][]string{
 	"retryDAGRecoveredDevice":   {"operationId", "contentHash"},
 	"applyDAGRecoveredDevice":   {"operationId", "contentHash"},
 	"restoreDAGRecoveredDevice": {}, "pullDAGRecoveredDevice": {},
-	"cancelDAGRecoveryOwner": {}, // 只由native处理本slot RAM；ExecuteDAGRecovery不执行此非domain命令。
+	"dagRecoveryResolutionInfo":   {},
+	"queryDAGRecoveryResolution":  {"operationId", "targetHash"},
+	"closeDAGRecoveryOriginal":    {"operationId", "targetHash"},
+	"openDAGRecoveryAfterClosure": {},
+	"cancelDAGRecoveryOwner":      {}, // 只由native处理本slot RAM；ExecuteDAGRecovery不执行此非domain命令。
 }
 
 func parseNativeDAGCommand(raw string) (workflowCommand, error) {
@@ -89,7 +93,7 @@ func parseNativeDAGCommand(raw string) (workflowCommand, error) {
 	return c, nil
 }
 func codeRequired(operation string) bool {
-	return operation == "openDAGRecoveryOwner" || operation == "sealDAGRecoveryTransition" || operation == "queryDAGRecoveryOriginal"
+	return operation == "openDAGRecoveryOwner" || operation == "sealDAGRecoveryTransition" || operation == "queryDAGRecoveryOriginal" || operation == "queryDAGRecoveryResolution" || operation == "closeDAGRecoveryOriginal" || operation == "openDAGRecoveryAfterClosure"
 }
 
 // ValidateDAGRecoveryCommand仅原生结构预检，不能凭其成功认为已认证/可信。
@@ -105,7 +109,10 @@ func ValidateDAGRecoveryCommand(raw string, codeLength int64) error {
 	} else if codeLength != 0 {
 		return errInput
 	}
-	return validateNativeDAGRecoveredCommand(c)
+	if e = validateNativeDAGRecoveredCommand(c); e != nil {
+		return e
+	}
+	return validateNativeDAGResolutionCommand(c)
 }
 func nativeDAGInfo(x syncclient.DAGRecoveryInfo) (map[string]any, error) {
 	if x.TrustedDevice {
@@ -233,6 +240,8 @@ func (v *VaultWorkflow) ExecuteDAGRecovery(raw string, completeCode []byte) (res
 		}
 	case "dagRecoveredEnrollmentChoices", "sealDAGRecoveredDevice", "retryDAGRecoveredDevice", "dagRecoveredDeviceInfo":
 		data, operationErr, metadataErr = v.executeNativeDAGRecovered(ctx, r, c)
+	case "dagRecoveryResolutionInfo", "queryDAGRecoveryResolution", "closeDAGRecoveryOriginal", "openDAGRecoveryAfterClosure":
+		data, operationErr, metadataErr = v.executeNativeDAGResolution(ctx, r, c, completeCode)
 	case "applyDAGRecoveredDevice", "restoreDAGRecoveredDevice", "pullDAGRecoveredDevice":
 		data, operationErr, metadataErr = v.executeNativeDAGApplied(ctx, r, c)
 		trusted = operationErr == nil && metadataErr == nil
