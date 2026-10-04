@@ -1,0 +1,46 @@
+{
+  "baseCommit": "2aa0c48fbe2fdbfa5348e37d02c8ff69733a6b98",
+  "toolchain": "Go1.26.4 darwin/arm64",
+  "red": {
+    "exitCode": 1,
+    "seconds": 54.711,
+    "expectedFailure": true
+  },
+  "validation": [
+    {
+      "step": "green",
+      "exitCode": 0,
+      "seconds": 8.042,
+      "passedTests": [
+        "TestActualNestedShapeKeepsOnlyTopLevel",
+        "TestDuplicateTopLevelRemainsRejected",
+        "TestScopeBracesAndArgumentsRemainStrict",
+        "TestV6ObservedJobRequiresFullIdentityAndNonStartingState",
+        "TestNestedLaunchIdentityAndObservedPID",
+        "TestNestedIdentityDoesNotRelaxMismatchOrStarting",
+        "TestLaunchStateRejectsDifferentServiceAndCA",
+        "TestJobPIDRequiresOnePositivePIDAndExactKnownJob"
+      ],
+      "failedTests": []
+    },
+    {
+      "step": "vet",
+      "exitCode": 0,
+      "seconds": 17.336
+    },
+    {
+      "step": "build",
+      "exitCode": 0,
+      "seconds": 65.486
+    }
+  ],
+  "fixture": "依据此前真实 launchctl 只读投影中的顶层唯一字段及嵌套 state/type 结构构造合成用例；原始 launchctl 文本未落盘。",
+  "newVMServiceCheck": "UNRUN: exact synthetic VM window not unique before capture or input",
+  "existingVM": "UTM official read-only list still reports started; this is not a service-start pass",
+  "hostServiceMutations": 0,
+  "guestServiceMutations": 0,
+  "wholeMacLifecycle": "UNVERIFIED",
+  "fullRegression": "UNRUN",
+  "productionReady": false,
+  "buildSHA256": "7bfa0e72629c2fffad558c48d939cd509f054489601142c05da060ba54791aff"
+}

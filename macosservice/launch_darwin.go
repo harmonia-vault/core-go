@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/harmonia-vault/core-go/internal/launchctlprint"
 )
 
 // 官方print-disabled只有domain接口；有界RAM仅投影固定label，不输出/保存其他配置。
@@ -146,46 +148,21 @@ func observedJob(b []byte, exit int, l layout, t Target) (jobSnapshot, error) {
 	if state == absent {
 		return jobSnapshot{State: absent}, nil
 	}
-	var pid int
-	seenPID, seenState := false, false
-	stable := false
-	for _, raw := range strings.Split(string(b), "\n") {
-		line := strings.TrimSpace(raw)
-		if strings.HasPrefix(line, "pid = ") {
-			if seenPID {
-				return jobSnapshot{}, ErrUnknown
-			}
-			seenPID = true
-			text := strings.TrimPrefix(line, "pid = ")
-			v, e := strconv.Atoi(text)
-			if e != nil || v < 2 || strconv.Itoa(v) != text {
-				return jobSnapshot{}, ErrUnknown
-			}
-			pid = v
-		}
-		if strings.HasPrefix(line, "state = ") {
-			if seenState {
-				return jobSnapshot{}, ErrUnknown
-			}
-			seenState = true
-			switch strings.TrimPrefix(line, "state = ") {
-			case "running":
-				stable = true
-			case "not running", "waiting", "exited":
-				stable = true
-			default:
-				return jobSnapshot{}, ErrUnknown
-			}
-		}
-	}
-	if !seenState {
+	job, err := launchctlprint.Decode(b, l.Label)
+	if err != nil {
 		return jobSnapshot{}, ErrUnknown
 	}
-	if seenPID {
+	switch job.Fields["state"] {
+	case "running", "not running", "waiting", "exited":
+	default:
+		return jobSnapshot{}, ErrUnknown
+	}
+	if text, present := job.Fields["pid"]; present {
+		pid, err := strconv.Atoi(text)
+		if err != nil || pid < 2 || strconv.Itoa(pid) != text {
+			return jobSnapshot{}, ErrUnknown
+		}
 		return jobSnapshot{State: matching, PID: pid}, nil
-	}
-	if !stable {
-		return jobSnapshot{}, ErrUnknown
 	}
 	return jobSnapshot{State: matching, StableNoPID: true}, nil
 }

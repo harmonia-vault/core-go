@@ -80,3 +80,7 @@ run = "go test -race -p 2 ./cryptox ./syncclient ./mobileworkflow -run '^(Test(R
 [tasks.test-systemd-unit-contract]
 description = "验证新 exec 模板、历史 simple receipt/journal 与不可变完整摘要"
 run = "go test -race -count=1 ./platform ./linuxinstall"
+
+[tasks.test-macos-launch-print]
+description = "仅验证 launchctl 顶层字段解析及受影响的身份/PID 检查"
+run = "go test -count=1 -timeout=45s -run '^Test(ActualNestedShapeKeepsOnlyTopLevel|DuplicateTopLevelRemainsRejected|ScopeBracesAndArgumentsRemainStrict|NestedLaunchIdentityAndObservedPID|NestedIdentityDoesNotRelaxMismatchOrStarting|LaunchStateRejectsDifferentServiceAndCA|JobPIDRequiresOnePositivePIDAndExactKnownJob|V6ObservedJobRequiresFullIdentityAndNonStartingState)$' ./internal/launchctlprint ./macosservice"

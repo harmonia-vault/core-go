@@ -18,6 +18,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/harmonia-vault/core-go/internal/launchctlprint"
+
 	"golang.org/x/sys/unix"
 )
 
@@ -432,41 +434,13 @@ func launchState(b []byte, exit int, l layout, t Target) serviceState {
 		}
 		return unknown
 	}
-	if !strings.HasPrefix(text, "system/"+l.Label+" = {") {
+	job, err := launchctlprint.Decode(b, l.Label)
+	if err != nil {
 		return unknown
 	}
-	// 只接受本收据对应的 path/program/username；不从运行状态广告推断 trust。
-	values := map[string]string{}
-	var args []string
-	inArgs := false
-	for _, line := range strings.Split(text, "\n") {
-		line = strings.TrimSpace(line)
-		if line == "arguments = {" {
-			if inArgs || args != nil {
-				return unknown
-			}
-			inArgs = true
-			args = []string{}
-			continue
-		}
-		if inArgs {
-			if line == "}" {
-				inArgs = false
-			} else {
-				args = append(args, line)
-			}
-			continue
-		}
-		for _, key := range []string{"path", "program", "username", "type"} {
-			if strings.HasPrefix(line, key+" = ") {
-				if _, ok := values[key]; ok {
-					return unknown
-				}
-				values[key] = strings.TrimPrefix(line, key+" = ")
-			}
-		}
-	}
-	if inArgs || values["path"] != l.Plist || values["program"] != l.Binary || values["username"] != t.UserName || values["type"] != "LaunchDaemon" {
+	// 只比较收据身份与顶层字段；嵌套运行统计不改变服务身份。
+	values, args := job.Fields, job.Arguments
+	if values["path"] != l.Plist || values["program"] != l.Binary || values["username"] != t.UserName || values["type"] != "LaunchDaemon" {
 		return unknown
 	}
 	want := []string{l.Binary, "daemon", "--local-directory", l.State, "--local-user", strconv.FormatUint(uint64(t.UID), 10), "--interval", "2s"}
@@ -533,21 +507,13 @@ func jobPID(b []byte, l layout, t Target) (int, error) {
 	if launchState(b, 0, l, t) != matching {
 		return 0, ErrUnknown
 	}
-	pid := 0
-	count := 0
-	for _, line := range strings.Split(string(b), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "pid = ") {
-			count++
-			s := strings.TrimPrefix(line, "pid = ")
-			n, e := strconv.Atoi(s)
-			if e != nil || n < 2 || strconv.Itoa(n) != s {
-				return 0, ErrUnknown
-			}
-			pid = n
-		}
+	job, err := launchctlprint.Decode(b, l.Label)
+	if err != nil {
+		return 0, ErrUnknown
 	}
-	if count != 1 {
+	text, present := job.Fields["pid"]
+	pid, err := strconv.Atoi(text)
+	if !present || err != nil || pid < 2 || strconv.Itoa(pid) != text {
 		return 0, ErrUnknown
 	}
 	return pid, nil
