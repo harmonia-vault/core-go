@@ -27,11 +27,12 @@ type UserEnvironmentStore interface {
 }
 
 type WindowsProvider struct {
-	mu        sync.Mutex
-	store     UserEnvironmentStore
-	originals map[string]registryOriginal
-	statePath string
-	secret    *localkeys.Vault
+	mu            sync.Mutex
+	store         UserEnvironmentStore
+	originals     map[string]registryOriginal
+	statePath     string
+	secret        *localkeys.Vault
+	notifyPending bool
 }
 
 func NewWindowsProvider(expectedSID string, store UserEnvironmentStore) (*WindowsProvider, error) {
@@ -88,6 +89,17 @@ func (p *WindowsProvider) Apply(ctx context.Context, changes []localstate.Change
 			return fmt.Errorf("NUL is not an environment value")
 		}
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if len(changes) > 0 {
+		// 注册表写入后进程可能退出，或广播可能失败。先保存待通知状态，
+		// 即使下一次同步发现值已相同，也必须完成原通知再报告成功。
+		p.notifyPending = true
+		if err := p.save(); err != nil {
+			return err
+		}
+	}
 	for _, change := range changes {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -137,8 +149,15 @@ func (p *WindowsProvider) Apply(ctx context.Context, changes []localstate.Change
 			return err
 		}
 	}
-	if len(changes) > 0 {
-		return p.store.Notify()
+	if p.notifyPending {
+		if err := p.store.Notify(); err != nil {
+			return err
+		}
+		p.notifyPending = false
+		if err := p.save(); err != nil {
+			p.notifyPending = true
+			return err
+		}
 	}
 	return nil
 }

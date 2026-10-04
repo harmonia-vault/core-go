@@ -149,6 +149,7 @@ func NewSecureWindowsProvider(expectedSID string, store UserEnvironmentStore, va
 			}
 		}
 		p.originals = state.Originals
+		p.notifyPending = state.NotifyPending
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}

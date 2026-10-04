@@ -13,9 +13,10 @@ type registryOriginal struct {
 	Value   RegistryValue `json:"value"`
 }
 type windowsOriginalState struct {
-	Marker    string                      `json:"marker"`
-	SID       string                      `json:"sid"`
-	Originals map[string]registryOriginal `json:"originals"`
+	Marker        string                      `json:"marker"`
+	SID           string                      `json:"sid"`
+	Originals     map[string]registryOriginal `json:"originals"`
+	NotifyPending bool                        `json:"notifyPending,omitempty"`
 }
 
 const windowsOriginalMarker = "Harmonia Windows original values v1"
@@ -45,6 +46,7 @@ func NewPersistentWindowsProvider(expectedSID string, store UserEnvironmentStore
 			}
 		}
 		p.originals = state.Originals
+		p.notifyPending = state.NotifyPending
 	} else if !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -54,7 +56,7 @@ func (p *WindowsProvider) save() error {
 	if p.statePath == "" && p.secret == nil {
 		return nil
 	}
-	data, err := json.Marshal(windowsOriginalState{Marker: windowsOriginalMarker, SID: p.store.UserSID(), Originals: p.originals})
+	data, err := json.Marshal(windowsOriginalState{Marker: windowsOriginalMarker, SID: p.store.UserSID(), Originals: p.originals, NotifyPending: p.notifyPending})
 	if err != nil {
 		return err
 	}

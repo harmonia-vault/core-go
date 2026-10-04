@@ -66,9 +66,13 @@ func (s *registryUserStore) Notify() error {
 	var result uintptr
 	proc := windows.NewLazySystemDLL("user32.dll").NewProc("SendMessageTimeoutW")
 	ok, _, callErr := proc.Call(0xffff, 0x001a, 0, uintptr(unsafe.Pointer(name)), 0x0002, 5000, uintptr(unsafe.Pointer(&result)))
-	// Session 0 无接收窗口时仍已持久化；超时不能把持久化写入当作未提交。
-	if ok == 0 && callErr != windows.ERROR_SUCCESS {
-		return fmt.Errorf("environment persisted; broadcast failed: %w", callErr)
+	// 返回0即失败或超时；该API不保证失败时设置LastError。
+	// 值已持久化，provider会保留待通知状态，不能将零错误码误认作成功。
+	if ok == 0 {
+		if callErr != windows.ERROR_SUCCESS {
+			return fmt.Errorf("environment persisted; broadcast failed: %w", callErr)
+		}
+		return fmt.Errorf("environment persisted; broadcast failed without an error code")
 	}
 	return nil
 }
