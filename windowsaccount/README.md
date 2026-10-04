@@ -1,6 +1,6 @@
 # 标准 SCM 普通用户服务候选 v9
 
-普通账号服务、当前用户 CLI、受保护安装与逐键恢复后卸载的实验候选。默认构建关闭，仅显式 `harmonia_windows_account_candidate` 标签开放入口。v9 已在合成 Windows ARM64 VM 中由标准 SCM 启动至 Running/Automatic，并核验指定普通用户 SID、Session 0、固定映像与已加载 profile。该次已有交互登录，不能据此证明无人登录启动；凭据入网和完整生命周期仍未完成。详见 [v9 验证记录](../docs/WINDOWS-SCM-V9.md)。
+普通账号服务、当前用户 CLI、受保护安装与逐键恢复后卸载的实验候选。默认构建关闭，仅显式 `harmonia_windows_account_candidate` 标签开放入口。v9 已在合成 Windows ARM64 VM 中由标准 SCM 启动至 Running/Automatic，并核验指定普通用户 SID、Session 0、固定映像与已加载 profile。初次启动测试已有交互登录；后续一次空账号服务的无人登录自动启动也已通过，但凭据入网和完整生命周期仍未完成。详见 [v9 验证记录](../docs/WINDOWS-SCM-V9.md)。
 
 ## 身份与系统边界
 
@@ -38,7 +38,7 @@ Windows provider 在注册表变更前持久保存待通知状态；空 patch �
 
 已有宿主组合测试覆盖 platform/localstate/localipc/windowsaccount/cmd owner 的 race 测试；Windows ARM64 CGO0 CLI 与安装器交叉编译、Windows vet 仅证明构建与静态检查。CGO0 CLI 不含 native BoringSSL SPAKE2，不能用于声称真实 PAKE 成功；需用仓库既有固定工具链构建 native 版本。
 
-标准 SCM 安装和 v9 启动、普通账号进程身份回读已通过。此前 v6/v8 的启动失败保留为历史失败，不能把它们改记通过。v9 CGO0 二进制不包含原生 SPAKE2；当前用户 IPC 联合凭据流程、HTTPS login/PAKE/Boot/Pull、无人登录重启、完整纠正/到期/撤销、logout/drain 和卸载仍未取得此候选完整验收结果。原有独立组件测试仅作为组件证据复用。默认产品门槛保持关闭，不宣传生产可用。
+标准 SCM 安装和 v9 启动、普通账号进程身份回读已通过。此前 v6/v8 的启动失败保留为历史失败，不能把它们改记通过。v9 CGO0 二进制不包含原生 SPAKE2；当前用户 IPC 联合凭据流程、HTTPS login/PAKE/Boot/Pull、持有可信设备材料的无人登录重启、完整纠正/到期/撤销、logout/drain 和卸载仍未取得此候选完整验收结果。原有独立组件测试仅作为组件证据复用。默认产品门槛保持关闭，不宣传生产可用。
 
 ## v3：撤销账号权限前的完整使用者核对
 
