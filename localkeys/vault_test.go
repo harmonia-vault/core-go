@@ -170,8 +170,31 @@ func TestCiphertextAuthenticationNonceAndSlotBinding(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(c.Directory, slots["device-v1"]), data, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := v.Load("device-v1"); !errors.Is(err, ErrCorrupt) {
-		t.Fatal("ciphertext accepted in another slot after metadata rewrite")
+	// 新建文件夹具可能先被平台 ACL 检查拒绝；记录类别，不把错误不匹配称为明文通过。
+	legacyPlaintext, legacyErr := v.Load("device-v1")
+	t.Logf("new-file fixture: permission=%t corrupt=%t noError=%t plaintextBytes=%d", errors.Is(legacyErr, ErrPermission), errors.Is(legacyErr, ErrCorrupt), legacyErr == nil, len(legacyPlaintext))
+	if legacyErr == nil || len(legacyPlaintext) != 0 {
+		t.Fatal("rewritten cross-slot fixture returned plaintext or no error")
+	}
+	if err := os.Remove(filepath.Join(c.Directory, slots["device-v1"])); err != nil {
+		t.Fatal(err)
+	}
+	// 由真实存储创建目标槽的受保护文件，再篡改已有文件，确保测试达到 AEAD 校验。
+	const targetPlaintext = "synthetic-device-slot"
+	if err := v.Save("device-v1", []byte(targetPlaintext)); err != nil {
+		t.Fatal(err)
+	}
+	if plaintext, err := v.Load("device-v1"); err != nil || string(plaintext) != targetPlaintext {
+		t.Fatalf("protected target slot not readable: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(c.Directory, slots["device-v1"]), data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if actual, err := v.fs.Read(slots["device-v1"], maxRecordSize); err != nil || !bytes.Equal(actual, data) {
+		t.Fatalf("cross-slot fixture blocked before AEAD: %v", err)
+	}
+	if plaintext, err := v.Load("device-v1"); !errors.Is(err, ErrCorrupt) || len(plaintext) != 0 {
+		t.Fatalf("cross-slot AEAD rejection missing: corrupt=%t plaintextBytes=%d error=%v", errors.Is(err, ErrCorrupt), len(plaintext), err)
 	}
 	if plaintext, err := v.Load("state-v1"); err != nil || string(plaintext) != "synthetic-sensitive" {
 		t.Fatal("authentic state failed after restoration")
