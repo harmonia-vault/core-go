@@ -41,3 +41,9 @@ API 依据：[NtCreateFile](https://learn.microsoft.com/en-us/windows/win32/api/
 现有安装仍是上述 CGO0 映像，配置没有合成 HTTPS CA，device/session/trust 槽为空。已检查旧固定升级助手：它仅接受此前失败的 `installed-disabled/start-service` 收据和 Stopped/Manual 状态，不适用于当前 Running/Automatic 实例；不能删除这些保护断言后直接重跑。后续需正常 stop/drain、针对精确旧/新文件及收据的可恢复升级、受保护 CA 配置，再从同用户 CLI 完成真实 login/PAKE、原 ID 确认和统一 Pull。不能用 SYSTEM 请求替代普通用户 CLI，也不能把另一机器生成的可信材料直接放入 Windows vault。
 
 这里没有缺少用户真实密码，也没有请求真实凭据。剩余项是含原生配对的产品映像、安全升级与测试接线；本次没有进入账号、角色或变量业务矩阵。
+
+## 原生凭据候选构建结果
+
+复用已存在且哈希匹配的固定 BoringSSL Windows ARM64 静态库与 LLVM-mingw 工具链，未重建依赖、安装工具或下载替代版本。以本分支代码提交 `b29fad11ed1dee9cd1c745bfb9bfcb2134bb5f2c` 构建 `harmonia_boringssl,harmonia_windows_account_candidate`、CGO1 候选，限制 Go 并发为 2。
+
+本次 **FAIL**：259.37 秒，exit 1，Go `runtime` 编译进程报 `signal: killed`。没有取得足够证据确认具体终止原因，不把推测的资源耗尽写成已证事实。没有重复构建、扩大 VM 或生成新 Windows 映像；含原生 PAKE 的候选安装、真实凭据流程和设备 Boot/Pull 均 **UNRUN**。原 v9 CGO0 服务保持运行，成功的空账号无人登录重启结果不受此构建失败影响。
