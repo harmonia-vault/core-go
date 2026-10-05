@@ -22,6 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/emailcode"
 	"github.com/harmonia-vault/core-go/syncclient"
 )
 
@@ -121,7 +122,7 @@ func proofGeneration(p Proof) (uint64, error) {
 	return n, nil
 }
 
-// ParseProof accepts the exact four-field JSON from the requested email.
+// ParseProof accepts the exact internal four-field proof returned by the server.
 // A proof is a bearer secret: never log it, put it in a URL, or persist it in Dart.
 func ParseProof(data []byte) (Proof, error) {
 	var p Proof
@@ -130,6 +131,35 @@ func ParseProof(data []byte) (Proof, error) {
 	}
 	if _, e := proofGeneration(p); e != nil {
 		return Proof{}, e
+	}
+	return p, nil
+}
+
+// ResolveCode exchanges the user-entered email/code for an internal bearer proof.
+// The response stays inside native RAM and never needs to be copied by the user.
+func (c *Client) ResolveCode(ctx context.Context, data []byte) (Proof, error) {
+	var input struct {
+		Email string `json:"email"`
+		Code  string `json:"code"`
+	}
+	if exactJSON(data, &input, "email", "code") != nil || input.Email == "" || len(input.Email) > 320 || strings.ContainsAny(input.Email, "\x00\r\n") {
+		return Proof{}, ErrInput
+	}
+	code, valid := emailcode.Normalize(input.Code)
+	if !valid {
+		return Proof{}, ErrInput
+	}
+	input.Code = code
+	body, _ := json.Marshal(input)
+	defer clear(body)
+	response, err := c.post(ctx, "/v1/account-reset/resolve", body)
+	defer clear(response)
+	if err != nil {
+		return Proof{}, err
+	}
+	p, err := ParseProof(response)
+	if err != nil {
+		return Proof{}, ErrResponse
 	}
 	return p, nil
 }
@@ -396,6 +426,7 @@ func (c *Client) post(ctx context.Context, suffix string, payload []byte) ([]byt
 		return nil, ErrInput
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Harmonia-Protocol-Major", "2")
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Cache-Control", "no-store")
 	response, e := c.http.Do(req)
@@ -403,6 +434,9 @@ func (c *Client) post(ctx context.Context, suffix string, payload []byte) ([]byt
 		return nil, ErrTransport
 	}
 	defer response.Body.Close()
+	if response.Header.Get("Harmonia-Protocol-Major") != "2" {
+		return nil, ErrResponse
+	}
 	data, e := io.ReadAll(io.LimitReader(response.Body, maximumWire+1))
 	if e != nil || len(data) > maximumWire {
 		clear(data)
@@ -411,13 +445,20 @@ func (c *Client) post(ctx context.Context, suffix string, payload []byte) ([]byt
 	if response.StatusCode != http.StatusOK {
 		defer clear(data)
 		var wire struct {
-			Error string `json:"error"`
+			Error             string `json:"error"`
+			RetryAfterSeconds *int   `json:"retryAfterSeconds,omitempty"`
 		}
 		code := ""
-		if exactJSON(data, &wire, "error") == nil {
-			code = wire.Error
+		if json.Unmarshal(data, &wire) == nil {
+			fields := []string{"error"}
+			if wire.Error == "email_request_limited" || wire.Error == "email_ip_blocked" {
+				fields = append(fields, "retryAfterSeconds")
+			}
+			if exactJSON(data, &wire, fields...) == nil {
+				code = wire.Error
+			}
 		}
-		return nil, syncclient.NewRequestError(response.StatusCode, code)
+		return nil, syncclient.NewRequestErrorWithRetry(response.StatusCode, code, wire.RetryAfterSeconds)
 	}
 	return data, nil
 }

@@ -74,6 +74,9 @@ func TestEnvironmentBatchConfirmationBindsHeadTailAndEveryInnerCheckpoint(t *tes
 			}
 			snapshot.SeenMutations["dev/rotate-first"] = point
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Harmonia-Protocol-Major", "2")
+
+				w.Header().Set("Harmonia-Protocol-Major", "2")
 				_ = json.NewEncoder(w).Encode(Pull{AccountID: "acct", AccountGeneration: "1", Sequence: 10})
 			}))
 			defer server.Close()

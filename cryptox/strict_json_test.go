@@ -25,15 +25,17 @@ func TestStrictJSONBoundedScanner(t *testing.T) {
 func TestIssuerOriginRequiresExactGenesisAnchor(t *testing.T) {
 	v := makeOriginFixture(t)
 	pin := originPin(v)
-	if _, e := VerifyIssuerEvidenceV2(pin, v.Approval.IssuerProof); e == nil {
-		t.Fatal("无独立initial锚接受")
-	}
-	initial := proofGenesisV2(v.Approval.IssuerProof)
-	if _, e := VerifyIssuerEvidenceV2(pin, v.Approval.IssuerProof, initial...); e != nil {
+	if _, e := VerifyIssuerRecoveryDAG(pin, v.Approval.IssuerProof); e != nil {
 		t.Fatal(e)
 	}
-	initial[0].Grant.EnvironmentID = "fresh-server-Y"
-	if _, e := VerifyIssuerEvidenceV2(pin, v.Approval.IssuerProof, initial...); e == nil {
-		t.Fatal("替换精确genesis接受")
+	p := cloneJSON(t, v.Approval.IssuerProof)
+	p.Initialization.Proposal.Environments[0].Grant.Grant.EnvironmentID = "fresh-server-Y"
+	if _, e := VerifyIssuerRecoveryDAG(pin, p); e == nil {
+		t.Fatal("replaced genesis accepted")
+	}
+	p = cloneJSON(t, v.Approval.IssuerProof)
+	p.Initialization.DeviceSignature = ""
+	if _, e := VerifyIssuerRecoveryDAG(pin, p); e == nil {
+		t.Fatal("missing original signature accepted")
 	}
 }

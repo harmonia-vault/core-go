@@ -13,7 +13,7 @@ func TestAccountRequestStrictWhitelist(t *testing.T) {
 	credential := bytes.Repeat([]byte{7}, 32)
 	good := []AccountRequest{
 		{Action: "login", Endpoint: "https://synthetic.invalid", Email: "test@example.invalid", Credential: credential},
-		{Action: "pair", ApproverDeviceID: "manager", CertificateVersion: "4"},
+		{Action: "pair", ApproverDeviceID: "manager", CertificateVersion: "5"},
 		{Action: "pair-status", PairingID: "pair-1"}, {Action: "pair-cancel", PairingID: "pair-1"},
 	}
 	for _, r := range good {

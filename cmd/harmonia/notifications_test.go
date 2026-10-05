@@ -65,7 +65,10 @@ func TestProtectedDaemonNotificationsWakeLongPollingAndPauseRevoke(t *testing.T)
 	mustCLI(t, err)
 	var fields []string
 	_ = json.Unmarshal(proofWire, &fields)
+	var issuerEvidence *cryptox.IssuerRecoveryDAG
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
 		if strings.HasSuffix(r.URL.Path, "/boot-challenges") {
 			bootCalls.Add(1)
 			if r.Header.Get("Authorization") != "" {
@@ -143,7 +146,7 @@ func TestProtectedDaemonNotificationsWakeLongPollingAndPauseRevoke(t *testing.T)
 		if phase.Load() == 4 {
 			sequence = 4
 		}
-		pull := syncclient.Pull{AccountID: "acct", AccountGeneration: "1", Sequence: sequence, Grants: []syncclient.SignedGrant{{Grant: grant, Signature: signedGrant.Signature}}, Events: []syncclient.Event{}}
+		pull := syncclient.Pull{IssuerDAGEvidence: issuerEvidence, AccountID: "acct", AccountGeneration: "1", Sequence: sequence, Grants: []syncclient.SignedGrant{{Grant: grant, Signature: signedGrant.Signature}}, Events: []syncclient.Event{}}
 		if r.URL.Query().Get("scope") == "authorizations" {
 			authorizationCalls.Add(1)
 			pull.Scope = "authorizations"
@@ -167,16 +170,12 @@ func TestProtectedDaemonNotificationsWakeLongPollingAndPauseRevoke(t *testing.T)
 	vault := store.Vault()
 	mustCLI(t, vault.SaveDeviceKeys(keys))
 	contextFields := pairing.Context{AccountID: "acct", AccountGeneration: "1", Purpose: pairing.PurposeEnrollment, SessionID: "pair-session", ChallengeNonce: nonce, ExpiresAt: fmtUint(uint64(expiry)), InitiatorDeviceID: "dev", InitiatorSigningPublicKey: grant.SubjectSigningPublicKey, InitiatorReceivingPublicKey: grant.SubjectReceivingPublicKey, ApproverDeviceID: "manager", ApproverSigningPublicKey: cryptox.EncodeBase64(managerPublic), ApproverReceivingPublicKey: cryptox.EncodeBase64(managerReceiving)}
-	approval := syncclient.EnrollmentApproval{Context: contextFields, PairingProfile: pairing.Profile, TranscriptHash: strings.Repeat("a", 64), Grants: []cryptox.SignedGrantWire{cryptox.GrantToWire(signedGrant)}}
-	certificate, err := approval.Certificate()
-	mustCLI(t, err)
-	approval.ApproverSignature, err = cryptox.SignEnrollmentCertificate(certificate, managerPrivate)
-	mustCLI(t, err)
-	approval.InitiatorSignature, err = cryptox.SignEnrollmentCertificate(certificate, signing)
-	mustCLI(t, err)
+	approval := cryptox.EnrollmentApproval{Context: cryptox.EnrollmentContext(contextFields), PairingProfile: pairing.Profile, TranscriptHash: strings.Repeat("a", 64), Grants: []cryptox.SignedGrantWire{cryptox.GrantToWire(signedGrant)}}
 	session := localkeys.LoginSession{Endpoint: server.URL, AccountID: "acct", AccountGeneration: 1, Token: cryptox.EncodeBase64(make([]byte, 32)), ExpiresAt: time.Now().Add(time.Hour).UTC().Format(time.RFC3339)}
 	mustCLI(t, vault.SaveSession(session))
-	mustCLI(t, saveReceipt(vault, session, keys, syncclient.EnrollmentReceipt{IdempotencyKey: "pair-1", Approval: approval}, true))
+	receipt, evidence := signedDaemonReceipt(t, approval, managerPrivate, signing)
+	issuerEvidence = evidence
+	mustCLI(t, saveReceiptV5(vault, session, keys, receipt, true))
 	mustCLI(t, store.Close())
 	provider := &isolatedProvider{values: map[string]string{"TOKEN": "original", "UNRELATED": "keep"}}
 	ctx, cancel := context.WithCancel(context.Background())

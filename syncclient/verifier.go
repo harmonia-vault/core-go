@@ -1,9 +1,7 @@
 package syncclient
 
 import (
-	"bytes"
 	"context"
-	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
@@ -27,46 +25,18 @@ type PinnedTrust struct {
 	DeviceID               string
 	DeviceSigningPublicKey ed25519.PublicKey
 	ReceivingPrivateKey    []byte
-	Managers               map[string]ed25519.PublicKey
 	Now                    func() time.Time
 }
 type PinnedVerifier struct {
-	trust                   PinnedTrust
-	receivingPublicKey      string
-	issuerProof             *cryptox.VerifiedIssuerProof
-	issuerOriginProof       verifiedAuthorityGraph
-	initialDAGEvidence      *cryptox.IssuerRecoveryDAG
-	initialRecoveryEvidence *cryptox.IssuerRecoveryProof
-	evidenceRoot            *cryptox.PinnedIssuerRoot
-	initialEvidence         *cryptox.IssuerProofV2
-	requireEvidence         bool
-	genesisAuthorities      []cryptox.SignedGrantWire
-	requireStoredEvidence   bool
+	trust              PinnedTrust
+	receivingPublicKey string
+	issuerOriginProof  verifiedAuthorityGraph
+	initialDAGEvidence *cryptox.IssuerRecoveryDAG
+	evidenceRoot       *cryptox.PinnedIssuerRoot
+	requireEvidence    bool
+	genesisAuthorities []cryptox.SignedGrantWire
 }
 
-func NewPinnedVerifier(trust PinnedTrust) (*PinnedVerifier, error) {
-	if trust.AccountID == "" || trust.AccountGeneration == 0 || trust.DeviceID == "" || len(trust.DeviceSigningPublicKey) != ed25519.PublicKeySize || len(trust.Managers) == 0 {
-		return nil, errors.New("incomplete trusted context")
-	}
-	sk, err := ecdh.X25519().NewPrivateKey(trust.ReceivingPrivateKey)
-	if err != nil {
-		return nil, errors.New("invalid trusted receiving key")
-	}
-	trust.ReceivingPrivateKey = bytes.Clone(trust.ReceivingPrivateKey)
-	trust.DeviceSigningPublicKey = bytes.Clone(trust.DeviceSigningPublicKey)
-	managers := map[string]ed25519.PublicKey{}
-	for id, key := range trust.Managers {
-		if id == "" || len(key) != ed25519.PublicKeySize {
-			return nil, errors.New("invalid pinned manager key")
-		}
-		managers[id] = bytes.Clone(key)
-	}
-	trust.Managers = managers
-	if trust.Now == nil {
-		trust.Now = time.Now
-	}
-	return &PinnedVerifier{trust: trust, receivingPublicKey: cryptox.EncodeBase64(sk.PublicKey().Bytes())}, nil
-}
 func digest(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
 func copyMap[T any](in map[string]T) map[string]T {
 	out := map[string]T{}
@@ -90,14 +60,7 @@ func (v *PinnedVerifier) verifyGrant(signed SignedGrant) error {
 	if v.issuerOriginProof != nil {
 		return v.issuerOriginProof.VerifyHistoricalGrant(cryptox.SignedGrantWire{Grant: grant, Signature: signed.Signature})
 	}
-	if v.issuerProof != nil {
-		return v.issuerProof.VerifyHistoricalGrant(cryptox.SignedGrantWire{Grant: grant, Signature: signed.Signature})
-	}
-	key, ok := v.trust.Managers[grant.IssuerDeviceID]
-	if !ok {
-		return errors.New("grant issuer is not a pinned trusted manager")
-	}
-	return cryptox.VerifyGrant(cryptox.SignedGrant{Grant: grant, Signature: signed.Signature}, key)
+	return cryptox.ErrInvalidWire
 }
 func (v *PinnedVerifier) verifyPullValues(ctx context.Context, pull Pull, previous localstate.CloudSnapshot) (localstate.CloudSnapshot, error) {
 	if err := ctx.Err(); err != nil {

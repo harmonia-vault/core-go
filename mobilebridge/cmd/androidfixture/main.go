@@ -115,13 +115,11 @@ func run() error {
 	var environmentAttempts atomic.Uint64
 	var environmentStatus atomic.Uint64
 	var environmentControlStatus atomic.Uint64
-	var approvals atomic.Uint64
-	var approvalsV3 atomic.Uint64
+	var approvalsV5 atomic.Uint64
 	var grants atomic.Uint64
 	var revocations atomic.Uint64
 	var recoveryTransitions atomic.Uint64
 	var recoveredDevices atomic.Uint64
-	var approvalsV4 atomic.Uint64
 	var recoveredChallengeStatus atomic.Uint64
 	var recoveredDeviceAttempts atomic.Uint64
 	var recoveredDeviceStatus atomic.Uint64
@@ -132,14 +130,14 @@ func run() error {
 		if r.Request.Method == "GET" && strings.HasSuffix(path, "/issuer-evidence") {
 			environmentControlStatus.Store(uint64(r.StatusCode))
 		}
-		if r.Request.Method == "POST" && (strings.HasSuffix(path, "/environment-changes") || strings.HasSuffix(path, "/environment-changes-v2") || strings.HasSuffix(path, "/environment-changes-v3")) {
+		if r.Request.Method == "POST" && strings.HasSuffix(path, "/environment-changes-v4") {
 			environmentAttempts.Add(1)
 			environmentStatus.Store(uint64(r.StatusCode))
 		}
-		if r.Request.Method == "POST" && strings.HasSuffix(r.Request.URL.Path, "/recovered-device-challenges") {
+		if r.Request.Method == "POST" && strings.HasSuffix(r.Request.URL.Path, "/recovered-device-challenges-v2") {
 			recoveredChallengeStatus.Store(uint64(r.StatusCode))
 		}
-		if r.Request.Method == "POST" && strings.HasSuffix(r.Request.URL.Path, "/recovered-devices") {
+		if r.Request.Method == "POST" && strings.HasSuffix(r.Request.URL.Path, "/recovered-devices-v2") {
 			recoveredDeviceAttempts.Add(1)
 			recoveredDeviceStatus.Store(uint64(r.StatusCode))
 		}
@@ -150,19 +148,13 @@ func run() error {
 		p := r.Request.URL.Path
 		if strings.HasSuffix(p, "/complete") && strings.Contains(p, "/vault-initializations/") {
 			kind = "init"
-		} else if strings.Contains(p, "/pairings-v2/") && strings.HasSuffix(p, "/approve") {
-			kind = "approval"
-			approvals.Add(1)
-		} else if strings.Contains(p, "/pairings-v3/") && strings.HasSuffix(p, "/approve") {
-			kind = "approvalV3"
-			approvalsV3.Add(1)
-		} else if strings.Contains(p, "/pairings-v4/") && strings.HasSuffix(p, "/approve") {
-			kind = "approvalV4"
-			approvalsV4.Add(1)
-		} else if strings.HasSuffix(p, "/recovery-authority-transitions") {
+		} else if strings.Contains(p, "/pairings-v5/") && strings.HasSuffix(p, "/approve") {
+			kind = "approvalV5"
+			approvalsV5.Add(1)
+		} else if strings.HasSuffix(p, "/recovery-authority-transitions-v2") {
 			kind = "recoveryTransition"
 			recoveryTransitions.Add(1)
-		} else if strings.HasSuffix(p, "/recovered-devices") {
+		} else if strings.HasSuffix(p, "/recovered-devices-v2") {
 			kind = "recoveredDevice"
 			recoveredDevices.Add(1)
 		} else if strings.HasSuffix(p, "/device-revocations/complete") {
@@ -174,7 +166,7 @@ func run() error {
 		} else if strings.HasSuffix(p, "/mutations") {
 			kind = "mutation"
 			submitted.Add(1)
-		} else if strings.HasSuffix(p, "/environment-changes") || strings.HasSuffix(p, "/environment-changes-v2") || strings.HasSuffix(p, "/environment-changes-v3") {
+		} else if strings.HasSuffix(p, "/environment-changes-v4") {
 			kind = "environment"
 			environmentChanges.Add(1)
 		}
@@ -199,7 +191,7 @@ func run() error {
 		}
 		d := json.NewDecoder(io.LimitReader(r.Body, 128))
 		d.DisallowUnknownFields()
-		if d.Decode(&body) != nil || (body.Lose != "init" && body.Lose != "mutation" && body.Lose != "environment" && body.Lose != "revocation" && body.Lose != "approval" && body.Lose != "approvalV3" && body.Lose != "grant" && body.Lose != "approvalV4" && body.Lose != "recoveryTransition" && body.Lose != "recoveredDevice") {
+		if d.Decode(&body) != nil || (body.Lose != "init" && body.Lose != "mutation" && body.Lose != "environment" && body.Lose != "revocation" && body.Lose != "approvalV5" && body.Lose != "grant" && body.Lose != "recoveryTransition" && body.Lose != "recoveredDevice") {
 			http.Error(w, "invalid", 400)
 			return
 		}
@@ -209,7 +201,7 @@ func run() error {
 	})
 	mux.HandleFunc("/test/counters", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]uint64{"mutations": submitted.Load(), "environmentChanges": environmentChanges.Load(), "environmentAttempts": environmentAttempts.Load(), "environmentStatus": environmentStatus.Load(), "environmentControlStatus": environmentControlStatus.Load(), "approvals": approvals.Load(), "approvalsV3": approvalsV3.Load(), "grants": grants.Load(), "revocations": revocations.Load(), "recoveryTransitions": recoveryTransitions.Load(), "recoveredDevices": recoveredDevices.Load(), "approvalsV4": approvalsV4.Load(), "recoveredChallengeStatus": recoveredChallengeStatus.Load(), "recoveredDeviceAttempts": recoveredDeviceAttempts.Load(), "recoveredDeviceStatus": recoveredDeviceStatus.Load()})
+		_ = json.NewEncoder(w).Encode(map[string]uint64{"mutations": submitted.Load(), "environmentChanges": environmentChanges.Load(), "environmentAttempts": environmentAttempts.Load(), "environmentStatus": environmentStatus.Load(), "environmentControlStatus": environmentControlStatus.Load(), "approvalsV5": approvalsV5.Load(), "grants": grants.Load(), "revocations": revocations.Load(), "recoveryTransitions": recoveryTransitions.Load(), "recoveredDevices": recoveredDevices.Load(), "recoveredChallengeStatus": recoveredChallengeStatus.Load(), "recoveredDeviceAttempts": recoveredDeviceAttempts.Load(), "recoveredDeviceStatus": recoveredDeviceStatus.Load()})
 	})
 	mux.Handle("/", proxy)
 	server := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%d", *port), Handler: mux, ReadHeaderTimeout: 5 * time.Second, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{{Certificate: [][]byte{leafDER, caDER}, PrivateKey: leafKey}}}}

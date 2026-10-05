@@ -19,11 +19,7 @@ func trustFixture(t *testing.T, v *Vault) TrustContext {
 	if err = v.SaveDeviceKeys(keys); err != nil {
 		t.Fatal(err)
 	}
-	manager, err := GenerateDeviceKeys("synthetic-manager")
-	if err != nil {
-		t.Fatal(err)
-	}
-	return TrustContext{Endpoint: "https://synthetic.invalid/harmonia", AccountID: "synthetic-account", AccountGeneration: 1, DeviceID: keys.DeviceID, SigningPublic: keys.SigningPublic, ReceivingPublic: keys.ReceivingPublic, Managers: map[string][]byte{manager.DeviceID: manager.SigningPublic}, PairingProfile: EnrollmentPairingProfile, EnrollmentCertificate: json.RawMessage(`{"syntheticReceipt":true}`), EnrollmentKey: "synthetic-enrollment"}
+	return TrustContext{Endpoint: "https://synthetic.invalid/harmonia", AccountID: "synthetic-account", AccountGeneration: 1, DeviceID: keys.DeviceID, SigningPublic: keys.SigningPublic, ReceivingPublic: keys.ReceivingPublic, CertificateVersion: "5", PairingProfile: EnrollmentPairingProfile, EnrollmentCertificate: json.RawMessage(`{"syntheticReceipt":true}`), EnrollmentKey: "synthetic-enrollment"}
 }
 func TestTrustPendingRestartBindingsAndAcceptance(t *testing.T) {
 	config := testConfig(t)
@@ -75,7 +71,7 @@ func TestTrustPendingRestartBindingsAndAcceptance(t *testing.T) {
 func TestTrustValidationAndMissingOrMismatchedMaterial(t *testing.T) {
 	v := openTest(t, testConfig(t))
 	trust := trustFixture(t, v)
-	for _, field := range []string{"endpoint", "account", "generation", "device", "enrollment", "signing", "receiving", "managers", "manager-key", "profile", "certificate", "certificate-size"} {
+	for _, field := range []string{"endpoint", "account", "generation", "device", "enrollment", "signing", "receiving", "profile", "certificate", "certificate-size"} {
 		t.Run(field, func(t *testing.T) {
 			data, _ := json.Marshal(trust)
 			var candidate TrustContext
@@ -95,16 +91,12 @@ func TestTrustValidationAndMissingOrMismatchedMaterial(t *testing.T) {
 				candidate.SigningPublic = nil
 			case "receiving":
 				candidate.ReceivingPublic = nil
-			case "managers":
-				candidate.Managers = nil
-			case "manager-key":
-				candidate.Managers = map[string][]byte{"synthetic-manager": {1}}
 			case "profile":
 				candidate.PairingProfile = "unverified-profile"
 			case "certificate":
 				candidate.EnrollmentCertificate = json.RawMessage(`null`)
 			case "certificate-size":
-				candidate.EnrollmentCertificate = json.RawMessage(`{"x":"` + string(bytes.Repeat([]byte{'x'}, maxEnrollmentCertificate)) + `"}`)
+				candidate.EnrollmentCertificate = json.RawMessage(`{"x":"` + string(bytes.Repeat([]byte{'x'}, maxEnrollmentCertificateV5)) + `"}`)
 			}
 			if err := v.SaveTrustContext(candidate); !errors.Is(err, ErrCorrupt) {
 				t.Fatalf("invalid trust field accepted: %v", err)

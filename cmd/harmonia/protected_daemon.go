@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/harmonia-vault/core-go/cryptox"
 	"github.com/harmonia-vault/core-go/localipc"
 	"github.com/harmonia-vault/core-go/localkeys"
 	"github.com/harmonia-vault/core-go/localstate"
@@ -48,93 +47,18 @@ func verifiedStoredContextReceipt(trust localkeys.TrustContext, keys localkeys.D
 		return nil, errors.New("待完成入网不能启动网络同步")
 	}
 	if trust.CertificateVersion == "5" {
-		if len(trust.Managers) != 0 {
-			return nil, errors.New("v5 不接受全局管理者名单")
-		}
 		receipt, e := syncclient.DecodeEnrollmentReceiptV5(trust.EnrollmentCertificate)
 		if e != nil {
 			return nil, e
 		}
 		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
-			return nil, errors.New("v5 受保护回执与本机身份不匹配")
+			return nil, errors.New("配对资料与此设备不符，请重新配对")
 		}
 		return syncclient.NewPinnedVerifierV5(syncclient.IssuerDAGPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
 	}
-	if trust.CertificateVersion == "4" {
-		if len(trust.Managers) != 0 {
-			return nil, errors.New("v4 不接受全局管理者名单")
-		}
-		receipt, e := syncclient.DecodeEnrollmentReceiptV4(trust.EnrollmentCertificate)
-		if e != nil {
-			return nil, e
-		}
-		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
-			return nil, errors.New("v4 受保护回执与本机身份不匹配")
-		}
-		return syncclient.NewPinnedVerifierV4(syncclient.IssuerRecoveryPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
-	}
-	if trust.CertificateVersion == "3" {
-		if len(trust.Managers) != 0 {
-			return nil, errors.New("v3 不接受全局管理者名单")
-		}
-		receipt, e := syncclient.DecodeEnrollmentReceiptV3(trust.EnrollmentCertificate)
-		if e != nil {
-			return nil, e
-		}
-		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
-			return nil, errors.New("v3 受保护回执与本机身份不匹配")
-		}
-		return syncclient.NewPinnedVerifierV3(syncclient.IssuerOriginPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
-	}
-	if trust.CertificateVersion == "2" {
-		if len(trust.Managers) != 0 {
-			return nil, errors.New("v2 不接受全局管理者名单")
-		}
-		receipt, err := syncclient.DecodeEnrollmentReceiptV2(trust.EnrollmentCertificate)
-		if err != nil {
-			return nil, err
-		}
-		if receipt.IdempotencyKey != trust.EnrollmentKey || receipt.Approval.PairingProfile != trust.PairingProfile || !bytes.Equal(trust.SigningPublic, keys.SigningPublic) || !bytes.Equal(trust.ReceivingPublic, keys.ReceivingPublic) || trust.DeviceID != keys.DeviceID {
-			return nil, errors.New("v2 受保护回执与本机身份不匹配")
-		}
-		return syncclient.NewPinnedVerifierV2WithOrigins(syncclient.IssuerPinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Receipt: receipt})
-	}
-	if trust.CertificateVersion != "" && trust.CertificateVersion != "1" {
-		return nil, errors.New("未知入网证书版本")
-	}
-	receipt, err := decodeReceipt(trust.EnrollmentCertificate)
-	if err != nil {
-		return nil, err
-	}
-	c := receipt.Approval.Context
-	if receipt.IdempotencyKey != trust.EnrollmentKey || c.AccountID != trust.AccountID || c.AccountGeneration != fmtUint(trust.AccountGeneration) || c.InitiatorDeviceID != keys.DeviceID || c.InitiatorSigningPublicKey != cryptox.EncodeBase64(keys.SigningPublic) || c.InitiatorReceivingPublicKey != cryptox.EncodeBase64(keys.ReceivingPublic) || receipt.Approval.PairingProfile != trust.PairingProfile {
-		return nil, errors.New("受保护入网证书与账号/设备公钥不匹配")
-	}
-	if _, err = c.CanonicalBytes(); err != nil {
-		return nil, err
-	}
-	manager, err := cryptox.DecodeBase64(c.ApproverSigningPublicKey, 32, 32)
-	if err != nil {
-		return nil, err
-	}
-	if len(trust.Managers) != 1 || !bytes.Equal(trust.Managers[c.ApproverDeviceID], manager) {
-		return nil, errors.New("本版只接受已PAKE确认的管理钥匙，不能静默扩展信任")
-	}
-	cert, err := receipt.Approval.Certificate()
-	if err != nil {
-		return nil, err
-	}
-	if err = cryptox.VerifyEnrollmentCertificate(cert, receipt.Approval.ApproverSignature, ed25519.PublicKey(manager)); err != nil {
-		return nil, err
-	}
-	if err = cryptox.VerifyEnrollmentCertificate(cert, receipt.Approval.InitiatorSignature, ed25519.PublicKey(keys.SigningPublic)); err != nil {
-		return nil, err
-	}
-	if err = cryptox.VerifyEnrollmentGrants(cert, receipt.Approval.Grants, ed25519.PublicKey(manager)); err != nil {
-		return nil, err
-	}
-	return syncclient.NewPinnedVerifier(syncclient.PinnedTrust{AccountID: trust.AccountID, AccountGeneration: trust.AccountGeneration, DeviceID: keys.DeviceID, DeviceSigningPublicKey: keys.SigningPublic, ReceivingPrivateKey: keys.ReceivingPrivate, Managers: map[string]ed25519.PublicKey{c.ApproverDeviceID: ed25519.PublicKey(manager)}})
+	return nil, errors.New("配对资料无法使用，请重新配对")
 }
+
 func fmtUint(value uint64) string { return strconv.FormatUint(value, 10) }
 func wipeAccountSlots(vault *localkeys.Vault) error {
 	return errors.Join(vault.Delete("device-v1"), vault.Delete("session-v1"), vault.Delete("trust-v1"), vault.Delete("writes-v1"), vault.Delete("recovery-dag-v1"))

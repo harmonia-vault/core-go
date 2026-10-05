@@ -36,7 +36,7 @@ func TestEncryptedOwnerIPCLogoutFailureAndRestart(t *testing.T) {
 		Token: "synthetic-device-session-32-bytes", ExpiresAt: syntheticNow.Add(time.Hour).Format(time.RFC3339),
 	}))
 	// 仅存储层合成 fixture：没有绕过生产 CLI 的证书/PAKE 校验入口。
-	must(t, store.Vault().SaveTrustContext(localkeys.TrustContext{Endpoint: "https://synthetic.invalid", AccountID: "synthetic", AccountGeneration: 1, DeviceID: device.DeviceID, SigningPublic: device.SigningPublic, ReceivingPublic: device.ReceivingPublic, Managers: map[string][]byte{"synthetic-manager": device.SigningPublic}, PairingProfile: localkeys.EnrollmentPairingProfile, EnrollmentCertificate: []byte(`{"syntheticStorageFixture":true}`), EnrollmentKey: "synthetic-storage-test", Accepted: true}))
+	must(t, store.Vault().SaveTrustContext(localkeys.TrustContext{Endpoint: "https://synthetic.invalid", AccountID: "synthetic", AccountGeneration: 1, DeviceID: device.DeviceID, SigningPublic: device.SigningPublic, ReceivingPublic: device.ReceivingPublic, CertificateVersion: "5", PairingProfile: localkeys.EnrollmentPairingProfile, EnrollmentCertificate: []byte(`{"syntheticStorageFixture":true}`), EnrollmentKey: "synthetic-storage-test", Accepted: true}))
 	must(t, engine.AcceptSnapshot(source.State().Cloud, syntheticNow))
 	if second, err := localkeys.OpenEncryptedStateStore(config); err == nil {
 		_ = second.Close()

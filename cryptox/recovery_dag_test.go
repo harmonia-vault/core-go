@@ -63,7 +63,9 @@ func makeRecoveryDAGFixture(t *testing.T) recoveryDAGFixture {
 	f := makeIssuerRecoveryFixture(t)
 	base := f.Recovery
 	now := time.Unix(base.SyntheticNow, 0)
-	source, bundle, e := RecoverySourceFromProof3(base.RootPin, f.Proof, 31)
+	source := recoveryClone(t, f.Proof.Source)
+	bundle := RecoveryDependencyBundle{f.Proof.Initialization, f.Proof.Records}
+	_, e := VerifyRecoveryDependencyBundle(base.RootPin, bundle)
 	dagCheck(t, "fixture step 6", e)
 	owner := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{6}, 32))
 	ownerGrant := base.Device.Submission.Grants[0]
@@ -350,7 +352,7 @@ func TestRecoveryDAGActualRepeatedRecoveryCreatedEnvironmentAndAllAdmin(t *testi
 		if strings.Contains(strings.ToLower(string(out)), "sk-") {
 			t.Fatal("synthetic vector accidentally matches credential pattern")
 		}
-		for _, path := range []string{"testdata/recovery-dag-v1.json", "../../protocol/vectors/recovery-dag-v1.json"} {
+		for _, path := range []string{"testdata/recovery-dag-v1.json", "../../protocol/vectors/recovery-dag-v1.json", "../../server/test/vectors/recovery-dag-v1.json"} {
 			recoveryCheck(t, os.WriteFile(path, out, 0644))
 		}
 	}
@@ -365,7 +367,7 @@ func TestRecoveryDAGMissingForwardUnusedAndChangedSourcesFailClosed(t *testing.T
 			case "missing-record":
 				p.Records = p.Records[1:]
 			case "wrong-kind":
-				p.Source.View.Dependencies[0].Kind = "recovered-v2"
+				p.Source.View.Dependencies[0].Kind = "transition-v2"
 			case "forward-head":
 				r := p.Records[2].TransitionV2
 				p.Records[3].RecoveredV2.Submission.IssuerEvidence.View.RecoveryHeadHash = p.Source.View.RecoveryHeadHash
@@ -490,15 +492,6 @@ func TestRecoverySourceStrictTaggedSchemaAndLegacyParser(t *testing.T) {
 			}
 		})
 	}
-	if _, e = DecodeIssuerRecoveryProof(b); e == nil {
-		t.Fatal("old Proof3 parser silently accepted DAG")
-	}
-	record := f.Proof.Records[4].TransitionV2
-	old, e := json.Marshal(record.Submission)
-	recoveryCheck(t, e)
-	if _, e = DecodeRecoveryTransitionSubmission(old); e == nil {
-		t.Fatal("old transition parser silently accepted Source union")
-	}
 	var c []any
 	cb, e := f.Proof.CanonicalBytes()
 	recoveryCheck(t, e)
@@ -512,7 +505,7 @@ func TestRecoverySourceStrictTaggedSchemaAndLegacyParser(t *testing.T) {
 	if len(c) != 12 {
 		t.Fatal("wrong source view arity")
 	}
-	for _, pair := range [][2]string{{f.TransitionSigningHex, "25"}, {f.RecoveredSigningHex, "18"}, {f.CertificateSigningHex, "16"}} {
+	for _, pair := range [][2]string{{f.TransitionSigningHex, "23"}, {f.RecoveredSigningHex, "18"}, {f.CertificateSigningHex, "16"}} {
 		data, e := hex.DecodeString(pair[0])
 		recoveryCheck(t, e)
 		recoveryCheck(t, json.Unmarshal(data, &c))

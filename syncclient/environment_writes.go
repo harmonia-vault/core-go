@@ -10,8 +10,9 @@ import (
 )
 
 type EnvironmentChangeStatus struct {
-	State    string `json:"state"`
-	Sequence uint64 `json:"sequence,omitempty"`
+	ContentHash string `json:"contentHash,omitempty"`
+	State       string `json:"state"`
+	Sequence    uint64 `json:"sequence,omitempty"`
 }
 
 func (c *Client) EnvironmentStatus(ctx context.Context, id string) (EnvironmentChangeStatus, error) {
@@ -19,7 +20,7 @@ func (c *Client) EnvironmentStatus(ctx context.Context, id string) (EnvironmentC
 		return EnvironmentChangeStatus{}, errors.New("invalid environment request id")
 	}
 	var status EnvironmentChangeStatus
-	if err := c.request(ctx, "GET", c.endpointFor("/environment-changes/"+id), nil, &status); err != nil {
+	if err := c.request(ctx, "GET", c.endpointFor("/environment-changes-v4/"+id), nil, &status); err != nil {
 		return status, err
 	}
 	if status.State != "complete" && status.State != "unknown" || status.State == "complete" && (status.Sequence == 0 || status.Sequence > 9007199254740991) || status.State == "unknown" && status.Sequence != 0 {
@@ -45,14 +46,14 @@ func (c *Client) ConfirmEnvironmentChange(ctx context.Context, signed cryptox.Si
 	return result, nil
 }
 func (c *Client) SubmitEnvironmentChange(ctx context.Context, signed cryptox.SignedEnvironmentChange) (SubmitResult, error) {
-	if c.dagControls() && (signed.Change.Operation == "create" || signed.Change.Operation == "rotate") {
+	if signed.Change.Operation == "create" || signed.Change.Operation == "rotate" {
 		return SubmitResult{}, ErrWritePermission
 	}
 	if err := c.validateEnvironmentChange(signed); err != nil {
 		return SubmitResult{}, err
 	}
 	var accepted Acceptance
-	if err := c.request(ctx, "POST", c.endpointFor("/environment-changes"), signed, &accepted); err != nil {
+	if err := c.request(ctx, "POST", c.endpointFor("/environment-changes-v4"), signed, &accepted); err != nil {
 		return SubmitResult{}, err
 	}
 	return c.ConfirmEnvironmentChange(ctx, signed, accepted)

@@ -20,6 +20,8 @@ func TestDAGAccountScopeCAS(t *testing.T) {
 	token := cryptox.EncodeBase64(bytes.Repeat([]byte{91}, 32))
 	account, generation := "synthetic-account", "1"
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
 		hits.Add(1)
 		if r.URL.Path != "/v1/login" {
 			t.Error("unexpected DAG route")

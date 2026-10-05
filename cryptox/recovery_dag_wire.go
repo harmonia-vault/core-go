@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"io"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -20,9 +21,8 @@ const (
 
 // 来源是有界叶；不允许在此嵌入完整 DAG 或其它来源。
 type RecoverySource struct {
-	Kind  string              `json:"kind"`
-	Proof *IssuerProofV2      `json:"proof,omitempty"`
-	View  *RecoverySourceView `json:"view,omitempty"`
+	Kind string              `json:"kind"`
+	View *RecoverySourceView `json:"view,omitempty"`
 }
 type RecoveryDependency struct {
 	Kind          string `json:"kind"`
@@ -42,7 +42,30 @@ type RecoverySourceView struct {
 	IdentityPaths      [][]IssuerRecoveryArchive `json:"identityPaths"`
 	Dependencies       []RecoveryDependency      `json:"dependencies"`
 }
-type RecoveryAuthorityTransitionV2 RecoveryAuthorityTransition
+type RecoveryAuthorityTransitionV2 struct {
+	AccountID                     string `json:"accountId"`
+	AccountGeneration             string `json:"accountGeneration"`
+	OperationID                   string `json:"operationId"`
+	ChallengeID                   string `json:"challengeId"`
+	Nonce                         string `json:"nonce"`
+	ExpiresAt                     string `json:"expiresAt"`
+	SessionHash                   string `json:"sessionHash"`
+	ExpectedSequence              string `json:"expectedSequence"`
+	PreviousTransitionHash        string `json:"previousTransitionHash"`
+	OldRecoveryGeneration         string `json:"oldRecoveryGeneration"`
+	OldRecoverySigningPublicKey   string `json:"oldRecoverySigningPublicKey"`
+	OldRecoveryReceivingPublicKey string `json:"oldRecoveryReceivingPublicKey"`
+	NewRecoveryGeneration         string `json:"newRecoveryGeneration"`
+	NewRecoverySigningPublicKey   string `json:"newRecoverySigningPublicKey"`
+	NewRecoveryReceivingPublicKey string `json:"newRecoveryReceivingPublicKey"`
+	AuthorizationKind             string `json:"authorizationKind"`
+	AuthorizerDeviceID            string `json:"authorizerDeviceId"`
+	EnvironmentManifestHash       string `json:"environmentManifestHash"`
+	AuthoritySetHash              string `json:"authoritySetHash"`
+	IssuerEvidenceHash            string `json:"issuerEvidenceHash"`
+	EnvelopesHash                 string `json:"envelopesHash"`
+	NewTrustRootHash              string `json:"newTrustRootHash"`
+}
 type RecoveryTransitionSubmissionV2 struct {
 	Transition             RecoveryAuthorityTransitionV2 `json:"transition"`
 	EnvironmentManifest    []RecoveryEnvironmentVersion  `json:"environmentManifest"`
@@ -50,7 +73,6 @@ type RecoveryTransitionSubmissionV2 struct {
 	IssuerEvidence         *RecoverySource               `json:"issuerEvidence"`
 	Envelopes              []RecoveryEnvelope            `json:"envelopes"`
 	NewTrustRoot           TrustRoot                     `json:"newTrustRoot"`
-	LegacyState            *RecoveryLegacyState          `json:"legacyState"`
 	AuthorizationSignature string                        `json:"authorizationSignature"`
 	NewRecoverySignature   string                        `json:"newRecoverySignature"`
 }
@@ -78,8 +100,6 @@ type AcceptedRecoveredDeviceV2 struct {
 // Record 各分支只保留自己的类型。JSON 始终是 exact {kind,record}。
 type RecoveryDAGRecord struct {
 	Kind         string
-	TransitionV1 *AcceptedRecoveryTransition
-	RecoveredV1  *AcceptedRecoveredDevice
 	TransitionV2 *AcceptedRecoveryTransitionV2
 	RecoveredV2  *AcceptedRecoveredDeviceV2
 }
@@ -108,28 +128,61 @@ type EnrollmentCertificateV5 struct {
 	IssuerProofHash string `json:"issuerProofHash"`
 }
 
-func replaceRecoveryDomain(b []byte, domain string, err error) ([]byte, error) {
-	if err != nil {
-		return nil, err
+func (t RecoveryAuthorityTransitionV2) SigningBytes() ([]byte, error) {
+	for _, id := range []string{t.AccountID, t.OperationID, t.ChallengeID} {
+		if validID(id) != nil {
+			return nil, ErrInvalidWire
+		}
 	}
-	var fields []string
-	if json.Unmarshal(b, &fields) != nil || len(fields) == 0 {
+	for _, n := range []string{t.AccountGeneration, t.OldRecoveryGeneration, t.NewRecoveryGeneration, t.ExpiresAt} {
+		if validDecimal(n, true) != nil {
+			return nil, ErrInvalidWire
+		}
+	}
+	if validDecimal(t.ExpectedSequence, false) != nil {
 		return nil, ErrInvalidWire
 	}
-	fields[0] = domain
-	return json.Marshal(fields)
-}
-func (t RecoveryAuthorityTransitionV2) SigningBytes() ([]byte, error) {
-	b, e := (RecoveryAuthorityTransition(t)).SigningBytes()
-	return replaceRecoveryDomain(b, "harmonia/recovery-authority-transition/v2", e)
+	expected, _ := strconv.ParseUint(t.ExpectedSequence, 10, 64)
+	expiry, _ := strconv.ParseUint(t.ExpiresAt, 10, 64)
+	if expiry > math.MaxInt64 {
+		return nil, ErrInvalidWire
+	}
+	old, _ := strconv.ParseUint(t.OldRecoveryGeneration, 10, 64)
+	next, _ := strconv.ParseUint(t.NewRecoveryGeneration, 10, 64)
+	if expected >= 9007199254740991 || old == math.MaxUint64 || next != old+1 || validatePublicPair(t.OldRecoverySigningPublicKey, t.OldRecoveryReceivingPublicKey) != nil || validatePublicPair(t.NewRecoverySigningPublicKey, t.NewRecoveryReceivingPublicKey) != nil || t.NewRecoverySigningPublicKey == t.OldRecoverySigningPublicKey || t.NewRecoveryReceivingPublicKey == t.OldRecoveryReceivingPublicKey || t.NewRecoverySigningPublicKey == t.OldRecoveryReceivingPublicKey || t.NewRecoveryReceivingPublicKey == t.OldRecoverySigningPublicKey {
+		return nil, ErrInvalidWire
+	}
+	if _, err := DecodeBase64(t.Nonce, 32, 32); err != nil {
+		return nil, err
+	}
+	for _, h := range []string{t.SessionHash, t.PreviousTransitionHash, t.EnvironmentManifestHash, t.EnvelopesHash, t.NewTrustRootHash} {
+		if !tokenHashPattern.MatchString(h) {
+			return nil, ErrInvalidWire
+		}
+	}
+	switch t.AuthorizationKind {
+	case "old-recovery":
+		if t.AuthorizerDeviceID != "" || t.AuthoritySetHash != "" || t.IssuerEvidenceHash != "" {
+			return nil, ErrInvalidWire
+		}
+	case "all-environments-admin":
+		if validID(t.AuthorizerDeviceID) != nil || !tokenHashPattern.MatchString(t.AuthoritySetHash) || !tokenHashPattern.MatchString(t.IssuerEvidenceHash) {
+			return nil, ErrInvalidWire
+		}
+	default:
+		return nil, ErrInvalidWire
+	}
+	return canonical("harmonia/recovery-authority-transition/v2", t.AccountID, t.AccountGeneration, t.OperationID, t.ChallengeID, t.Nonce, t.ExpiresAt, t.SessionHash, t.ExpectedSequence, t.PreviousTransitionHash, t.OldRecoveryGeneration, t.OldRecoverySigningPublicKey, t.OldRecoveryReceivingPublicKey, t.NewRecoveryGeneration, t.NewRecoverySigningPublicKey, t.NewRecoveryReceivingPublicKey, t.AuthorizationKind, t.AuthorizerDeviceID, t.EnvironmentManifestHash, t.AuthoritySetHash, t.IssuerEvidenceHash, t.EnvelopesHash, t.NewTrustRootHash), nil
 }
 func (c RecoveredDeviceEnrollmentV2) SigningBytes() ([]byte, error) {
-	b, e := (RecoveredDeviceEnrollment(c)).SigningBytes()
-	return replaceRecoveryDomain(b, "harmonia/recovered-device-enrollment/v2", e)
+	return (RecoveredDeviceEnrollment(c)).signingBytes()
 }
 func (c EnrollmentCertificateV5) SigningBytes() ([]byte, error) {
-	b, e := (EnrollmentCertificateV4{c.EnrollmentCertificate, c.IssuerProofHash}).SigningBytes()
-	return replaceRecoveryDomain(b, "harmonia/device-enrollment/v5", e)
+	fields, err := c.EnrollmentCertificate.fields()
+	if err != nil || !tokenHashPattern.MatchString(c.IssuerProofHash) {
+		return nil, ErrInvalidWire
+	}
+	return json.Marshal(append(append([]string{"harmonia/device-enrollment/v5"}, fields...), c.IssuerProofHash))
 }
 func SignEnrollmentCertificateV5(c EnrollmentCertificateV5, key ed25519.PrivateKey) (string, error) {
 	b, e := c.SigningBytes()
@@ -147,7 +200,7 @@ func SignEnrollmentCertificateV5(c EnrollmentCertificateV5, key ed25519.PrivateK
 }
 func dagArchiveBytes(n IssuerEnrollment) ([]byte, error) {
 	if n.CertificateVersion != "5" {
-		return issuerRecoveryArchiveBytes(n)
+		return nil, ErrInvalidWire
 	}
 	c, e := n.Approval.Certificate()
 	if e != nil {
@@ -186,17 +239,8 @@ func dagPathRows(path []IssuerRecoveryArchive) ([][]string, error) {
 }
 func (s RecoverySource) CanonicalBytes() ([]byte, error) {
 	switch s.Kind {
-	case "proof2":
-		if s.Proof == nil || s.View != nil {
-			return nil, ErrInvalidWire
-		}
-		b, e := s.Proof.CanonicalBytes()
-		if e != nil {
-			return nil, e
-		}
-		return json.Marshal([]string{"harmonia/recovery-source/v1", "proof2", IssuerProofV2Profile, EncodeBase64(b)})
 	case "proof3":
-		if s.View == nil || s.Proof != nil {
+		if s.View == nil {
 			return nil, ErrInvalidWire
 		}
 		b, e := s.View.CanonicalBytes()
@@ -216,7 +260,7 @@ func (s RecoverySource) Hash() (string, error) {
 	return dagHashBytes(b), nil
 }
 func validDAGKind(s string) bool {
-	return s == "transition-v1" || s == "recovered-v1" || s == "transition-v2" || s == "recovered-v2"
+	return s == "transition-v2" || s == "recovered-v2"
 }
 func recoveryRecordHash(domain string, b []byte, a, z string, e error) (string, error) {
 	if e != nil {
@@ -239,7 +283,7 @@ func RecoveredDeviceReferenceHashV2(s RecoveredDeviceSubmissionV2) (string, erro
 }
 func (r RecoveryDAGRecord) body() (any, error) {
 	n := 0
-	for _, x := range []bool{r.TransitionV1 != nil, r.RecoveredV1 != nil, r.TransitionV2 != nil, r.RecoveredV2 != nil} {
+	for _, x := range []bool{r.TransitionV2 != nil, r.RecoveredV2 != nil} {
 		if x {
 			n++
 		}
@@ -248,14 +292,6 @@ func (r RecoveryDAGRecord) body() (any, error) {
 		return nil, ErrInvalidWire
 	}
 	switch r.Kind {
-	case "transition-v1":
-		if r.TransitionV1 != nil {
-			return r.TransitionV1, nil
-		}
-	case "recovered-v1":
-		if r.RecoveredV1 != nil {
-			return r.RecoveredV1, nil
-		}
 	case "transition-v2":
 		if r.TransitionV2 != nil {
 			return r.TransitionV2, nil
@@ -287,16 +323,6 @@ func (r RecoveryDAGRecord) row() ([]string, error) {
 	var seq uint64
 	var e error
 	switch r.Kind {
-	case "transition-v1":
-		s := r.TransitionV1.Submission
-		h, e = RecoveryTransitionHash(s)
-		b, _ = s.Transition.SigningBytes()
-		a, z, seq = s.AuthorizationSignature, s.NewRecoverySignature, r.TransitionV1.Sequence
-	case "recovered-v1":
-		s := r.RecoveredV1.Submission
-		h, e = RecoveredDeviceReferenceHash(s)
-		b, _ = s.Enrollment.SigningBytes()
-		a, z, seq = s.RecoverySignature, s.DeviceSignature, r.RecoveredV1.Sequence
 	case "transition-v2":
 		s := r.TransitionV2.Submission
 		h, e = RecoveryTransitionHashV2(s)
@@ -454,14 +480,8 @@ func (r *RecoveryDAGRecord) UnmarshalJSON(data []byte) error {
 	}
 	fresh := RecoveryDAGRecord{Kind: kind}
 	var out any
-	nullable := map[string]bool{"$.submission.issuerEvidence": true, "$.submission.legacyState": true}
+	nullable := map[string]bool{"$.submission.issuerEvidence": true}
 	switch kind {
-	case "transition-v1":
-		fresh.TransitionV1 = &AcceptedRecoveryTransition{}
-		out = fresh.TransitionV1
-	case "recovered-v1":
-		fresh.RecoveredV1 = &AcceptedRecoveredDevice{}
-		out = fresh.RecoveredV1
 	case "transition-v2":
 		fresh.TransitionV2 = &AcceptedRecoveryTransitionV2{}
 		out = fresh.TransitionV2

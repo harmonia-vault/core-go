@@ -40,38 +40,10 @@ func cloneDAGEvidence(p cryptox.IssuerRecoveryDAG) cryptox.IssuerRecoveryDAG {
 	return out
 }
 func dagView(p *cryptox.IssuerRecoveryDAG) (*cryptox.RecoverySourceView, error) {
-	if p.Source.Kind == "proof3" && p.Source.View != nil {
-		return p.Source.View, nil
-	}
-	if p.Source.Kind != "proof2" || p.Source.Proof == nil || len(p.Records) != 0 {
+	if p == nil || p.Source.Kind != "proof3" || p.Source.View == nil {
 		return nil, cryptox.ErrInvalidWire
 	}
-	old := p.Source.Proof
-	h, e := p.Initialization.Hash()
-	if e != nil {
-		return nil, e
-	}
-	path := make([]cryptox.IssuerRecoveryArchive, 0, len(old.Path))
-	for _, n := range old.Path {
-		n := n
-		path = append(path, cryptox.IssuerRecoveryArchive{Kind: "paired", Enrollment: &n})
-	}
-	paths := make([][]cryptox.IssuerRecoveryArchive, 0, len(old.IdentityPaths))
-	for _, branch := range old.IdentityPaths {
-		b := []cryptox.IssuerRecoveryArchive{}
-		for _, n := range branch {
-			n := n
-			b = append(b, cryptox.IssuerRecoveryArchive{Kind: "paired", Enrollment: &n})
-		}
-		paths = append(paths, b)
-	}
-	nodes := make([]cryptox.IssuerRecoveryAuthority, 0, len(old.Authorities))
-	for _, n := range old.Authorities {
-		nodes = append(nodes, cryptox.IssuerRecoveryAuthority{Grant: n.Grant, ParentHash: n.ParentHash, OriginHash: n.OriginHash, PreviousGrantHash: n.PreviousGrantHash})
-	}
-	v := &cryptox.RecoverySourceView{Profile: cryptox.RecoverySourceViewProfile, AccountID: p.AccountID, AccountGeneration: p.AccountGeneration, InitializationHash: h, TrustRoot: old.TrustRoot, RecoveryHeadHash: h, Path: path, Authorities: nodes, Targets: old.Targets, Origins: old.Origins, IdentityPaths: paths, Dependencies: []cryptox.RecoveryDependency{}}
-	p.Source = cryptox.RecoverySource{Kind: "proof3", View: v}
-	return v, nil
+	return p.Source.View, nil
 }
 func completedEvidenceV5(r EnrollmentReceiptV5) (cryptox.IssuerRecoveryDAG, error) {
 	a := r.Approval
@@ -111,7 +83,7 @@ func NewPinnedVerifierV5(t IssuerDAGPinnedTrust) (*PinnedVerifier, error) {
 	v, e := newIssuerDAGPinnedVerifier(t, p)
 	if e == nil {
 		v.requireEvidence = true
-		v.requireStoredEvidence = true
+
 	}
 	return v, e
 }
@@ -151,7 +123,7 @@ func newIssuerDAGPinnedVerifier(t IssuerDAGPinnedTrust, proof *cryptox.VerifiedR
 }
 func NewRecoveredDAGPinnedVerifier(t RecoveredDAGPinnedTrust) (*PinnedVerifier, error) {
 	tr := t.Trust
-	if len(tr.Managers) != 0 || tr.AccountID == "" || tr.AccountGeneration == 0 || !enrollmentID.MatchString(tr.DeviceID) || len(tr.DeviceSigningPublicKey) != 32 || t.Pin.AccountID != tr.AccountID || t.Pin.AccountGeneration != strconv.FormatUint(tr.AccountGeneration, 10) {
+	if tr.AccountID == "" || tr.AccountGeneration == 0 || !enrollmentID.MatchString(tr.DeviceID) || len(tr.DeviceSigningPublicKey) != 32 || t.Pin.AccountID != tr.AccountID || t.Pin.AccountGeneration != strconv.FormatUint(tr.AccountGeneration, 10) {
 		return nil, cryptox.ErrInvalidWire
 	}
 	sk, e := ecdh.X25519().NewPrivateKey(tr.ReceivingPrivateKey)
@@ -201,7 +173,7 @@ func NewRecoveredDAGPinnedVerifier(t RecoveredDAGPinnedTrust) (*PinnedVerifier, 
 	tr.DeviceSigningPublicKey = bytes.Clone(tr.DeviceSigningPublicKey)
 	tr.ReceivingPrivateKey = bytes.Clone(tr.ReceivingPrivateKey)
 	pin := t.Pin
-	return &PinnedVerifier{trust: tr, receivingPublicKey: recv, issuerOriginProof: proof, evidenceRoot: &pin, initialDAGEvidence: &p, genesisAuthorities: proof.InitialAuthorities(), requireEvidence: true, requireStoredEvidence: true}, nil
+	return &PinnedVerifier{trust: tr, receivingPublicKey: recv, issuerOriginProof: proof, evidenceRoot: &pin, initialDAGEvidence: &p, genesisAuthorities: proof.InitialAuthorities(), requireEvidence: true}, nil
 }
 func (c *Client) requestDAGPull(ctx context.Context, u *url.URL, out *Pull) error {
 	var wire struct {
@@ -371,10 +343,6 @@ func validateDAGSequence(p cryptox.IssuerRecoveryDAG, checkpoint uint64) error {
 	for _, r := range p.Records {
 		var seq uint64
 		switch r.Kind {
-		case "transition-v1":
-			seq = r.TransitionV1.Sequence
-		case "recovered-v1":
-			seq = r.RecoveredV1.Sequence
 		case "transition-v2":
 			seq = r.TransitionV2.Sequence
 		case "recovered-v2":
@@ -389,7 +357,7 @@ func validateDAGSequence(p cryptox.IssuerRecoveryDAG, checkpoint uint64) error {
 	return nil
 }
 func (v *PinnedVerifier) withIssuerDAGEvidence(pull Pull, previous localstate.CloudSnapshot) (*PinnedVerifier, json.RawMessage, error) {
-	if pull.IssuerEvidence != nil || pull.IssuerRecoveryEvidence != nil || v.evidenceRoot == nil {
+	if v.evidenceRoot == nil {
 		return nil, nil, cryptox.ErrInvalidWire
 	}
 	p := cloneDAGEvidence(*v.initialDAGEvidence)
@@ -593,4 +561,48 @@ func (c *Client) PrepareEnrollmentProofV5(environments []string) (cryptox.Issuer
 		return empty, cryptox.PinnedIssuerRoot{}, e
 	}
 	return p, *v.evidenceRoot, nil
+}
+
+// NewRootDAGPinnedVerifier pins the actual initialization signed by both keys.
+func NewRootDAGPinnedVerifier(tr PinnedTrust, original cryptox.OriginalInitialization) (*PinnedVerifier, error) {
+	if tr.AccountGeneration == 0 || len(tr.DeviceSigningPublicKey) != ed25519.PublicKeySize {
+		return nil, cryptox.ErrInvalidWire
+	}
+	sk, err := ecdh.X25519().NewPrivateKey(tr.ReceivingPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	recv := cryptox.EncodeBase64(sk.PublicKey().Bytes())
+	p := original.Proposal
+	gen := strconv.FormatUint(tr.AccountGeneration, 10)
+	if original.Proof.AccountID != tr.AccountID || original.Proof.AccountGeneration != gen || p.Device.ID != tr.DeviceID || p.Device.SigningPublicKey != cryptox.EncodeBase64(tr.DeviceSigningPublicKey) || p.Device.ReceivingPublicKey != recv {
+		return nil, cryptox.ErrInvalidWire
+	}
+	h, err := original.Hash()
+	if err != nil {
+		return nil, err
+	}
+	pin := cryptox.PinnedIssuerRoot{AccountID: tr.AccountID, AccountGeneration: gen, DeviceID: tr.DeviceID, SigningPublicKey: p.Device.SigningPublicKey, ReceivingPublicKey: recv}
+	root := cryptox.TrustRoot{RootDeviceID: tr.DeviceID, RootSigningPublicKey: p.Device.SigningPublicKey, RootReceivingPublicKey: recv, RecoveryGeneration: p.RecoveryGeneration, RecoverySigningPublicKey: p.RecoverySigningPublicKey, RecoveryReceivingPublicKey: p.RecoveryReceivingPublicKey, Signature: p.TrustRootSignature}
+	view := &cryptox.RecoverySourceView{Profile: cryptox.RecoverySourceViewProfile, AccountID: tr.AccountID, AccountGeneration: gen, InitializationHash: h, TrustRoot: root, RecoveryHeadHash: h, Path: []cryptox.IssuerRecoveryArchive{}, Authorities: []cryptox.IssuerRecoveryAuthority{}, Targets: []cryptox.IssuerTarget{}, Origins: []cryptox.SignedEnvironmentOrigin{}, IdentityPaths: [][]cryptox.IssuerRecoveryArchive{}, Dependencies: []cryptox.RecoveryDependency{}}
+	for _, env := range p.Environments {
+		hash, err := cryptox.IssuerAuthorityHash(env.Grant)
+		if err != nil {
+			return nil, err
+		}
+		view.Authorities = append(view.Authorities, cryptox.IssuerRecoveryAuthority{Grant: env.Grant})
+		view.Targets = append(view.Targets, cryptox.IssuerTarget{EnvironmentID: env.EnvironmentID, AuthorityHash: hash})
+	}
+	evidence := cryptox.IssuerRecoveryDAG{Profile: cryptox.IssuerRecoveryDAGProfile, AccountID: tr.AccountID, AccountGeneration: gen, Initialization: original, Source: cryptox.RecoverySource{Kind: "proof3", View: view}, Records: []cryptox.RecoveryDAGRecord{}}
+	proof, err := cryptox.VerifyIssuerRecoveryDAG(pin, evidence)
+	if err != nil {
+		return nil, err
+	}
+	tr.DeviceSigningPublicKey = bytes.Clone(tr.DeviceSigningPublicKey)
+	tr.ReceivingPrivateKey = bytes.Clone(tr.ReceivingPrivateKey)
+	if tr.Now == nil {
+		tr.Now = time.Now
+	}
+	initial := cloneDAGEvidence(evidence)
+	return &PinnedVerifier{trust: tr, receivingPublicKey: recv, issuerOriginProof: proof, evidenceRoot: &pin, initialDAGEvidence: &initial, genesisAuthorities: proof.InitialAuthorities(), requireEvidence: true}, nil
 }

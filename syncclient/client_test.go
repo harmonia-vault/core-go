@@ -50,6 +50,9 @@ func TestSubmitUpdatesOnlyAfterVerifiedPull(t *testing.T) {
 	engine := testEngine(t)
 	requests := []string{}
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		requests = append(requests, r.Method+" "+r.URL.Path)
 		if r.Header.Get("X-Harmonia-Device-Id") != "dev" || r.Header.Get("X-Harmonia-Account-Generation") != "1" || r.Header.Get("Cache-Control") != "no-store" {
 			t.Error("unbound or cacheable request")
@@ -74,6 +77,9 @@ func TestSubmitUpdatesOnlyAfterVerifiedPull(t *testing.T) {
 func TestAcceptedPullFailurePreservesLocalAuthority(t *testing.T) {
 	engine := testEngine(t)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		if r.Method == "POST" {
 			_ = json.NewEncoder(w).Encode(Acceptance{Sequence: 4})
 		} else {
@@ -90,6 +96,9 @@ func TestAcceptedPullFailurePreservesLocalAuthority(t *testing.T) {
 func TestPullVerificationFailureDoesNotApply(t *testing.T) {
 	engine := testEngine(t)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		_ = json.NewEncoder(w).Encode(Pull{AccountID: "acct", AccountGeneration: "1", Sequence: 1})
 	}))
 	defer server.Close()
@@ -107,9 +116,17 @@ func TestHTTPAndCredentialURLsRejected(t *testing.T) {
 }
 func TestRedirectDoesNotForwardSession(t *testing.T) {
 	var reached atomic.Int32
-	destination := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached.Add(1) }))
+	destination := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+		reached.Add(1)
+	}))
 	defer destination.Close()
 	source := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		http.Redirect(w, r, destination.URL, http.StatusTemporaryRedirect)
 	}))
 	defer source.Close()
@@ -133,6 +150,9 @@ func TestUnboundLoginMustProveDevicePossession(t *testing.T) {
 	_ = json.Unmarshal(payload, &fields)
 	var consumed bool
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		switch {
 		case strings.HasSuffix(r.URL.Path, "device-challenges"):
 			_ = json.NewEncoder(w).Encode(DeviceChallenge{ChallengeID: "challenge-1", Nonce: nonce, ExpiresAt: expires, SigningPayload: fields})
@@ -174,6 +194,9 @@ func TestBindDeviceRejectsUnboundChallengeWithoutSigning(t *testing.T) {
 	check(t, err)
 	var submitted atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		if strings.HasSuffix(r.URL.Path, "device-sessions") {
 			submitted.Add(1)
 		}
@@ -188,9 +211,12 @@ func TestBindDeviceRejectsUnboundChallengeWithoutSigning(t *testing.T) {
 func TestNewEnvironmentAutomaticallyTriggersFullCatchup(t *testing.T) {
 	f := newCryptoFixture(t)
 	engine := testEngine(t)
-	check(t, engine.AcceptSnapshot(localstate.CloudSnapshot{AccountID: "acct", AccountGeneration: 1, Sequence: 10, Environments: map[string]localstate.Environment{}}, fixedNow))
+	check(t, engine.AcceptSnapshot(localstate.CloudSnapshot{IssuerEvidence: fixtureDAGBytes(t, f.proof), AccountID: "acct", AccountGeneration: 1, Sequence: 10, Environments: map[string]localstate.Environment{}}, fixedNow))
 	var calls atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		calls.Add(1)
 		pull := f.pull(11)
 		if r.URL.Query().Get("after") == "0" {
@@ -209,7 +235,11 @@ func TestNewEnvironmentAutomaticallyTriggersFullCatchup(t *testing.T) {
 func fmtInt(value int64) string { return strconv.FormatInt(value, 10) }
 
 func TestTLSVerificationAndIdentityCannotBeWeakened(t *testing.T) {
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+	}))
 	defer server.Close()
 	transport := server.Client().Transport.(*http.Transport).Clone()
 	transport.TLSClientConfig.InsecureSkipVerify = true

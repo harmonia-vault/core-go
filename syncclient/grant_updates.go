@@ -85,15 +85,13 @@ type ManagementSubject struct {
 	HighestGrantGeneration string                   `json:"highestGrantGeneration"`
 }
 type ManagementControl struct {
-	AccountID              string                       `json:"accountId"`
-	AccountGeneration      string                       `json:"accountGeneration"`
-	EnvironmentID          string                       `json:"environmentId"`
-	Sequence               uint64                       `json:"sequence"`
-	KeyVersion             string                       `json:"keyVersion"`
-	Subjects               []ManagementSubject          `json:"subjects"`
-	IssuerEvidence         cryptox.IssuerProofV2        `json:"issuerEvidence"`
-	IssuerRecoveryEvidence *cryptox.IssuerRecoveryProof `json:"issuerRecoveryEvidence,omitempty"`
-	IssuerDAGEvidence      *cryptox.IssuerRecoveryDAG   `json:"issuerDAGEvidence,omitempty"`
+	AccountID         string                     `json:"accountId"`
+	AccountGeneration string                     `json:"accountGeneration"`
+	EnvironmentID     string                     `json:"environmentId"`
+	Sequence          uint64                     `json:"sequence"`
+	KeyVersion        string                     `json:"keyVersion"`
+	Subjects          []ManagementSubject        `json:"subjects"`
+	IssuerDAGEvidence *cryptox.IssuerRecoveryDAG `json:"issuerEvidence"`
 }
 
 func (c *Client) verifyManagementControl(out ManagementControl, historical ...bool) (VerifiedControlEvidence, cryptox.SignedGrantWire, error) {
@@ -191,7 +189,7 @@ func (c *Client) ManagementControl(ctx context.Context, environment string) (Man
 	if c.config.Engine.State().Paused {
 		return out, ErrPaused
 	}
-	if e := c.requestManagementControl(ctx, environment, &out); e != nil {
+	if e := c.requestDAGManagementControl(ctx, environment, &out); e != nil {
 		return out, e
 	}
 	if out.EnvironmentID != environment {
@@ -325,11 +323,7 @@ func (c *Client) prepareGrantUpdate(ctx context.Context, in GrantUpdateIntent, k
 	if e != nil {
 		return nil, e
 	}
-	transaction := &GrantUpdateTransaction{client: c, record: grantUpdateRecord{Version: 1, SessionEpoch: c.epoch, PreparedAt: c.config.Now().Unix(), Intent: in, Control: control, Signed: cryptox.GrantToWire(signed)}}
-	if c.dagControls() {
-		transaction.record.Version = 2
-		transaction.record.Capability = cryptox.RecoveryDAGCapability
-	}
+	transaction := &GrantUpdateTransaction{client: c, record: grantUpdateRecord{Version: 2, Capability: cryptox.RecoveryDAGCapability, SessionEpoch: c.epoch, PreparedAt: c.config.Now().Unix(), Intent: in, Control: control, Signed: cryptox.GrantToWire(signed)}}
 	if e = transaction.validate(); e != nil {
 		return nil, e
 	}
@@ -355,7 +349,7 @@ func (c *Client) RestoreGrantUpdate(data []byte) (*GrantUpdateTransaction, error
 func (t *GrantUpdateTransaction) validate() error {
 	c, r := t.client, t.record
 	g, in := r.Signed.Grant, r.Intent
-	if (c.dagControls() && (r.Version != 2 || r.Capability != cryptox.RecoveryDAGCapability) || !c.dagControls() && (r.Version != 1 || r.Capability != "")) || r.PreparedAt <= 0 || in.ExpiresAt < 0 || in.ExpiresAt > 253402300799 || c.config.Now().Unix() < r.PreparedAt-5 || r.SessionEpoch != c.epoch || c.config.Engine.State().SessionEpoch != c.epoch || c.config.Engine.State().AccountClosed || !enrollmentID.MatchString(in.ID) || len(in.ID) > 64 || g.EnvironmentID != in.EnvironmentID || g.SubjectDeviceID != in.SubjectDeviceID || g.IdempotencyKey != in.ID || g.Role != in.Role {
+	if (!c.dagControls() || r.Version != 2 || r.Capability != cryptox.RecoveryDAGCapability) || r.PreparedAt <= 0 || in.ExpiresAt < 0 || in.ExpiresAt > 253402300799 || c.config.Now().Unix() < r.PreparedAt-5 || r.SessionEpoch != c.epoch || c.config.Engine.State().SessionEpoch != c.epoch || c.config.Engine.State().AccountClosed || !enrollmentID.MatchString(in.ID) || len(in.ID) > 64 || g.EnvironmentID != in.EnvironmentID || g.SubjectDeviceID != in.SubjectDeviceID || g.IdempotencyKey != in.ID || g.Role != in.Role {
 		return cryptox.ErrInvalidWire
 	}
 	if e := c.grantIdentity(r.Signed); e != nil {
@@ -421,7 +415,7 @@ func (t *GrantUpdateTransaction) SubmitWithBarrier(ctx context.Context, beforePo
 	return t.submit(ctx, beforePost, nil)
 }
 func (t *GrantUpdateTransaction) submit(ctx context.Context, beforePost func() error, controlBarrier func(ManagementControl) error) (Acceptance, error) {
-	if t.client.dagControls() && beforePost == nil {
+	if beforePost == nil {
 		return Acceptance{}, ErrWriteJournal
 	}
 	if e := t.validate(); e != nil {

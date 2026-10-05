@@ -78,7 +78,8 @@ func run() error {
 	defer w.Close()
 	email := "native-generic-" + strconv.FormatInt(time.Now().UnixNano(), 10) + "@example.invalid"
 	password := "synthetic-cross-password-only"
-	if _, err = w.Register(ctx, email, password); err != nil {
+	registration, err := w.Register(ctx, email, password)
+	if err != nil {
 		return errFixture
 	}
 	request, err := http.NewRequestWithContext(ctx, "GET", *endpoint+"/test/emails", nil)
@@ -104,12 +105,13 @@ func run() error {
 		return errFixture
 	}
 	clear(raw)
-	var proof mobileworkflow.EmailProof
+	var proof mobileworkflow.EmailVerification
 	found := false
 	for _, mail := range emails {
 		if mail.To == email {
 			for _, line := range strings.Split(mail.Text, "\n") {
-				if strings.HasPrefix(line, "{") && json.Unmarshal([]byte(line), &proof) == nil {
+				if code, ok := strings.CutPrefix(line, "验证码："); ok && len(code) == 8 {
+					proof = mobileworkflow.EmailVerification{AccountID: registration.AccountID, AccountGeneration: registration.AccountGeneration, Code: code}
 					found = true
 				}
 			}
@@ -178,7 +180,7 @@ func run() error {
 	selection := []mobileworkflow.ApprovalSelection{{EnvironmentID: y, Role: "admin", ExpiresAt: "0"}}
 	var approved mobileworkflow.ApprovalResult
 	for {
-		approved, err = w.ApprovePairingV3(ctx, mobileworkflow.ApprovalInput{PairingID: id, ShortCode: code, Selections: selection})
+		approved, err = w.ApprovePairingV5(ctx, mobileworkflow.ApprovalInput{PairingID: id, ShortCode: code, Selections: selection})
 		if err == nil {
 			break
 		}
@@ -200,7 +202,7 @@ func run() error {
 	if err != nil || string(ack) != "CANDIDATE_COMPLETED\n" {
 		return errFixture
 	}
-	result, err := w.RetryApprovalV3(ctx, id)
+	result, err := w.RetryApprovalV5(ctx, id)
 	if err != nil || result.State != "complete" || result.Sequence == 0 {
 		return errFixture
 	}

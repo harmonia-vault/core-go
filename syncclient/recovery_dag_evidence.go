@@ -15,9 +15,6 @@ func directDAGReferences(s cryptox.RecoverySource, initial string) ([]string, er
 	if _, e := s.CanonicalBytes(); e != nil {
 		return nil, e
 	}
-	if s.Kind == "proof2" {
-		return []string{}, nil
-	}
 	v := s.View
 	set := map[string]bool{}
 	if v.RecoveryHeadHash != initial {
@@ -79,16 +76,6 @@ func proofFromDAGSource(pin cryptox.PinnedIssuerRoot, bundle cryptox.RecoveryDep
 		var parent string
 		var s *cryptox.RecoverySource
 		switch r.Kind {
-		case "transition-v1":
-			t := r.TransitionV1.Submission
-			parent = t.Transition.PreviousTransitionHash
-			if t.IssuerEvidence != nil {
-				s = &cryptox.RecoverySource{Kind: "proof2", Proof: t.IssuerEvidence}
-			}
-		case "recovered-v1":
-			t := r.RecoveredV1.Submission
-			parent = t.Enrollment.RecoveryTransitionHash
-			s = &cryptox.RecoverySource{Kind: "proof2", Proof: &t.IssuerEvidence}
 		case "transition-v2":
 			t := r.TransitionV2.Submission
 			parent = t.Transition.PreviousTransitionHash

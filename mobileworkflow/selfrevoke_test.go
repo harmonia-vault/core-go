@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/internal/dagfixture"
 	"github.com/harmonia-vault/core-go/localstate"
 	"github.com/harmonia-vault/core-go/syncclient"
 )
@@ -39,7 +40,7 @@ type selfFixture struct {
 	public          ed25519.PublicKey
 	receivingPublic []byte
 	grant           cryptox.SignedGrant
-	evidence        *cryptox.IssuerProofV2
+	evidence        *cryptox.IssuerRecoveryDAG
 	server          *httptest.Server
 	tokens          map[string]bool
 	boots           map[string]cryptox.DeviceBootProof
@@ -79,17 +80,16 @@ func newSelfFixture(t *testing.T) *selfFixture {
 	t.Cleanup(f.server.Close)
 	f.config.Endpoint = f.server.URL
 	f.config.HTTPClient = f.server.Client()
-	state := protectedState{Version: 1, Endpoint: f.server.URL, DeviceID: f.device, SigningPublicKey: root.RootSigningPublicKey, ReceivingPublicKey: root.RootReceivingPublicKey, AccountID: f.account, AccountGeneration: "1", Root: &root, Cloud: localstate.EmptyState(), Grants: []cryptox.SignedGrantWire{cryptox.GrantToWire(f.grant)}, Labels: map[string]labelState{}}
-	verifier := selfMust(syncclient.NewPinnedVerifier(syncclient.PinnedTrust{AccountID: f.account, AccountGeneration: 1, DeviceID: f.device, DeviceSigningPublicKey: f.public, ReceivingPrivateKey: f.config.ReceivingPrivateKey, Managers: map[string]ed25519.PublicKey{f.device: f.public}, Now: f.config.Now}))
+	state := protectedState{Version: 2, Endpoint: f.server.URL, DeviceID: f.device, SigningPublicKey: root.RootSigningPublicKey, ReceivingPublicKey: root.RootReceivingPublicKey, AccountID: f.account, AccountGeneration: "1", Root: &root, Cloud: localstate.EmptyState(), Grants: []cryptox.SignedGrantWire{cryptox.GrantToWire(f.grant)}, Labels: map[string]labelState{}}
+	p := dagfixture.Root(t, f.account, root, f.config.SigningKey, recovery.SigningPrivate, []cryptox.InitializationEnvironment{{EnvironmentID: "env", KeyVersion: "1", RecoveryEnvelope: cryptox.EncodeBase64(make([]byte, 80)), Grant: cryptox.GrantToWire(f.grant)}})
+	f.evidence = &p
+	state.Initialization = &p.Initialization
 	payload := selfMust(cryptox.EncryptValue(envKey, cryptox.ValueContext{AccountID: f.account, AccountGeneration: "1", EnvironmentID: "env", KeyVersion: "1", Name: "UNIT_SYNTHETIC"}, []byte("synthetic-unit-value")))
 	mutation := selfMust(cryptox.SignMutation(cryptox.Mutation{AccountID: f.account, AccountGeneration: "1", DeviceID: f.device, EnvironmentID: "env", KeyVersion: "1", GrantGeneration: "1", Operation: "put", IdempotencyKey: "unit-value", Name: "UNIT_SYNTHETIC", Payload: cryptox.EncodeBase64(payload)}, f.config.SigningKey))
 	grant := syncclient.SignedGrant{Grant: f.grant.Grant, Signature: f.grant.Signature}
-	state.Cloud.Cloud = selfMust(verifier.VerifyPull(context.Background(), syncclient.Pull{Full: true, AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{grant}, Events: []syncclient.Event{{Sequence: 1, Mutation: syncclient.SignedMutation{Mutation: mutation.Mutation, Signature: mutation.Signature}, Authorization: &grant}}}, localstate.CloudSnapshot{}))
 	state.InitialAuthorities = []cryptox.SignedGrantWire{cryptox.GrantToWire(f.grant)}
-	h := selfMust(cryptox.IssuerAuthorityHash(cryptox.GrantToWire(f.grant)))
-	f.evidence = &cryptox.IssuerProofV2{Profile: cryptox.IssuerProofV2Profile, AccountID: f.account, AccountGeneration: "1", TrustRoot: root, Path: []cryptox.IssuerEnrollment{}, IdentityPaths: [][]cryptox.IssuerEnrollment{}, Origins: []cryptox.SignedEnvironmentOrigin{}, Authorities: []cryptox.IssuerAuthorityV2{{Grant: cryptox.GrantToWire(f.grant)}}, Targets: []cryptox.IssuerTarget{{EnvironmentID: "env", AuthorityHash: h}}}
-	originVerifier := selfMust(syncclient.NewRootPinnedVerifierWithOrigins(syncclient.OriginRootPinnedTrust{Trust: syncclient.PinnedTrust{AccountID: f.account, AccountGeneration: 1, DeviceID: f.device, DeviceSigningPublicKey: f.public, ReceivingPrivateKey: f.config.ReceivingPrivateKey, Now: f.config.Now}, Root: root, InitialAuthorities: state.InitialAuthorities}))
-	state.Cloud.Cloud = selfMust(originVerifier.VerifyPull(context.Background(), syncclient.Pull{Full: true, IssuerEvidence: f.evidence, AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{grant}, Events: []syncclient.Event{{Sequence: 1, Mutation: syncclient.SignedMutation{Mutation: mutation.Mutation, Signature: mutation.Signature}, Authorization: &grant}}}, localstate.CloudSnapshot{}))
+	originVerifier := selfMust(syncclient.NewRootDAGPinnedVerifier(syncclient.PinnedTrust{AccountID: f.account, AccountGeneration: 1, DeviceID: f.device, DeviceSigningPublicKey: f.public, ReceivingPrivateKey: f.config.ReceivingPrivateKey, Now: f.config.Now}, p.Initialization))
+	state.Cloud.Cloud = selfMust(originVerifier.VerifyPull(context.Background(), syncclient.Pull{Full: true, IssuerDAGEvidence: f.evidence, AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{grant}, Events: []syncclient.Event{{Sequence: 1, Mutation: syncclient.SignedMutation{Mutation: mutation.Mutation, Signature: mutation.Signature}, Authorization: &grant}}}, localstate.CloudSnapshot{}))
 	originVerifier.Close()
 	f.config.ProtectedState = selfMust(json.Marshal(state))
 	f.config.SaveProtectedState = func(blob []byte) error {
@@ -110,6 +110,7 @@ func newSelfFixture(t *testing.T) *selfFixture {
 	return f
 }
 func (f *selfFixture) handle(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Harmonia-Protocol-Major", "2")
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	write := func(v any) { _ = json.NewEncoder(w).Encode(v) }
@@ -158,7 +159,7 @@ func (f *selfFixture) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	switch {
 	case strings.HasSuffix(path, "/pull"):
-		write(syncclient.Pull{IssuerEvidence: f.evidence, AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{{Grant: f.grant.Grant, Signature: f.grant.Signature}}, Events: []syncclient.Event{}})
+		write(syncclient.Pull{IssuerDAGEvidence: f.evidence, AccountID: f.account, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{{Grant: f.grant.Grant, Signature: f.grant.Signature}}, Events: []syncclient.Event{}})
 	case strings.HasSuffix(path, "/device-revocations"):
 		f.prepares++
 		var body map[string]string

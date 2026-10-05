@@ -446,7 +446,7 @@ func (e *EnrollmentV5) Complete(ctx context.Context) (EnrollmentResultV5, error)
 		return EnrollmentResultV5{}, errors.Join(ErrEnrollmentPending, errors.New("completion does not acknowledge the exact dual-signed certificate"))
 	}
 	verifier.requireEvidence = true
-	verifier.requireStoredEvidence = true
+
 	keepVerifier = true
 	return EnrollmentResultV5{Receipt: cloneReceiptV5(*e.receipt), Sequence: *status.Sequence, Verifier: verifier}, nil
 }

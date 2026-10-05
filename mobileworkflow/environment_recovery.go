@@ -7,10 +7,6 @@ import (
 	"github.com/harmonia-vault/core-go/syncclient"
 )
 
-func (w *Workflow) recoveryEnvironmentMode() bool {
-	return w.state.RecoveredDevice != nil && w.state.RecoveredDevice.Applied
-}
-
 // 本机历史 journal 重验不需要发 HTTP，也不建立当前会话或权限。
 func (w *Workflow) environmentJournalClient() (*syncclient.Client, func(), error) {
 	verifier, err := w.originVerifier()
@@ -36,9 +32,6 @@ func (w *Workflow) environmentRecoveryRecipient() (cryptox.TrustRoot, error) {
 	if w.state.Root == nil {
 		return cryptox.TrustRoot{}, ErrNotTrusted
 	}
-	if !w.recoveryEnvironmentMode() {
-		return *w.state.Root, nil
-	}
 	client := w.client
 	if client == nil {
 		var close func()
@@ -49,12 +42,13 @@ func (w *Workflow) environmentRecoveryRecipient() (cryptox.TrustRoot, error) {
 		}
 		defer close()
 	}
-	proof, err := client.CurrentIssuerRecoveryEvidence()
+	proof, err := client.CurrentIssuerDAGEvidence()
 	if err != nil {
 		return cryptox.TrustRoot{}, err
 	}
-	pin := w.state.RecoveredDevice.Pin
-	root := proof.TrustRoot
+	rootPin := w.state.Root
+	pin := cryptox.PinnedIssuerRoot{AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, DeviceID: rootPin.RootDeviceID, SigningPublicKey: rootPin.RootSigningPublicKey, ReceivingPublicKey: rootPin.RootReceivingPublicKey}
+	root := proof.Source.View.TrustRoot
 	if proof.AccountID != pin.AccountID || proof.AccountGeneration != pin.AccountGeneration || root.RootDeviceID != pin.DeviceID || root.RootSigningPublicKey != pin.SigningPublicKey || root.RootReceivingPublicKey != pin.ReceivingPublicKey {
 		return cryptox.TrustRoot{}, ErrRecoveryEvidence
 	}

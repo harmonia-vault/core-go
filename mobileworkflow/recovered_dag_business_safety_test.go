@@ -237,6 +237,8 @@ func dagBusinessTLSServer(t *testing.T, w *Workflow, pull func(*http.Request, ht
 	_ = json.Unmarshal(payload, &fields)
 	return httptest.NewTLSServer(http.HandlerFunc(func(out http.ResponseWriter, r *http.Request) {
 		out.Header().Set("Harmonia-Protocol-Major", "2")
+
+		out.Header().Set("Harmonia-Protocol-Major", "2")
 		switch {
 		case strings.HasSuffix(r.URL.Path, "/boot-challenges"):
 			_ = json.NewEncoder(out).Encode(map[string]any{"challengeId": "synthetic-boot", "nonce": nonce, "expiresAt": expiryTime, "signingPayload": fields})

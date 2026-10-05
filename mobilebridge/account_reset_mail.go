@@ -73,6 +73,9 @@ func (r *NativeAccountResetMail) RequestEmail(email []byte) (string, error) {
 		return "", accountreset.ErrClosed
 	}
 	if e != nil {
+		if limited := emailLimitFailure(e); limited != nil {
+			return encode(map[string]any{"version": 1, "accepted": false, "trustedDevice": false, "retryAfterSeconds": limited["retryAfterSeconds"]})
+		}
 		return "", e
 	}
 	if contextError != nil {

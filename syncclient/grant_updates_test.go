@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/internal/dagfixture"
 	"github.com/harmonia-vault/core-go/localstate"
 )
 
@@ -23,7 +24,7 @@ type managementFixture struct {
 	control         ManagementControl
 	grant           cryptox.SignedGrantWire
 	initial         cryptox.SignedGrantWire
-	proof           cryptox.IssuerProofV2
+	proof           cryptox.IssuerRecoveryDAG
 	status          GrantStatus
 	lose, wrongHash bool
 	posts           int
@@ -50,11 +51,12 @@ func newManagementFixture(t *testing.T) *managementFixture {
 	check(t, e)
 	f := &managementFixture{key: key, grant: cryptox.GrantToWire(signed)}
 	f.initial = f.grant
-	hash, e := cryptox.IssuerAuthorityHash(f.grant)
-	check(t, e)
-	f.proof = cryptox.IssuerProofV2{Profile: cryptox.IssuerProofV2Profile, AccountID: "management-account", AccountGeneration: "1", TrustRoot: root, Path: []cryptox.IssuerEnrollment{}, Authorities: []cryptox.IssuerAuthorityV2{{Grant: f.grant}}, Targets: []cryptox.IssuerTarget{{EnvironmentID: "managed-env", AuthorityHash: hash}}, Origins: []cryptox.SignedEnvironmentOrigin{}, IdentityPaths: [][]cryptox.IssuerEnrollment{}}
-	f.control = ManagementControl{AccountID: "management-account", AccountGeneration: "1", EnvironmentID: "managed-env", Sequence: 1, KeyVersion: "1", Subjects: []ManagementSubject{{DeviceID: root.RootDeviceID, SigningPublicKey: root.RootSigningPublicKey, ReceivingPublicKey: root.RootReceivingPublicKey, CurrentGrant: &f.grant, HighestGrantGeneration: "1"}}, IssuerEvidence: f.proof}
+	f.proof = dagfixture.Root(t, "management-account", root, key, recovery, []cryptox.InitializationEnvironment{{EnvironmentID: "managed-env", KeyVersion: "1", RecoveryEnvelope: cryptox.EncodeBase64(make([]byte, 80)), Grant: f.grant}})
+	f.control = ManagementControl{AccountID: "management-account", AccountGeneration: "1", EnvironmentID: "managed-env", Sequence: 1, KeyVersion: "1", Subjects: []ManagementSubject{{DeviceID: root.RootDeviceID, SigningPublicKey: root.RootSigningPublicKey, ReceivingPublicKey: root.RootReceivingPublicKey, CurrentGrant: &f.grant, HighestGrantGeneration: "1"}}, IssuerDAGEvidence: &f.proof}
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		w.Header().Set("Content-Type", "application/json")
 		switch {
 		case strings.HasSuffix(r.URL.Path, "/grant-status"):
@@ -82,20 +84,20 @@ func newManagementFixture(t *testing.T) *managementFixture {
 			}
 			_ = json.NewEncoder(w).Encode(Acceptance{Sequence: 2})
 		case strings.HasSuffix(r.URL.Path, "/pull"):
-			p := f.proof
+			p := cloneDAGEvidence(f.proof)
 			if f.status.Accepted {
 				parent, e := cryptox.IssuerAuthorityHash(f.initial)
 				check(t, e)
 				h, e := cryptox.IssuerAuthorityHash(f.grant)
 				check(t, e)
-				p.Authorities = append(append([]cryptox.IssuerAuthorityV2(nil), p.Authorities...), cryptox.IssuerAuthorityV2{Grant: f.grant, ParentHash: parent})
-				p.Targets = []cryptox.IssuerTarget{{EnvironmentID: "managed-env", AuthorityHash: h}}
+				p.Source.View.Authorities = append(append([]cryptox.IssuerRecoveryAuthority(nil), p.Source.View.Authorities...), cryptox.IssuerRecoveryAuthority{Grant: f.grant, ParentHash: parent})
+				p.Source.View.Targets = []cryptox.IssuerTarget{{EnvironmentID: "managed-env", AuthorityHash: h}}
 			}
 			seq := uint64(1)
 			if f.status.Accepted {
 				seq = 2
 			}
-			_ = json.NewEncoder(w).Encode(Pull{AccountID: "management-account", AccountGeneration: "1", Sequence: seq, Grants: []SignedGrant{{Grant: f.grant.Grant, Signature: f.grant.Signature}}, Events: []Event{}, IssuerEvidence: &p})
+			_ = json.NewEncoder(w).Encode(Pull{AccountID: "management-account", AccountGeneration: "1", Sequence: seq, Grants: []SignedGrant{{Grant: f.grant.Grant, Signature: f.grant.Signature}}, Events: []Event{}, IssuerDAGEvidence: &p})
 		default:
 			w.WriteHeader(404)
 			_, _ = w.Write([]byte(`{"error":"not_found"}`))
@@ -104,7 +106,7 @@ func newManagementFixture(t *testing.T) *managementFixture {
 	t.Cleanup(server.Close)
 	engine, e := localstate.New(&volatileStore{state: localstate.EmptyState()})
 	check(t, e)
-	v, e := NewRootPinnedVerifierWithOrigins(OriginRootPinnedTrust{Trust: PinnedTrust{AccountID: "management-account", AccountGeneration: 1, DeviceID: root.RootDeviceID, DeviceSigningPublicKey: key.Public().(ed25519.PublicKey), ReceivingPrivateKey: private, Now: func() time.Time { return time.Unix(2030000000, 0) }}, Root: root, InitialAuthorities: []cryptox.SignedGrantWire{f.initial}})
+	v, e := NewRootDAGPinnedVerifier(PinnedTrust{AccountID: "management-account", AccountGeneration: 1, DeviceID: root.RootDeviceID, DeviceSigningPublicKey: key.Public().(ed25519.PublicKey), ReceivingPrivateKey: private, Now: func() time.Time { return time.Unix(2030000000, 0) }}, f.proof.Initialization)
 	check(t, e)
 	t.Cleanup(v.Close)
 	f.c, e = New(Config{Endpoint: server.URL, HTTPClient: server.Client(), AccountID: "management-account", AccountGeneration: 1, DeviceID: root.RootDeviceID, Token: cryptox.EncodeBase64(bytes.Repeat([]byte{42}, 32)), Engine: engine, Verifier: v, Now: func() time.Time { return time.Unix(2030000000, 0) }})
@@ -129,7 +131,7 @@ func TestGrantUpdateOriginalBytesReceiptAndNoOptimisticApply(t *testing.T) {
 		t.Fatal("native restore changed signed original or submitted during prepare")
 	}
 	f.lose = true
-	if _, e = restored.Submit(ctx); e == nil {
+	if _, e = restored.SubmitWithBarrier(ctx, func() error { return nil }); e == nil {
 		t.Fatal("accepted response loss reported success")
 	}
 	if f.c.config.Engine.State().Cloud.Sequence != before.Sequence || f.c.config.Engine.State().Cloud.Environments["managed-env"].Role != localstate.Admin {
@@ -179,7 +181,7 @@ func TestGrantUpdateRejectsCorruptProtectedBindingEpochAndUnsafeIntent(t *testin
 		}
 	}
 	check(t, f.c.config.Engine.SetPaused(true))
-	if _, e = tx.Submit(ctx); !errors.Is(e, ErrPaused) {
+	if _, e = tx.SubmitWithBarrier(ctx, func() error { return nil }); !errors.Is(e, ErrPaused) {
 		t.Fatal("paused grant update reached network", e)
 	}
 	if f.posts != 0 {

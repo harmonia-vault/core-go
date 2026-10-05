@@ -38,7 +38,7 @@ func (a EnrollmentApproval) Certificate() (EnrollmentCertificate, error) {
 		return EnrollmentCertificate{}, err
 	}
 	cert := EnrollmentCertificate{a.PairingProfile, c.AccountID, c.AccountGeneration, c.SessionID, c.ChallengeNonce, c.ExpiresAt, c.InitiatorDeviceID, c.InitiatorSigningPublicKey, c.InitiatorReceivingPublicKey, c.ApproverDeviceID, c.ApproverSigningPublicKey, c.ApproverReceivingPublicKey, a.TranscriptHash, hash}
-	if _, err := cert.SigningBytes(); err != nil {
+	if _, err := cert.fields(); err != nil {
 		return EnrollmentCertificate{}, err
 	}
 	return cert, nil

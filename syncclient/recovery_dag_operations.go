@@ -85,7 +85,7 @@ func (s *DAGRecoverySession) BeginTransition(ctx context.Context, id string) (st
 		}
 	}
 	var c DAGTransitionChallenge
-	if e := s.request(ctx, "POST", dagPath("recovery-authority-challenges-v2"), s.token, map[string]string{"operationId": id, "authorizationKind": "old-recovery", "chainMode": "continuous"}, &c); e != nil {
+	if e := s.request(ctx, "POST", dagPath("recovery-authority-challenges-v2"), s.token, map[string]string{"operationId": id, "authorizationKind": "old-recovery"}, &c); e != nil {
 		if s.config.Preparation != nil {
 			return "", errors.Join(ErrDAGPreparationPending, e)
 		}
@@ -95,7 +95,7 @@ func (s *DAGRecoverySession) BeginTransition(ctx context.Context, id string) (st
 	if e != nil {
 		return "", e
 	}
-	if c.OperationID != id || c.AccountGeneration != strconv.FormatUint(s.config.AccountGeneration, 10) || c.AuthorizationKind != "old-recovery" || c.ChainMode != "continuous" || c.AuthorizerDeviceID != "" || c.SessionHash != digest([]byte(s.token)) || c.ExpectedSequence != strconv.FormatUint(s.vault.Sequence, 10) || c.OldRecoveryGeneration != head.RecoveryGeneration || c.OldRecoverySigningPublicKey != head.SigningPublicKey || c.OldRecoveryReceivingPublicKey != head.ReceivingPublicKey || c.PreviousTransitionHash != head.TransitionHead || !sameJSON(c.DependencyBundle, s.vault.DependencyBundle) || c.IssuerEvidence != nil || len(c.AuthoritySet) != 0 || c.ExpiresAt <= s.config.Now().Unix() || c.ExpiresAt > s.config.Now().Unix()+125 {
+	if c.OperationID != id || c.AccountGeneration != strconv.FormatUint(s.config.AccountGeneration, 10) || c.AuthorizationKind != "old-recovery" || c.AuthorizerDeviceID != "" || c.SessionHash != digest([]byte(s.token)) || c.ExpectedSequence != strconv.FormatUint(s.vault.Sequence, 10) || c.OldRecoveryGeneration != head.RecoveryGeneration || c.OldRecoverySigningPublicKey != head.SigningPublicKey || c.OldRecoveryReceivingPublicKey != head.ReceivingPublicKey || c.PreviousTransitionHash != head.TransitionHead || !sameJSON(c.DependencyBundle, s.vault.DependencyBundle) || c.IssuerEvidence != nil || len(c.AuthoritySet) != 0 || c.ExpiresAt <= s.config.Now().Unix() || c.ExpiresAt > s.config.Now().Unix()+125 {
 		return "", cryptox.ErrInvalidWire
 	}
 	versions := []cryptox.RecoveryEnvironmentVersion{}
@@ -174,7 +174,7 @@ func (s *DAGRecoverySession) SealTransition(ctx context.Context, completeNewCode
 	if cryptox.EncodeBase64(keys.SigningPublic) != s.newSigning || cryptox.EncodeBase64(keys.ReceivingPublic) != s.newReceiving {
 		return ProtectedDAGOperation{}, ErrDAGNewCodeMismatch
 	}
-	sub := cryptox.RecoveryTransitionSubmissionV2{EnvironmentManifest: c.EnvironmentManifest, AuthoritySet: []cryptox.RecoveryAdminAuthority{}, IssuerEvidence: nil, Envelopes: []cryptox.RecoveryEnvelope{}, LegacyState: nil}
+	sub := cryptox.RecoveryTransitionSubmissionV2{EnvironmentManifest: c.EnvironmentManifest, AuthoritySet: []cryptox.RecoveryAdminAuthority{}, IssuerEvidence: nil, Envelopes: []cryptox.RecoveryEnvelope{}}
 	root := s.vault.TrustRoot
 	root.RecoveryGeneration = s.newGeneration
 	root.RecoverySigningPublicKey = s.newSigning
@@ -207,7 +207,7 @@ func (s *DAGRecoverySession) SealTransition(ctx context.Context, completeNewCode
 	if e != nil {
 		return ProtectedDAGOperation{}, e
 	}
-	sub.Transition = cryptox.RecoveryAuthorityTransitionV2{AccountID: s.config.AccountID, AccountGeneration: c.AccountGeneration, OperationID: c.OperationID, ChallengeID: c.ChallengeID, Nonce: c.Nonce, ExpiresAt: strconv.FormatInt(c.ExpiresAt, 10), SessionHash: c.SessionHash, ExpectedSequence: c.ExpectedSequence, PreviousTransitionHash: c.PreviousTransitionHash, OldRecoveryGeneration: c.OldRecoveryGeneration, OldRecoverySigningPublicKey: c.OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey: c.OldRecoveryReceivingPublicKey, NewRecoveryGeneration: s.newGeneration, NewRecoverySigningPublicKey: s.newSigning, NewRecoveryReceivingPublicKey: s.newReceiving, AuthorizationKind: "old-recovery", AuthorizerDeviceID: "", EnvironmentManifestHash: mh, AuthoritySetHash: "", IssuerEvidenceHash: "", EnvelopesHash: eh, NewTrustRootHash: rh, ChainMode: "continuous", LegacyStateHash: ""}
+	sub.Transition = cryptox.RecoveryAuthorityTransitionV2{AccountID: s.config.AccountID, AccountGeneration: c.AccountGeneration, OperationID: c.OperationID, ChallengeID: c.ChallengeID, Nonce: c.Nonce, ExpiresAt: strconv.FormatInt(c.ExpiresAt, 10), SessionHash: c.SessionHash, ExpectedSequence: c.ExpectedSequence, PreviousTransitionHash: c.PreviousTransitionHash, OldRecoveryGeneration: c.OldRecoveryGeneration, OldRecoverySigningPublicKey: c.OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey: c.OldRecoveryReceivingPublicKey, NewRecoveryGeneration: s.newGeneration, NewRecoverySigningPublicKey: s.newSigning, NewRecoveryReceivingPublicKey: s.newReceiving, AuthorizationKind: "old-recovery", AuthorizerDeviceID: "", EnvironmentManifestHash: mh, AuthoritySetHash: "", IssuerEvidenceHash: "", EnvelopesHash: eh, NewTrustRootHash: rh}
 	sub.AuthorizationSignature, e = cryptox.SignOldRecoveryTransitionV2(s.proof, sub, s.keys.SigningPrivate, s.config.Now())
 	if e != nil {
 		return ProtectedDAGOperation{}, e

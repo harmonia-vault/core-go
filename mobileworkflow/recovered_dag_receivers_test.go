@@ -76,6 +76,8 @@ func TestDAGEnvironmentReceiverHistorySurvivesMismatchAndCold(t *testing.T) {
 	var posts atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		if request.Method == "POST" {
 			posts.Add(1)
 			w.WriteHeader(500)

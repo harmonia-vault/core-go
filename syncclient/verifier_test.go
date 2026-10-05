@@ -4,12 +4,14 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/internal/dagfixture"
 	"github.com/harmonia-vault/core-go/localstate"
 )
 
@@ -21,6 +23,7 @@ type cryptoFixture struct {
 	devicePublic                     ed25519.PublicKey
 	environmentKey, receivingPrivate []byte
 	grant                            SignedGrant
+	proof                            cryptox.IssuerRecoveryDAG
 }
 
 func newCryptoFixture(t *testing.T) *cryptoFixture {
@@ -39,9 +42,34 @@ func newCryptoFixture(t *testing.T) *cryptoFixture {
 	grant.Envelope = cryptox.EncodeBase64(envelope)
 	signed, err := cryptox.SignGrant(grant, managerPrivate)
 	check(t, err)
-	verifier, err := NewPinnedVerifier(PinnedTrust{AccountID: "acct", AccountGeneration: 1, DeviceID: "dev", DeviceSigningPublicKey: devicePublic, ReceivingPrivateKey: receivingPrivate, Managers: map[string]ed25519.PublicKey{"manager": managerPublic}, Now: func() time.Time { return fixedNow }})
+	_, recovery, err := ed25519.GenerateKey(rand.Reader)
 	check(t, err)
-	return &cryptoFixture{verifier, managerPrivate, devicePrivate, devicePublic, key, receivingPrivate, SignedGrant{Grant: signed.Grant, Signature: signed.Signature}}
+	managerX, _, err := cryptox.GenerateReceivingKey()
+	check(t, err)
+	recX, _, err := cryptox.GenerateReceivingKey()
+	check(t, err)
+	root, err := cryptox.SignTrustRoot("acct", "1", cryptox.TrustRoot{RootDeviceID: "manager", RootSigningPublicKey: cryptox.EncodeBase64(managerPublic), RootReceivingPublicKey: cryptox.EncodeBase64(managerX), RecoveryGeneration: "1", RecoverySigningPublicKey: cryptox.EncodeBase64(recovery.Public().(ed25519.PublicKey)), RecoveryReceivingPublicKey: cryptox.EncodeBase64(recX)}, recovery)
+	check(t, err)
+	rootGrant := grant
+	rootGrant.SubjectDeviceID = "manager"
+	rootGrant.SubjectSigningPublicKey = root.RootSigningPublicKey
+	rootGrant.SubjectReceivingPublicKey = root.RootReceivingPublicKey
+	rootGrant.Role = "admin"
+	rootGrant.IdempotencyKey = "init-root"
+	rootEnvelope, err := cryptox.WrapEnvironmentKey(key, cryptox.EnvelopeContext{"acct", "1", "env", "1", "device", "manager", "1", root.RootReceivingPublicKey})
+	check(t, err)
+	rootGrant.Envelope = cryptox.EncodeBase64(rootEnvelope)
+	rootSigned, err := cryptox.SignGrant(rootGrant, managerPrivate)
+	check(t, err)
+	recEnvelope, err := cryptox.WrapEnvironmentKey(key, cryptox.EnvelopeContext{"acct", "1", "env", "1", "recovery", "acct", "1", root.RecoveryReceivingPublicKey})
+	check(t, err)
+	p := dagfixture.Root(t, "acct", root, managerPrivate, recovery, []cryptox.InitializationEnvironment{{EnvironmentID: "env", KeyVersion: "1", RecoveryEnvelope: cryptox.EncodeBase64(recEnvelope), Grant: cryptox.GrantToWire(rootSigned)}})
+	context := cryptox.EnrollmentContext{AccountID: "acct", AccountGeneration: "1", Purpose: "enroll-device", SessionID: "pair-fixture", ChallengeNonce: cryptox.EncodeBase64(make([]byte, 32)), ExpiresAt: "4102444800", ApproverDeviceID: "manager", ApproverSigningPublicKey: root.RootSigningPublicKey, ApproverReceivingPublicKey: root.RootReceivingPublicKey, InitiatorDeviceID: "dev", InitiatorSigningPublicKey: grant.SubjectSigningPublicKey, InitiatorReceivingPublicKey: grant.SubjectReceivingPublicKey}
+	approval, p := dagfixture.Enroll(t, p, context, []cryptox.SignedGrantWire{cryptox.GrantToWire(signed)}, managerPrivate, devicePrivate)
+	verifier, err := NewPinnedVerifierV5(IssuerDAGPinnedTrust{AccountID: "acct", AccountGeneration: 1, DeviceID: "dev", DeviceSigningPublicKey: devicePublic, ReceivingPrivateKey: receivingPrivate, Receipt: EnrollmentReceiptV5{IdempotencyKey: "pair-fixture", Approval: approval}, Now: func() time.Time { return fixedNow }})
+	check(t, err)
+	return &cryptoFixture{verifier: verifier, managerPrivate: managerPrivate, devicePrivate: devicePrivate, devicePublic: devicePublic, environmentKey: key, receivingPrivate: receivingPrivate, grant: SignedGrant{Grant: signed.Grant, Signature: signed.Signature}, proof: p}
+
 }
 func (f *cryptoFixture) resignGrant(t *testing.T, g Grant) SignedGrant {
 	t.Helper()
@@ -60,7 +88,8 @@ func (f *cryptoFixture) event(t *testing.T, sequence uint64, value string) Event
 	return Event{Sequence: sequence, Mutation: SignedMutation{Mutation: signed.Mutation, Signature: signed.Signature}, Authorization: &authorization}
 }
 func (f *cryptoFixture) pull(sequence uint64, events ...Event) Pull {
-	return Pull{Full: true, AccountID: "acct", AccountGeneration: "1", Sequence: sequence, Grants: []SignedGrant{f.grant}, Events: events}
+	p := cloneDAGEvidence(f.proof)
+	return Pull{IssuerDAGEvidence: &p, Full: true, AccountID: "acct", AccountGeneration: "1", Sequence: sequence, Grants: []SignedGrant{f.grant}, Events: events}
 }
 func check(t *testing.T, err error) {
 	t.Helper()
@@ -195,7 +224,7 @@ func TestGrantRevocationCheckpointSurvivesCacheRemoval(t *testing.T) {
 }
 func TestNewAuthorizationRequiresAndAcceptsFullCatchup(t *testing.T) {
 	f := newCryptoFixture(t)
-	previous := localstate.CloudSnapshot{AccountID: "acct", AccountGeneration: 1, Sequence: 10, Environments: map[string]localstate.Environment{}}
+	previous := localstate.CloudSnapshot{IssuerEvidence: fixtureDAGBytes(t, f.proof), AccountID: "acct", AccountGeneration: 1, Sequence: 10, Environments: map[string]localstate.Environment{}}
 	incremental := f.pull(11)
 	incremental.Full = false
 	if _, err := f.verifier.VerifyPull(context.Background(), incremental, previous); !errors.Is(err, ErrFullPullRequired) {
@@ -215,4 +244,11 @@ func TestMutationMustCarryWriterAuthorization(t *testing.T) {
 	if _, err := f.verifier.VerifyPull(context.Background(), f.pull(1, event), localstate.CloudSnapshot{}); err == nil {
 		t.Fatal("unsigned write authorization accepted")
 	}
+}
+
+func fixtureDAGBytes(t *testing.T, p cryptox.IssuerRecoveryDAG) []byte {
+	t.Helper()
+	b, e := json.Marshal(p)
+	check(t, e)
+	return b
 }

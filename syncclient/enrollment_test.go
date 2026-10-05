@@ -19,6 +19,9 @@ func TestLoginReturnsRandomSessionWithoutDeviceTrust(t *testing.T) {
 	credential := cryptox.PasswordCredential("synthetic-password-only")
 	var calls atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		calls.Add(1)
 		if r.URL.Path != "/v1/login" || r.Header.Get("Authorization") != "" || r.Header.Get("Cache-Control") != "no-store" {
 			t.Error("login request had wrong routing/authorization/cache policy")
@@ -56,12 +59,15 @@ func TestDefaultEnrollmentCannotReachServerOrAcceptUnsignedReceipt(t *testing.T)
 	f := newCryptoFixture(t)
 	var calls atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		calls.Add(1)
 		http.Error(w, "synthetic unexpected request", 500)
 	}))
 	defer server.Close()
 	config := EnrollmentConfig{Endpoint: server.URL, HTTPClient: server.Client(), AccountID: "acct", AccountGeneration: 1, DeviceID: "dev", LoginToken: cryptox.EncodeBase64(make([]byte, 32)), SigningKey: f.devicePrivate, ReceivingPrivateKey: f.receivingPrivate, Engine: testEngine(t)}
-	e, err := NewEnrollment(config)
+	e, err := NewEnrollmentV5(config)
 	check(t, err)
 	defer e.Close()
 	if !pairing.NativeAvailable() {
@@ -69,7 +75,7 @@ func TestDefaultEnrollmentCannotReachServerOrAcceptUnsignedReceipt(t *testing.T)
 			t.Fatal("default build sent enrollment request", err)
 		}
 	}
-	if _, err = ResumeEnrollment(config, EnrollmentReceipt{IdempotencyKey: "pair-1"}); err == nil || calls.Load() != 0 {
+	if _, err = ResumeEnrollmentV5(config, EnrollmentReceiptV5{IdempotencyKey: "pair-1"}); err == nil || calls.Load() != 0 {
 		t.Fatal("unsigned receipt resumed")
 	}
 	if _, err = e.Receipt(); err == nil {
@@ -78,9 +84,17 @@ func TestDefaultEnrollmentCannotReachServerOrAcceptUnsignedReceipt(t *testing.T)
 }
 func TestLoginErrorsNeverEchoCredentialAndRedirectNeverForwards(t *testing.T) {
 	var forwarded atomic.Int32
-	target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { forwarded.Add(1) }))
+	target := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+		forwarded.Add(1)
+	}))
 	defer target.Close()
 	source := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		w.Header().Set("Location", target.URL)
 		w.WriteHeader(307)
 		_, _ = w.Write([]byte("SYNTHETIC_SECRET"))

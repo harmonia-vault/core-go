@@ -250,7 +250,7 @@ type EnrollmentCertificate struct {
 	GrantsHash                  string `json:"grantsHash"`
 }
 
-func (c EnrollmentCertificate) SigningBytes() ([]byte, error) {
+func (c EnrollmentCertificate) fields() ([]string, error) {
 	for _, id := range []string{c.AccountID, c.SessionID, c.InitiatorDeviceID, c.ApproverDeviceID} {
 		if validID(id) != nil {
 			return nil, ErrInvalidWire
@@ -265,39 +265,12 @@ func (c EnrollmentCertificate) SigningBytes() ([]byte, error) {
 	if _, err := DecodeBase64(c.Nonce, 32, 32); err != nil {
 		return nil, err
 	}
-	return canonical("harmonia/device-enrollment/v1", c.PairingProfile, c.AccountID, c.AccountGeneration, c.SessionID, c.Nonce, c.ExpiresAt, c.InitiatorDeviceID, c.InitiatorSigningPublicKey, c.InitiatorReceivingPublicKey, c.ApproverDeviceID, c.ApproverSigningPublicKey, c.ApproverReceivingPublicKey, c.TranscriptHash, c.GrantsHash), nil
-}
-
-func SignEnrollmentCertificate(c EnrollmentCertificate, key ed25519.PrivateKey) (string, error) {
-	b, err := c.SigningBytes()
-	if err != nil {
-		return "", err
-	}
-	if len(key) != ed25519.PrivateKeySize {
-		return "", ErrInvalidWire
-	}
-	public := EncodeBase64(key.Public().(ed25519.PublicKey))
-	if public != c.InitiatorSigningPublicKey && public != c.ApproverSigningPublicKey {
-		return "", ErrInvalidWire
-	}
-	return sign(key, b)
-}
-
-func VerifyEnrollmentCertificate(c EnrollmentCertificate, signature string, key ed25519.PublicKey) error {
-	b, err := c.SigningBytes()
-	if err != nil {
-		return err
-	}
-	public := EncodeBase64(key)
-	if public != c.InitiatorSigningPublicKey && public != c.ApproverSigningPublicKey {
-		return ErrInvalidSignature
-	}
-	return verify(key, b, signature)
+	return []string{c.PairingProfile, c.AccountID, c.AccountGeneration, c.SessionID, c.Nonce, c.ExpiresAt, c.InitiatorDeviceID, c.InitiatorSigningPublicKey, c.InitiatorReceivingPublicKey, c.ApproverDeviceID, c.ApproverSigningPublicKey, c.ApproverReceivingPublicKey, c.TranscriptHash, c.GrantsHash}, nil
 }
 
 // VerifyEnrollmentGrants 验证证书绑定的每个授权；服务器还须检查逐环境当前管理权。
 func VerifyEnrollmentGrants(c EnrollmentCertificate, grants []SignedGrantWire, expectedApproverKey ed25519.PublicKey) error {
-	if _, err := c.SigningBytes(); err != nil {
+	if _, err := c.fields(); err != nil {
 		return err
 	}
 	if c.ApproverSigningPublicKey != EncodeBase64(expectedApproverKey) {

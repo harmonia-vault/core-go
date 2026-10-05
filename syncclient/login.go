@@ -57,12 +57,16 @@ func Login(ctx context.Context, config LoginConfig) (LoginResult, error) {
 	}
 	request.Header.Set("Cache-Control", "no-store")
 	request.Header.Set("Accept", "application/json")
+	request.Header.Set("Harmonia-Protocol-Major", "2")
 	request.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(request)
 	if err != nil {
 		return LoginResult{}, errors.New("HTTPS login failed")
 	}
 	defer response.Body.Close()
+	if response.Header.Get("Harmonia-Protocol-Major") != "2" {
+		return LoginResult{}, cryptox.ErrInvalidWire
+	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return LoginResult{}, parseRequestError(response)
 	}

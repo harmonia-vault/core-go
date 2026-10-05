@@ -35,14 +35,14 @@ func sourceRoot(t *testing.T) (*Workflow, *selfFixture) {
 }
 
 // 公开向量仅供合成测试；用成熟 grant/certificate 签名与真实 HPKE 重绑本机身份。
-func sourceV3(t *testing.T, role string) (*Workflow, *int64) {
+func sourceDAGPaired(t *testing.T, role string) (*Workflow, *int64) {
 	t.Helper()
 	raw, err := os.ReadFile("../cryptox/testdata/environment-origin-v1.json")
 	if err != nil {
 		t.Fatal(err)
 	}
 	var fixture struct {
-		Approval cryptox.EnrollmentApprovalV3 `json:"approval"`
+		Approval cryptox.EnrollmentApprovalV5 `json:"approval"`
 	}
 	if err = json.Unmarshal(raw, &fixture); err != nil {
 		t.Fatal(err)
@@ -65,110 +65,48 @@ func sourceV3(t *testing.T, role string) (*Workflow, *int64) {
 	own := selfMust(cryptox.SignGrant(g, manager))
 	a.Grants = []cryptox.SignedGrantWire{cryptox.GrantToWire(own)}
 	cert := selfMust(a.Certificate())
-	a.ApproverSignature = selfMust(cryptox.SignEnrollmentCertificateV3(cert, manager))
-	a.InitiatorSignature = selfMust(cryptox.SignEnrollmentCertificateV3(cert, sign))
+	a.ApproverSignature = selfMust(cryptox.SignEnrollmentCertificateV5(cert, manager))
+	a.InitiatorSignature = selfMust(cryptox.SignEnrollmentCertificateV5(cert, sign))
 	now := int64(2030000000)
-	receipt := syncclient.EnrollmentReceiptV3{IdempotencyKey: "synthetic-source-v3", Approval: a}
-	verified := selfMust(cryptox.VerifyCompletedEnrollmentV3(cryptox.ConfirmedEnrollmentAnchor{Context: a.Context, TranscriptHash: a.TranscriptHash}, a))
+	receipt := syncclient.EnrollmentReceiptV5{IdempotencyKey: "synthetic-source-v3", Approval: a}
+	_ = selfMust(cryptox.VerifyCompletedEnrollmentV5(cryptox.ConfirmedEnrollmentAnchor{Context: a.Context, TranscriptHash: a.TranscriptHash}, a))
 	proof := clone(a.IssuerProof)
 	parent := map[string]string{}
-	for _, target := range proof.Targets {
+	for _, target := range proof.Source.View.Targets {
 		parent[target.EnvironmentID] = target.AuthorityHash
 	}
-	proof.Path = append(proof.Path, cryptox.IssuerEnrollment{CertificateVersion: "3", IssuerProofHash: cert.IssuerProofHash, Approval: cryptox.EnrollmentApproval{Context: a.Context, PairingProfile: a.PairingProfile, TranscriptHash: a.TranscriptHash, Grants: a.Grants, ApproverSignature: a.ApproverSignature, InitiatorSignature: a.InitiatorSignature}})
-	proof.Targets = nil
+	proof.Source.View.Path = append(proof.Source.View.Path, cryptox.IssuerRecoveryArchive{Kind: "paired", Enrollment: &cryptox.IssuerEnrollment{CertificateVersion: "5", IssuerProofHash: cert.IssuerProofHash, Approval: cryptox.EnrollmentApproval{Context: a.Context, PairingProfile: a.PairingProfile, TranscriptHash: a.TranscriptHash, Grants: a.Grants, ApproverSignature: a.ApproverSignature, InitiatorSignature: a.InitiatorSignature}}})
+	proof.Source.View.Targets = []cryptox.IssuerTarget{}
 	for _, grant := range a.Grants {
-		proof.Authorities = append(proof.Authorities, cryptox.IssuerAuthorityV2{Grant: grant, ParentHash: parent[grant.Grant.EnvironmentID]})
-		proof.Targets = append(proof.Targets, cryptox.IssuerTarget{EnvironmentID: grant.Grant.EnvironmentID, AuthorityHash: selfMust(cryptox.IssuerAuthorityHash(grant))})
+		proof.Source.View.Authorities = append(proof.Source.View.Authorities, cryptox.IssuerRecoveryAuthority{Grant: grant, ParentHash: parent[grant.Grant.EnvironmentID]})
+		proof.Source.View.Targets = append(proof.Source.View.Targets, cryptox.IssuerTarget{EnvironmentID: grant.Grant.EnvironmentID, AuthorityHash: selfMust(cryptox.IssuerAuthorityHash(grant))})
 	}
-	pin := cryptox.PinnedIssuerRoot{AccountID: g.AccountID, AccountGeneration: g.AccountGeneration, DeviceID: proof.TrustRoot.RootDeviceID, SigningPublicKey: proof.TrustRoot.RootSigningPublicKey, ReceivingPublicKey: proof.TrustRoot.RootReceivingPublicKey}
-	if _, err = cryptox.VerifyIssuerEvidenceV2(pin, proof, verified.InitialAuthorities()...); err != nil {
+	pin := cryptox.PinnedIssuerRoot{AccountID: g.AccountID, AccountGeneration: g.AccountGeneration, DeviceID: proof.Source.View.TrustRoot.RootDeviceID, SigningPublicKey: proof.Source.View.TrustRoot.RootSigningPublicKey, ReceivingPublicKey: proof.Source.View.TrustRoot.RootReceivingPublicKey}
+	if _, err = cryptox.VerifyIssuerRecoveryDAG(pin, proof); err != nil {
 		t.Fatal(err)
 	}
-	verifier := selfMust(syncclient.NewPinnedVerifierV3(syncclient.IssuerOriginPinnedTrust{AccountID: g.AccountID, AccountGeneration: 1, DeviceID: id, DeviceSigningPublicKey: sign.Public().(ed25519.PublicKey), ReceivingPrivateKey: recv, Receipt: receipt, Now: func() time.Time { return time.Unix(now, 0) }}))
+	verifier := selfMust(syncclient.NewPinnedVerifierV5(syncclient.IssuerDAGPinnedTrust{AccountID: g.AccountID, AccountGeneration: 1, DeviceID: id, DeviceSigningPublicKey: sign.Public().(ed25519.PublicKey), ReceivingPrivateKey: recv, Receipt: receipt, Now: func() time.Time { return time.Unix(now, 0) }}))
 	defer verifier.Close()
-	cloud := selfMust(verifier.VerifyPull(context.Background(), syncclient.Pull{Full: true, AccountID: g.AccountID, AccountGeneration: g.AccountGeneration, Sequence: 20, Grants: []syncclient.SignedGrant{{Grant: g, Signature: own.Signature}}, IssuerEvidence: &proof}, localstate.CloudSnapshot{}))
-	state := protectedState{Version: 1, Endpoint: "https://synthetic.example.invalid", DeviceID: id, SigningPublicKey: cryptox.EncodeBase64(sign.Public().(ed25519.PublicKey)), ReceivingPublicKey: g.SubjectReceivingPublicKey, AccountID: g.AccountID, AccountGeneration: "1", Root: &proof.TrustRoot, Cloud: localstate.EmptyState(), Grants: a.Grants, Labels: map[string]labelState{}, EnrollmentV3: &mobileEnrollmentRecord{Version: 1, CreatedAt: now, LastObservedAt: now, Receipt: receipt, Sequence: 20, Applied: true}}
+	cloud := selfMust(verifier.VerifyPull(context.Background(), syncclient.Pull{Full: true, AccountID: g.AccountID, AccountGeneration: g.AccountGeneration, Sequence: 20, Grants: []syncclient.SignedGrant{{Grant: g, Signature: own.Signature}}, IssuerDAGEvidence: &proof}, localstate.CloudSnapshot{}))
+	state := protectedState{Version: 2, Endpoint: "https://synthetic.example.invalid", DeviceID: id, SigningPublicKey: cryptox.EncodeBase64(sign.Public().(ed25519.PublicKey)), ReceivingPublicKey: g.SubjectReceivingPublicKey, AccountID: g.AccountID, AccountGeneration: "1", Root: &proof.Source.View.TrustRoot, Cloud: localstate.EmptyState(), Grants: a.Grants, Labels: map[string]labelState{}, EnrollmentV5: &mobileEnrollmentRecord{Version: 1, CreatedAt: now, LastObservedAt: now, Receipt: receipt, Sequence: 20, Applied: true}}
 	state.Cloud.Cloud = cloud
-	state.EnrollmentV3.SessionEpoch = state.Cloud.SessionEpoch
+	state.EnrollmentV5.SessionEpoch = state.Cloud.SessionEpoch
 	w := selfMust(New(Config{Endpoint: state.Endpoint, SigningKey: sign, ReceivingPrivateKey: recv, ProtectedState: selfMust(json.Marshal(state)), Now: func() time.Time { return time.Unix(now, 0) }, SaveProtectedState: func([]byte) error { return nil }}))
 	t.Cleanup(w.Close)
 	return w, &now
 }
 
-func sourceV4(t *testing.T) *Workflow {
-	t.Helper()
-	var fixture struct {
-		Recovery struct {
-			Now        int64                              `json:"syntheticNow"`
-			Seeds      map[string]string                  `json:"syntheticSeedsHex"`
-			Pin        cryptox.PinnedIssuerRoot           `json:"rootPin"`
-			Original   cryptox.OriginalInitialization     `json:"originalInitialization"`
-			Transition cryptox.AcceptedRecoveryTransition `json:"oldRecoveryTransition"`
-			Accepted   cryptox.AcceptedRecoveredDevice    `json:"recoveredDevice"`
-		} `json:"recovery"`
-	}
-	raw := selfMust(os.ReadFile("../cryptox/testdata/issuer-recovery-v1.json"))
-	if err := json.Unmarshal(raw, &fixture); err != nil {
-		t.Fatal(err)
-	}
-	f := fixture.Recovery
-	decode := func(s string) []byte { return selfMust(hex.DecodeString(s)) }
-	sign := ed25519.NewKeyFromSeed(decode(f.Seeds["deviceEd"]))
-	recv := decode(f.Seeds["deviceX"])
-	authority := selfMust(cryptox.VerifyRecoveryInitialization(f.Pin, f.Original))
-	authority = selfMust(cryptox.VerifyAcceptedRecoveryTransition(authority, f.Transition))
-	p := clone(f.Accepted.Submission)
-	hash := sha256.Sum256(sign.Public().(ed25519.PublicKey))
-	id := hex.EncodeToString(hash[:])
-	// 相同真实软件钥，改为Workflow正式本机ID，并重新签完整恢复包；不是伪造信任bool。
-	for i, wire := range p.Grants {
-		g := wire.Grant
-		key := selfMust(cryptox.UnwrapEnvironmentKey(recv, cryptox.EnvelopeContext{AccountID: g.AccountID, AccountGeneration: g.AccountGeneration, EnvironmentID: g.EnvironmentID, KeyVersion: g.KeyVersion, RecipientType: "device", RecipientID: g.SubjectDeviceID, RecipientGeneration: g.GrantGeneration, RecipientPublicKey: g.SubjectReceivingPublicKey}, selfMust(cryptox.DecodeBase64(g.Envelope, 80, 80))))
-		g.SubjectDeviceID = id
-		g.IssuerDeviceID = id
-		packet := selfMust(cryptox.WrapEnvironmentKey(key, cryptox.EnvelopeContext{AccountID: g.AccountID, AccountGeneration: g.AccountGeneration, EnvironmentID: g.EnvironmentID, KeyVersion: g.KeyVersion, RecipientType: "device", RecipientID: id, RecipientGeneration: g.GrantGeneration, RecipientPublicKey: g.SubjectReceivingPublicKey}))
-		clear(key)
-		g.Envelope = cryptox.EncodeBase64(packet)
-		p.Grants[i] = cryptox.GrantToWire(selfMust(cryptox.SignGrant(g, sign)))
-		p.Envelopes[i].Envelope = g.Envelope
-	}
-	p.Enrollment.DeviceID = id
-	p.Enrollment.GrantsHash = selfMust(cryptox.RecoveredDeviceGrantsHash(p.Grants))
-	p.Enrollment.EnvelopesHash = selfMust(cryptox.RecoveredDeviceEnvelopesHash(p.Envelopes))
-	keys := selfMust(cryptox.DeriveRecoveryKeys(decode(f.Seeds["newRecovery"]), f.Pin.AccountID, f.Pin.AccountGeneration, p.Enrollment.RecoveryGeneration))
-	defer clear(keys.SigningPrivate)
-	defer clear(keys.ReceivingPrivate)
-	now := time.Unix(f.Now, 0)
-	p.RecoverySignature = selfMust(cryptox.SignRecoveredDeviceByRecovery(authority, p, keys.SigningPrivate, now))
-	p.DeviceSignature = selfMust(cryptox.SignRecoveredDeviceAfterHPKE(authority, p, sign, recv, now))
-	accepted := cryptox.AcceptedRecoveredDevice{Submission: p, Sequence: f.Accepted.Sequence}
-	proof := selfMust(cryptox.BuildRecoveredDeviceIssuerEvidence(f.Pin, f.Original, []cryptox.AcceptedRecoveryTransition{f.Transition}, accepted))
-	verifier := selfMust(syncclient.NewRecoveredDevicePinnedVerifier(syncclient.RecoveredDevicePinnedTrust{Trust: syncclient.PinnedTrust{AccountID: f.Pin.AccountID, AccountGeneration: 1, DeviceID: id, DeviceSigningPublicKey: sign.Public().(ed25519.PublicKey), ReceivingPrivateKey: recv, Now: func() time.Time { return now }}, Pin: f.Pin, Evidence: proof, Accepted: accepted}))
-	defer verifier.Close()
-	own := p.Grants[0]
-	cloud := selfMust(verifier.VerifyPull(context.Background(), syncclient.Pull{Full: true, AccountID: f.Pin.AccountID, AccountGeneration: f.Pin.AccountGeneration, Sequence: 32, Grants: []syncclient.SignedGrant{{Grant: own.Grant, Signature: own.Signature}}, IssuerRecoveryEvidence: &proof}, localstate.CloudSnapshot{}))
-	state := protectedState{Version: 1, Endpoint: "https://synthetic.example.invalid", DeviceID: id, SigningPublicKey: p.Enrollment.DeviceSigningPublicKey, ReceivingPublicKey: p.Enrollment.DeviceReceivingPublicKey, AccountID: f.Pin.AccountID, AccountGeneration: f.Pin.AccountGeneration, Root: &proof.TrustRoot, Cloud: localstate.EmptyState(), Grants: p.Grants, Labels: map[string]labelState{}}
-	state.Cloud.Cloud = cloud
-	state.RecoveredDevice = &recoveredDeviceRecord{Version: 1, CreatedAt: f.Now, SessionEpoch: state.Cloud.SessionEpoch, Pin: f.Pin, OriginalInitialization: f.Original, Transitions: []cryptox.AcceptedRecoveryTransition{f.Transition}, Packet: p, ContentHash: selfMust(cryptox.RecoveredDeviceReferenceHash(p)), AcceptedSequence: accepted.Sequence, Applied: true, Evidence: &proof}
-	w := selfMust(New(Config{Endpoint: state.Endpoint, SigningKey: sign, ReceivingPrivateKey: recv, ProtectedState: selfMust(json.Marshal(state)), Now: func() time.Time { return now }, SaveProtectedState: func([]byte) error { return nil }}))
-	t.Cleanup(w.Close)
-	return w
-}
-
 func TestSourceProjectionThreeVerifiedOrigins(t *testing.T) {
-	for _, kind := range []string{"root", "v3", "recovered-v4"} {
+	for _, kind := range []string{"root", "paired"} {
 		t.Run(kind, func(t *testing.T) {
 			var w *Workflow
-			expected := "3"
+			expected := "5"
 			switch kind {
 			case "root":
 				w, _ = sourceRoot(t)
-			case "v3":
-				w, _ = sourceV3(t, "admin")
-			case "recovered-v4":
-				w = sourceV4(t)
-				expected = "4"
+			case "paired":
+				w, _ = sourceDAGPaired(t, "admin")
+
 			}
 			result, err := w.RestoreSessionWithSource()
 			if err != nil {
@@ -187,14 +125,14 @@ func TestSourceProjectionThreeVerifiedOrigins(t *testing.T) {
 
 func TestSourceProjectionNoAdminAndExpiresBeforeProjection(t *testing.T) {
 	t.Run("RO-source-is-not-admin", func(t *testing.T) {
-		w, _ := sourceV3(t, "ro")
+		w, _ := sourceDAGPaired(t, "ro")
 		r, err := w.RestoreSessionWithSource()
-		if err != nil || len(r.ApprovalSource.AdminEnvironmentIDs) != 0 || r.ApprovalSource.CertificateVersion != "3" {
+		if err != nil || len(r.ApprovalSource.AdminEnvironmentIDs) != 0 || r.ApprovalSource.CertificateVersion != "5" {
 			t.Fatal(r.ApprovalSource, err)
 		}
 	})
 	t.Run("expired-admin-clears-cache", func(t *testing.T) {
-		w, now := sourceV3(t, "admin")
+		w, now := sourceDAGPaired(t, "admin")
 		*now = 2030000501
 		r, err := w.RestoreSessionWithSource()
 		if err != nil || len(r.ApprovalSource.AdminEnvironmentIDs) != 0 || len(r.View.Environments) != 0 {
@@ -204,34 +142,29 @@ func TestSourceProjectionNoAdminAndExpiresBeforeProjection(t *testing.T) {
 }
 
 func TestSourceProjectionRejectsBadSignatureGenerationLedgerAndPending(t *testing.T) {
-	for _, kind := range []string{"bad-initial-signature", "wrong-generation", "missing-initial-authorities", "unknown-ledger", "restricted", "pending-v3", "unapplied-v4", "bad-v3-signature", "bad-v4-signature"} {
+	for _, kind := range []string{"bad-initial-signature", "wrong-generation", "missing-initial-authorities", "unknown-ledger", "restricted", "pending-v3", "bad-v3-signature"} {
 		t.Run(kind, func(t *testing.T) {
 			w, _ := sourceRoot(t)
 			switch kind {
 			case "bad-initial-signature":
-				w.state.InitialAuthorities[0].Signature = cryptox.EncodeBase64(make([]byte, 64))
+				w.state.Initialization.DeviceSignature = cryptox.EncodeBase64(make([]byte, 64))
 			case "wrong-generation":
 				w.state.AccountGeneration = "2"
 			case "missing-initial-authorities":
-				w.state.InitialAuthorities = nil
+				w.state.Initialization = nil
 			case "unknown-ledger":
 				s := w.engine.State()
 				s.Cloud.IssuerEvidence = json.RawMessage(`{"profile":"unknown-future-source"}`)
 				w.store.state = s
 				w.engine = selfMust(localstate.New(w.store))
 			case "restricted":
-				w.state.Recovery = &recoveryRecord{}
+				w.state.RecoveryDAG = &recoveryDAGState{}
 			case "pending-v3":
-				w.state.EnrollmentV3 = &mobileEnrollmentRecord{}
-			case "unapplied-v4":
-				w = sourceV4(t)
-				w.state.RecoveredDevice.Applied = false
+				w.state.EnrollmentV5 = &mobileEnrollmentRecord{}
 			case "bad-v3-signature":
-				w, _ = sourceV3(t, "admin")
-				w.state.EnrollmentV3.Receipt.Approval.InitiatorSignature = cryptox.EncodeBase64(make([]byte, 64))
-			case "bad-v4-signature":
-				w = sourceV4(t)
-				w.state.RecoveredDevice.Packet.RecoverySignature = cryptox.EncodeBase64(make([]byte, 64))
+				w, _ = sourceDAGPaired(t, "admin")
+				w.state.EnrollmentV5.Receipt.Approval.InitiatorSignature = cryptox.EncodeBase64(make([]byte, 64))
+
 			}
 			saves := 0
 			w.saveNative = func([]byte) error { saves++; return nil }
@@ -258,6 +191,8 @@ func TestSourceProjectionPullUsesVerifiedSameCheckpoint(t *testing.T) {
 	var pulls atomic.Int64
 	original := f.server.Config.Handler
 	f.server.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Harmonia-Protocol-Major", "2")
+
 		if strings.HasSuffix(request.URL.Path, "/pull") {
 			pulls.Add(1)
 		}
@@ -295,6 +230,8 @@ func TestSourceProjectionUnknownSignedJournalSurvivesRestartAndClosesSource(t *t
 	w, f := sourceRoot(t)
 	original := f.server.Config.Handler
 	f.server.Config.Handler = http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Harmonia-Protocol-Major", "2")
+
 		if strings.HasSuffix(request.URL.Path, "/mutation-status") {
 			writer.WriteHeader(502)
 			_ = json.NewEncoder(writer).Encode(map[string]string{"error": "synthetic_unknown_original_write"})

@@ -177,7 +177,7 @@ func ValidateDAGRecoveredPreparation(p DAGRecoveredPreparation) error {
 			return e
 		}
 		if h == p.PriorContentHash {
-			if t.OperationID != p.PriorOperationID || a.Sequence != p.PriorAcceptedSequence || t.SessionHash != p.RestrictedSessionHash || t.AuthorizationKind != "old-recovery" || t.ChainMode != "continuous" {
+			if t.OperationID != p.PriorOperationID || a.Sequence != p.PriorAcceptedSequence || t.SessionHash != p.RestrictedSessionHash || t.AuthorizationKind != "old-recovery" {
 				return cryptox.ErrInvalidWire
 			}
 			found = true

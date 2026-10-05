@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestV3ExplicitProfileAndSecretRoutesRemainClosed(t *testing.T) {
+func TestV5ExplicitProfileAndSecretRoutesRemainClosed(t *testing.T) {
 	raw, err := WorkflowProfile()
 	if err != nil {
 		t.Fatal(err)
@@ -28,7 +28,7 @@ func TestV3ExplicitProfileAndSecretRoutesRemainClosed(t *testing.T) {
 		}
 		return false
 	}
-	for _, op := range []string{"approvePairing", "approvePairingV3", "enrollDeviceV3", "rotateEnvironmentKey"} {
+	for _, op := range []string{"approvePairingV5", "enrollDeviceV5", "rotateEnvironmentKey"} {
 		if !has(p.Operations, op) {
 			t.Fatal("explicit operation missing")
 		}
@@ -48,8 +48,8 @@ func TestV3ExplicitProfileAndSecretRoutesRemainClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer w.Close()
-	enroll := `{"version":1,"operation":"enrollDeviceV3","endpoint":"https://vault.example.invalid","email":"synthetic@example.invalid","password":"synthetic-only","pairingId":"pair","approverDeviceId":"manager"}`
-	approve := `{"version":1,"operation":"approvePairingV3","endpoint":"https://vault.example.invalid","pairingId":"pair","selections":"[{\"environmentId\":\"env\",\"role\":\"rw\",\"expiresAt\":\"0\"}]"}`
+	enroll := `{"version":1,"operation":"enrollDeviceV5","endpoint":"https://vault.example.invalid","email":"synthetic@example.invalid","password":"synthetic-only","pairingId":"pair","approverDeviceId":"manager"}`
+	approve := `{"version":1,"operation":"approvePairingV5","endpoint":"https://vault.example.invalid","pairingId":"pair","selections":"[{\"environmentId\":\"env\",\"role\":\"rw\",\"expiresAt\":\"0\"}]"}`
 	for _, command := range []string{enroll, approve} {
 		if _, err = w.Execute(command); err == nil {
 			t.Fatal("JSON-only secret operation accepted")

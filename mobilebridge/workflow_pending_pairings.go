@@ -38,7 +38,7 @@ func parsePendingPairingsCommand(raw string) (workflowCommand, error) {
 		return c, errInput
 	}
 	canonical, e := validateEndpoint(wire.Endpoint)
-	if e != nil || canonical != wire.Endpoint || wire.Operation != "pendingPairingRequestsV3" && wire.Operation != "pendingPairingRequestsV4" {
+	if e != nil || canonical != wire.Endpoint || wire.Operation != "pendingPairingRequestsV5" {
 		return c, errInput
 	}
 	c.endpoint, c.operation = wire.Endpoint, wire.Operation
@@ -55,12 +55,10 @@ func nativePendingPairings(out syncclient.PendingPairingRequests, b stateBinding
 	if _, e := nativeDAGDecimal(b.AccountGeneration, true); e != nil {
 		return nil, e
 	}
-	expected := cryptox.EnvironmentOriginCapability
-	if out.CertificateVersion == "4" {
-		expected = cryptox.RecoveryAuthorityCapability
-	} else if out.CertificateVersion != "3" {
+	if out.CertificateVersion != "5" {
 		return nil, errInput
 	}
+	expected := cryptox.RecoveryDAGCapability
 	if len(out.Capabilities) != 1 || out.Capabilities[0] != expected || out.Requests == nil || len(out.Requests) > 64 {
 		return nil, errInput
 	}
@@ -98,12 +96,7 @@ func (v *VaultWorkflow) ExecutePendingPairings(raw string) (response string, err
 	if e = v.checkProtected(v.protectedSHA256); e != nil {
 		return "", e
 	}
-	var out syncclient.PendingPairingRequests
-	if c.operation == "pendingPairingRequestsV3" {
-		out, e = v.workflow.PendingPairingRequestsV3(ctx)
-	} else {
-		out, e = v.workflow.PendingPairingRequestsV4(ctx)
-	}
+	out, e := v.workflow.PendingPairingRequestsV5(ctx)
 	if e != nil {
 		if errors.Is(e, syncclient.ErrTrustInvalidated) {
 			v.deleteDevice = true

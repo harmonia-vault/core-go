@@ -142,12 +142,12 @@ type counters struct {
 	MutationAccepted       atomic.Uint64
 	EnvironmentAttempt     atomic.Uint64
 	EnvironmentAccepted    atomic.Uint64
-	ApprovalV3Attempt      atomic.Uint64
-	ApprovalV3Accepted     atomic.Uint64
+	ApprovalV5Attempt      atomic.Uint64
+	ApprovalV5Accepted     atomic.Uint64
 }
 
 func (c *counters) public() map[string]uint64 {
-	return map[string]uint64{"instanceInfo": c.Inspect.Load(), "registerAttempts": c.RegistrationAttempt.Load(), "registerAccepted": c.RegistrationAccepted.Load(), "emailProofAttempts": c.EmailProofAttempt.Load(), "emailProofAccepted": c.EmailProofAccepted.Load(), "loginAttempts": c.LoginAttempt.Load(), "loginAccepted": c.LoginAccepted.Load(), "initializationAccepted": c.InitializationAccepted.Load(), "bootAccepted": c.BootAccepted.Load(), "pullAccepted": c.PullAccepted.Load(), "mutationAttempts": c.MutationAttempt.Load(), "mutationAccepted": c.MutationAccepted.Load(), "environmentAttempts": c.EnvironmentAttempt.Load(), "environmentAccepted": c.EnvironmentAccepted.Load(), "approvalV3Attempts": c.ApprovalV3Attempt.Load(), "approvalV3Accepted": c.ApprovalV3Accepted.Load()}
+	return map[string]uint64{"instanceInfo": c.Inspect.Load(), "registerAttempts": c.RegistrationAttempt.Load(), "registerAccepted": c.RegistrationAccepted.Load(), "emailProofAttempts": c.EmailProofAttempt.Load(), "emailProofAccepted": c.EmailProofAccepted.Load(), "loginAttempts": c.LoginAttempt.Load(), "loginAccepted": c.LoginAccepted.Load(), "initializationAccepted": c.InitializationAccepted.Load(), "bootAccepted": c.BootAccepted.Load(), "pullAccepted": c.PullAccepted.Load(), "mutationAttempts": c.MutationAttempt.Load(), "mutationAccepted": c.MutationAccepted.Load(), "environmentAttempts": c.EnvironmentAttempt.Load(), "environmentAccepted": c.EnvironmentAccepted.Load(), "approvalV5Attempts": c.ApprovalV5Attempt.Load(), "approvalV5Accepted": c.ApprovalV5Accepted.Load()}
 }
 func (c *counters) response(r *http.Response, lose *atomic.Value) error {
 	path := r.Request.URL.Path
@@ -190,17 +190,17 @@ func (c *counters) response(r *http.Response, lose *atomic.Value) error {
 			c.MutationAccepted.Add(1)
 			kind = "mutation"
 		}
-	case post && (strings.HasSuffix(path, "/environment-changes") || strings.HasSuffix(path, "/environment-changes-v2") || strings.HasSuffix(path, "/environment-changes-v3")):
+	case post && strings.HasSuffix(path, "/environment-changes-v4"):
 		c.EnvironmentAttempt.Add(1)
 		if accepted {
 			c.EnvironmentAccepted.Add(1)
 			kind = "environment"
 		}
-	case post && strings.Contains(path, "/pairings-v3/") && strings.HasSuffix(path, "/approve"):
-		c.ApprovalV3Attempt.Add(1)
+	case post && strings.Contains(path, "/pairings-v5/") && strings.HasSuffix(path, "/approve"):
+		c.ApprovalV5Attempt.Add(1)
 		if accepted {
-			c.ApprovalV3Accepted.Add(1)
-			kind = "approvalV3"
+			c.ApprovalV5Accepted.Add(1)
+			kind = "approvalV5"
 		}
 	}
 	if kind != "" && lose.CompareAndSwap(kind, "") {
@@ -230,7 +230,7 @@ func testProjection(c *counters, lose *atomic.Value, proxy http.Handler) http.Ha
 			Lose string `json:"lose"`
 		}
 		body, err := io.ReadAll(io.LimitReader(r.Body, 129))
-		if r.Method != "POST" || r.URL.RawQuery != "" || r.URL.ForceQuery || err != nil || len(body) > 128 || decodeStrict(body, &input) != nil || (input.Lose != "mutation" && input.Lose != "environment" && input.Lose != "approvalV3") {
+		if r.Method != "POST" || r.URL.RawQuery != "" || r.URL.ForceQuery || err != nil || len(body) > 128 || decodeStrict(body, &input) != nil || (input.Lose != "mutation" && input.Lose != "environment" && input.Lose != "approvalV5") {
 			http.Error(w, "invalid", 400)
 			return
 		}

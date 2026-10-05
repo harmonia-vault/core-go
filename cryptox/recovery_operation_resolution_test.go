@@ -28,12 +28,12 @@ func TestRecoveryOperationResolutionPublishedBytes(t *testing.T) {
 			ChallengeHash       string `json:"challengeHash"`
 			DependencyBasisHash string `json:"dependencyBasisHash"`
 			Challenge           struct {
-				OperationID, ChallengeID, Nonce, SessionHash, AccountGeneration, AuthorizationKind, ChainMode, AuthorizerDeviceID, ExpectedSequence, PreviousTransitionHash, OldRecoveryGeneration, OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey string
-				ExpiresAt                                                                                                                                                                                                                                      int64
-				EnvironmentManifest                                                                                                                                                                                                                            []RecoveryEnvironmentVersion
-				AuthoritySet                                                                                                                                                                                                                                   []RecoveryAdminAuthority
-				IssuerEvidence                                                                                                                                                                                                                                 *RecoverySource
-				DependencyBundle                                                                                                                                                                                                                               RecoveryDependencyBundle
+				OperationID, ChallengeID, Nonce, SessionHash, AccountGeneration, AuthorizationKind, AuthorizerDeviceID, ExpectedSequence, PreviousTransitionHash, OldRecoveryGeneration, OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey string
+				ExpiresAt                                                                                                                                                                                                                           int64
+				EnvironmentManifest                                                                                                                                                                                                                 []RecoveryEnvironmentVersion
+				AuthoritySet                                                                                                                                                                                                                        []RecoveryAdminAuthority
+				IssuerEvidence                                                                                                                                                                                                                      *RecoverySource
+				DependencyBundle                                                                                                                                                                                                                    RecoveryDependencyBundle
 			} `json:"challenge"`
 		} `json:"transitionChallenge"`
 	}
@@ -55,7 +55,7 @@ func TestRecoveryOperationResolutionPublishedBytes(t *testing.T) {
 		}
 	}
 	c := f.TransitionChallenge.Challenge
-	hash, e := RecoveryOperationTransitionChallengeHash(RecoveryOperationTransitionChallenge{AccountID: f.TransitionChallenge.AccountID, AccountGeneration: c.AccountGeneration, OperationID: c.OperationID, ChallengeID: c.ChallengeID, Nonce: c.Nonce, ExpiresAt: strconv.FormatInt(c.ExpiresAt, 10), SessionHash: c.SessionHash, AuthorizationKind: c.AuthorizationKind, ChainMode: c.ChainMode, AuthorizerDeviceID: c.AuthorizerDeviceID, ExpectedSequence: c.ExpectedSequence, PreviousTransitionHash: c.PreviousTransitionHash, OldRecoveryGeneration: c.OldRecoveryGeneration, OldRecoverySigningPublicKey: c.OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey: c.OldRecoveryReceivingPublicKey, EnvironmentManifest: c.EnvironmentManifest, AuthoritySet: c.AuthoritySet, IssuerEvidence: c.IssuerEvidence, DependencyBundle: c.DependencyBundle})
+	hash, e := RecoveryOperationTransitionChallengeHash(RecoveryOperationTransitionChallenge{AccountID: f.TransitionChallenge.AccountID, AccountGeneration: c.AccountGeneration, OperationID: c.OperationID, ChallengeID: c.ChallengeID, Nonce: c.Nonce, ExpiresAt: strconv.FormatInt(c.ExpiresAt, 10), SessionHash: c.SessionHash, AuthorizationKind: c.AuthorizationKind, AuthorizerDeviceID: c.AuthorizerDeviceID, ExpectedSequence: c.ExpectedSequence, PreviousTransitionHash: c.PreviousTransitionHash, OldRecoveryGeneration: c.OldRecoveryGeneration, OldRecoverySigningPublicKey: c.OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey: c.OldRecoveryReceivingPublicKey, EnvironmentManifest: c.EnvironmentManifest, AuthoritySet: c.AuthoritySet, IssuerEvidence: c.IssuerEvidence, DependencyBundle: c.DependencyBundle})
 	if e != nil || hash != f.TransitionChallenge.ChallengeHash {
 		t.Fatal("challenge vector mismatch", e)
 	}

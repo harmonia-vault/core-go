@@ -76,7 +76,7 @@ func TestFixedCountersAndLostResponseTrackAcceptedSeparately(t *testing.T) {
 	var lose atomic.Value
 	lose.Store("environment")
 	response := func(status int) *http.Response {
-		u, _ := url.Parse("http://127.0.0.1/v1/accounts/synthetic/environment-changes-v3")
+		u, _ := url.Parse("http://127.0.0.1/v1/accounts/synthetic/environment-changes-v4")
 		return &http.Response{StatusCode: status, Request: &http.Request{Method: "POST", URL: u}, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{}`))}
 	}
 	rejected := response(403)
@@ -112,7 +112,7 @@ func TestProjectionNoNetworkAndStrictControls(t *testing.T) {
 		status             int
 	}{
 		{"GET", "/test/counters", "", 200}, {"POST", "/test/counters", "", 400}, {"GET", "/test/counters?extra=1", "", 400},
-		{"POST", "/test/control", `{"lose":"mutation"}`, 200}, {"POST", "/test/control", `{"lose":"environment"}`, 200}, {"POST", "/test/control", `{"lose":"approvalV3"}`, 200},
+		{"POST", "/test/control", `{"lose":"mutation"}`, 200}, {"POST", "/test/control", `{"lose":"environment"}`, 200}, {"POST", "/test/control", `{"lose":"approvalV5"}`, 200},
 		{"GET", "/test/control", "", 400}, {"POST", "/test/control", `{"lose":"register"}`, 400}, {"POST", "/test/control", `{"lose":"mutation","token":"synthetic-rejected"}`, 400}, {"POST", "/test/control", `{"lose":"mutation"} {}`, 400},
 	} {
 		rec := httptest.NewRecorder()

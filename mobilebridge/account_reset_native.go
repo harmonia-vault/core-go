@@ -57,15 +57,11 @@ func OpenNativeAccountResetQuery(endpoint, namespace string, proof, additionalCA
 func (*NativeAccountReset) String() string       { return "native account reset owner (opaque)" }
 func (*NativeAccountResetCommit) String() string { return "native account reset completion (opaque)" }
 
-// NewNativeAccountReset 消费邮件 proof 缓冲；只配置既有协议，不生成设备或云信任。
+// NewNativeAccountReset 只消费邮箱和八位字母数字码；内部凭证仅从服务器换取。
 func NewNativeAccountReset(endpoint, namespace string, proof, additionalCA []byte) (*NativeAccountReset, error) {
 	defer clear(proof)
 	canonical, err := validateEndpoint(endpoint)
 	if err != nil || canonical != endpoint || namespace == "" || len(namespace) > 512 {
-		return nil, errInput
-	}
-	p, err := accountreset.ParseProof(proof)
-	if err != nil {
 		return nil, errInput
 	}
 	h, err := workflowHTTPClient(additionalCA)
@@ -75,6 +71,15 @@ func NewNativeAccountReset(endpoint, namespace string, proof, additionalCA []byt
 	c, err := accountreset.New(accountreset.Config{Endpoint: endpoint, HTTPClient: h})
 	if err != nil {
 		return nil, errInput
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	p, err := c.ResolveCode(ctx, proof)
+	if err != nil {
+		if code := emailCodeFailure(err); code != "" {
+			return nil, errors.New(code)
+		}
+		return nil, err
 	}
 	return &NativeAccountReset{endpoint: endpoint, namespace: namespace, proof: p, query: c.Query,
 		prepare: func(p accountreset.Proof, b []byte, s string) (resetAttempt, error) { return c.NewAttempt(p, b, s) }, now: time.Now}, nil
@@ -235,7 +240,6 @@ func (p *NativeAccountResetCommit) LogoutMatchedWorkflow(v *VaultWorkflow) error
 	if e := v.checkProtected(v.protectedSHA256); e != nil {
 		return errResetLocal
 	}
-	v.clearRecoveryOwner()
 	v.deleteDevice = true
 	if e := v.workflow.Logout(); e != nil {
 		return errResetLocal

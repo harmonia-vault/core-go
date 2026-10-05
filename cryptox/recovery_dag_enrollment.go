@@ -75,12 +75,7 @@ func verifyEnrollmentApprovalV5(anchor ConfirmedEnrollmentAnchor, a EnrollmentAp
 	if p.AccountID != a.Context.AccountID || p.AccountGeneration != a.Context.AccountGeneration {
 		return nil, ErrInvalidSignature
 	}
-	var path []IssuerRecoveryArchive
-	if p.Source.Kind == "proof3" {
-		path = p.Source.View.Path
-	} else {
-		path = pairedRecoveryPathForDAG(p.Source.Proof.Path)
-	}
+	path := p.Source.View.Path
 	if len(path) > 0 {
 		last := path[len(path)-1]
 		if last.Kind == "paired" {

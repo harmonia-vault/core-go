@@ -23,23 +23,26 @@ import (
 )
 
 // 合成 A→B 历史证明 + 实际 B↔C SPAKE2/TLS；真正业务原子性另测 SQLite。
-func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
+func TestNativeEnrollmentV5ConfirmedProofAndUnknownCompletion(t *testing.T) {
 	for _, mode := range []string{"valid", "wrong-code", "downgrade"} {
 		t.Run(mode, func(t *testing.T) {
 			f := issuerClientVector(t)
 			var mu sync.Mutex
-			var status PairingStatusV2
+			var status PairingStatusV5
 			var manager *pairing.Session
 			var completeCalls int
 			bk := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{2}, 32))
 			defer clear(bk)
 			rootReceive, err := ecdh.X25519().NewPrivateKey(bytes.Repeat([]byte{11}, 32))
 			check(t, err)
-			rootPin := cryptox.PinnedIssuerRoot{AccountID: "account-chain", AccountGeneration: "1", DeviceID: "device-A", SigningPublicKey: cryptox.EncodeBase64(ed25519.NewKeyFromSeed(bytes.Repeat([]byte{1}, 32)).Public().(ed25519.PublicKey)), ReceivingPublicKey: cryptox.EncodeBase64(rootReceive.PublicKey().Bytes())}
+			rootPin := cryptox.PinnedIssuerRoot{AccountID: "account-fixture", AccountGeneration: "1", DeviceID: "device-A", SigningPublicKey: cryptox.EncodeBase64(ed25519.NewKeyFromSeed(bytes.Repeat([]byte{1}, 32)).Public().(ed25519.PublicKey)), ReceivingPublicKey: cryptox.EncodeBase64(rootReceive.PublicKey().Bytes())}
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Harmonia-Protocol-Major", "2")
+
+				w.Header().Set("Harmonia-Protocol-Major", "2")
 				mu.Lock()
 				defer mu.Unlock()
-				body, err := io.ReadAll(io.LimitReader(r.Body, cryptox.MaxIssuerProofBytes+513))
+				body, err := io.ReadAll(io.LimitReader(r.Body, cryptox.MaxRecoveryAuthorityBytes+513))
 				if err != nil {
 					t.Error(err)
 					w.WriteHeader(500)
@@ -48,7 +51,7 @@ func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
 				if bytes.Contains(body, []byte("12345678")) || bytes.Contains(body, []byte("87654321")) {
 					t.Error("short code reached HTTP")
 				}
-				if r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/pairings-v2") {
+				if r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/pairings-v5") {
 					var proposal struct {
 						IdempotencyKey     string   `json:"idempotencyKey"`
 						DeviceID           string   `json:"deviceId"`
@@ -60,7 +63,7 @@ func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
 					}
 					d := json.NewDecoder(bytes.NewReader(body))
 					d.DisallowUnknownFields()
-					if d.Decode(&proposal) != nil || proposal.CertificateVersion != "2" || len(proposal.Capabilities) != 1 || proposal.Capabilities[0] != cryptox.IssuerProofCapability {
+					if d.Decode(&proposal) != nil || proposal.CertificateVersion != "5" || len(proposal.Capabilities) != 1 || proposal.Capabilities[0] != cryptox.RecoveryDAGCapability {
 						t.Error("wrong v2 begin schema")
 						w.WriteHeader(400)
 						return
@@ -72,7 +75,7 @@ func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
 					if proposal.DeviceID != c.InitiatorDeviceID || proposal.SigningPublicKey != c.InitiatorSigningPublicKey || proposal.ReceivingPublicKey != c.InitiatorReceivingPublicKey || proposal.ApproverDeviceID != c.ApproverDeviceID {
 						t.Error("wrong exact local keys")
 					}
-					status = PairingStatusV2{State: "pending", IdempotencyKey: proposal.IdempotencyKey, CertificateVersion: "2", Capabilities: []string{cryptox.IssuerProofCapability}, PairingProfile: pairing.Profile, Context: c, Messages: map[string]string{}, Confirmations: map[string]string{}}
+					status = PairingStatusV5{State: "pending", IdempotencyKey: proposal.IdempotencyKey, CertificateVersion: "5", Capabilities: []string{cryptox.RecoveryDAGCapability}, PairingProfile: pairing.Profile, Context: c, Messages: map[string]string{}, Confirmations: map[string]string{}}
 					if mode == "downgrade" {
 						status.CertificateVersion = "1"
 						status.Capabilities = nil
@@ -128,7 +131,17 @@ func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
 							a.ApproverSignature = ""
 							a.InitiatorSignature = ""
 							confirmed := cryptox.ConfirmedEnrollmentAnchor{Context: a.Context, TranscriptHash: transcript}
-							a, e = cryptox.SignEnrollmentApprovalV2(a, rootPin, confirmed, bk, time.Now())
+							_, e = cryptox.VerifyIssuerRecoveryDAG(rootPin, a.IssuerProof)
+							if e == nil {
+								var cert cryptox.EnrollmentCertificateV5
+								cert, e = a.Certificate()
+								if e == nil {
+									a.ApproverSignature, e = cryptox.SignEnrollmentCertificateV5(cert, bk)
+								}
+							}
+							if e == nil {
+								_, e = cryptox.VerifyEnrollmentApprovalV5(confirmed, a)
+							}
 							if e != nil {
 								t.Error(e)
 								w.WriteHeader(500)
@@ -147,8 +160,9 @@ func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
 					}
 					_ = json.Unmarshal(body, &input)
 					a := *status.Approval
-					cert, e := a.Certificate()
-					if e != nil || cryptox.VerifyEnrollmentCertificateV2(cert, input.Signature, ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)).Public().(ed25519.PublicKey)) != nil {
+					a.InitiatorSignature = input.Signature
+					_, e := cryptox.VerifyCompletedEnrollmentV5(cryptox.ConfirmedEnrollmentAnchor{Context: a.Context, TranscriptHash: a.TranscriptHash}, a)
+					if e != nil {
 						t.Error("invalid initiator exact v2 signature")
 						w.WriteHeader(403)
 						return
@@ -161,7 +175,7 @@ func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
 					// 已原子接受但断开结果：只能查询同一回执，不能重新取得短码或扩大证明。
 					w.WriteHeader(503)
 					return
-				} else if r.Method != "GET" || !strings.HasSuffix(r.URL.Path, "/pairings-v2/pair-C") {
+				} else if r.Method != "GET" || !strings.HasSuffix(r.URL.Path, "/pairings-v5/pair-C") {
 					t.Error("wrong v2 route")
 					w.WriteHeader(404)
 					return
@@ -174,8 +188,8 @@ func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
 					manager.Close()
 				}
 			}()
-			cfg := EnrollmentConfig{Endpoint: server.URL, HTTPClient: server.Client(), AccountID: "account-chain", AccountGeneration: 1, DeviceID: "device-C", LoginToken: cryptox.EncodeBase64(make([]byte, 32)), SigningKey: ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)), ReceivingPrivateKey: bytes.Repeat([]byte{13}, 32), Engine: testEngine(t), Now: func() time.Time { return time.Now() }}
-			enrollment, err := NewEnrollmentV2(cfg)
+			cfg := EnrollmentConfig{Endpoint: server.URL, HTTPClient: server.Client(), AccountID: "account-fixture", AccountGeneration: 1, DeviceID: "device-C", LoginToken: cryptox.EncodeBase64(make([]byte, 32)), SigningKey: ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)), ReceivingPrivateKey: bytes.Repeat([]byte{13}, 32), Engine: testEngine(t), Now: func() time.Time { return time.Now() }}
+			enrollment, err := NewEnrollmentV5(cfg)
 			check(t, err)
 			defer enrollment.Close()
 			_, err = enrollment.Begin(context.Background(), "device-B", "pair-C", []byte("12345678"))
@@ -196,24 +210,27 @@ func TestNativeEnrollmentV2ConfirmedProofAndUnknownCompletion(t *testing.T) {
 			check(t, err)
 			receipt, err := enrollment.Receipt()
 			check(t, err)
-			if receipt.Approval.InitiatorSignature == "" || len(receipt.Approval.IssuerProof.Path) != 1 {
+			if receipt.Approval.InitiatorSignature == "" || len(receipt.Approval.IssuerProof.Source.View.Path) != 1 {
 				t.Fatal("missing real PAKE dual-signed proof")
 			}
 			if _, err = enrollment.Complete(context.Background()); !errors.Is(err, ErrEnrollmentPending) {
 				t.Fatal("unknown result mistaken as accepted", err)
 			}
-			resumed, err := ResumeEnrollmentV2(cfg, receipt)
+			resumed, err := ResumeEnrollmentV5(cfg, receipt)
 			check(t, err)
 			defer resumed.Close()
 			result, err := resumed.Complete(context.Background())
 			check(t, err)
 			defer result.Verifier.Close()
-			if completeCalls != 1 || result.Sequence != 5 || resumed.session != nil || len(result.Verifier.IssuerBindings()) != 2 {
+			if completeCalls != 1 || result.Sequence != 5 || resumed.session != nil || len(result.Verifier.IssuerBindings()) != 3 {
 				t.Fatal("resume rewrote completion/trust")
 			}
-			state, err := result.Verifier.VerifyPull(context.Background(), issuerClientPull(f), cfg.Engine.State().Cloud)
+			f.Approval = receipt.Approval
+			pull := issuerClientPull(f)
+			pull.Sequence = 5
+			state, err := result.Verifier.VerifyPull(context.Background(), pull, cfg.Engine.State().Cloud)
 			check(t, err)
-			if state.Environments["env-fixture"].Values["FIXTURE_KEY"] != "synthetic-only" {
+			if state.Environments["env-fixture"].Values["SYNTHETIC_VALUE"] != "synthetic-only" {
 				t.Fatal("confirmed enrollment cannot read A history")
 			}
 		})

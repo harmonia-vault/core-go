@@ -31,6 +31,9 @@ func TestBootUsesExactKeysWithoutLoginCredential(t *testing.T) {
 	boundToken := cryptox.EncodeBase64(append([]byte{7}, make([]byte, 31)...))
 	var calls atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		calls.Add(1)
 		switch {
 		case strings.HasSuffix(r.URL.Path, "/boot-challenges"):
@@ -80,6 +83,9 @@ func TestBootRejectsBlindSigningAndLoginCredential(t *testing.T) {
 	f := newCryptoFixture(t)
 	var signed atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		if strings.HasSuffix(r.URL.Path, "boot-sessions") {
 			signed.Add(1)
 		}
@@ -113,6 +119,9 @@ func TestOldPullCannotRepopulateAfterLogout(t *testing.T) {
 	engine := testEngine(t)
 	var calls atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		calls.Add(1)
 		_ = json.NewEncoder(w).Encode(Pull{AccountID: "acct", AccountGeneration: "1", Sequence: 1})
 	}))

@@ -12,28 +12,24 @@ import (
 )
 
 const EnrollmentPairingProfile = "boringssl-spake2-edwards25519-draft02-v1"
-const maxEnrollmentCertificate = 64 << 10
-const maxEnrollmentCertificateV2 = (256 << 10) + 512
-const maxEnrollmentCertificateV3 = (1 << 20) + 512
-const maxEnrollmentCertificateV4 = (2 << 20) + 512
+const maxEnrollmentCertificateV5 = (2 << 20) + 512
 
 var identityPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
 // TrustContext 是经过入网控制器验证后保存的绑定资料，不包含私钥。
 // Accepted 只记录服务器完成状态；本包不验配对/证书签名，不授予设备信任。
 type TrustContext struct {
-	Endpoint              string            `json:"endpoint"`
-	AccountID             string            `json:"accountId"`
-	AccountGeneration     uint64            `json:"accountGeneration"`
-	DeviceID              string            `json:"deviceId"`
-	SigningPublic         []byte            `json:"signingPublic"`
-	ReceivingPublic       []byte            `json:"receivingPublic"`
-	Managers              map[string][]byte `json:"managers"`
-	CertificateVersion    string            `json:"certificateVersion,omitempty"`
-	PairingProfile        string            `json:"pairingProfile"`
-	EnrollmentCertificate json.RawMessage   `json:"enrollmentCertificate"`
-	EnrollmentKey         string            `json:"enrollmentKey"`
-	Accepted              bool              `json:"accepted"`
+	Endpoint              string          `json:"endpoint"`
+	AccountID             string          `json:"accountId"`
+	AccountGeneration     uint64          `json:"accountGeneration"`
+	DeviceID              string          `json:"deviceId"`
+	SigningPublic         []byte          `json:"signingPublic"`
+	ReceivingPublic       []byte          `json:"receivingPublic"`
+	CertificateVersion    string          `json:"certificateVersion"`
+	PairingProfile        string          `json:"pairingProfile"`
+	EnrollmentCertificate json.RawMessage `json:"enrollmentCertificate"`
+	EnrollmentKey         string          `json:"enrollmentKey"`
+	Accepted              bool            `json:"accepted"`
 }
 
 func validEndpoint(endpoint string) bool {
@@ -44,53 +40,20 @@ func (t TrustContext) validate() error {
 	if !validEndpoint(t.Endpoint) || !identityPattern.MatchString(t.AccountID) || t.AccountGeneration == 0 || !identityPattern.MatchString(t.DeviceID) || !identityPattern.MatchString(t.EnrollmentKey) || len(t.SigningPublic) != ed25519.PublicKeySize || len(t.ReceivingPublic) != 32 || t.PairingProfile != EnrollmentPairingProfile || len(t.EnrollmentCertificate) == 0 || !json.Valid(t.EnrollmentCertificate) {
 		return ErrCorrupt
 	}
-	switch t.CertificateVersion {
-	case "", "1":
-		if len(t.Managers) < 1 || len(t.Managers) > 64 || len(t.EnrollmentCertificate) > maxEnrollmentCertificate {
-			return ErrCorrupt
-		}
-	case "4", "5":
-		if len(t.Managers) != 0 || len(t.EnrollmentCertificate) > maxEnrollmentCertificateV4 {
-			return ErrCorrupt
-		}
-	case "3":
-		if len(t.Managers) != 0 || len(t.EnrollmentCertificate) > maxEnrollmentCertificateV3 {
-			return ErrCorrupt
-		}
-	case "2":
-		if len(t.Managers) != 0 || len(t.EnrollmentCertificate) > maxEnrollmentCertificateV2 {
-			return ErrCorrupt
-		}
-	default:
+	if t.CertificateVersion != "5" || len(t.EnrollmentCertificate) > maxEnrollmentCertificateV5 {
 		return ErrCorrupt
 	}
 	var object map[string]json.RawMessage
 	if json.Unmarshal(t.EnrollmentCertificate, &object) != nil || len(object) == 0 {
 		return ErrCorrupt
 	}
-	for id, key := range t.Managers {
-		if !identityPattern.MatchString(id) || len(key) != ed25519.PublicKeySize {
-			return ErrCorrupt
-		}
-	}
 	return nil
-}
-func trustVersion(t TrustContext) string {
-	if t.CertificateVersion == "" {
-		return "1"
-	}
-	return t.CertificateVersion
 }
 
 // 回执和信任集合冻结；仅 Accepted 可以由 false 变为 true，不能替换 proof。
 func sameTrustEvidence(a, b TrustContext) bool {
-	if trustVersion(a) != trustVersion(b) || a.PairingProfile != b.PairingProfile || len(a.Managers) != len(b.Managers) {
+	if a.CertificateVersion != b.CertificateVersion || a.PairingProfile != b.PairingProfile {
 		return false
-	}
-	for id, key := range a.Managers {
-		if !bytes.Equal(key, b.Managers[id]) {
-			return false
-		}
 	}
 	var x, y bytes.Buffer
 	if json.Compact(&x, a.EnrollmentCertificate) != nil || json.Compact(&y, b.EnrollmentCertificate) != nil {

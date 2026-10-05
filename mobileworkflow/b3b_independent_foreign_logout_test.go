@@ -23,6 +23,8 @@ func TestB3bIndependentForeignLogoutPreventsLateTrust(t *testing.T) {
 	var enteredOnce, releaseOnce sync.Once
 	releaseHTTP := func() { releaseOnce.Do(func() { close(release) }) }
 	server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Harmonia-Protocol-Major", "2")
+
 		enteredOnce.Do(func() { close(entered) })
 		select {
 		case <-r.Context().Done():

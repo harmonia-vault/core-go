@@ -39,12 +39,8 @@ func ValidateDAGClosedHistory(closed []DAGClosedOperationCheckpoint, records []c
 		var id string
 		var sequence uint64
 		switch row.Kind {
-		case "transition-v1":
-			id, sequence = row.TransitionV1.Submission.Transition.OperationID, row.TransitionV1.Sequence
 		case "transition-v2":
 			id, sequence = row.TransitionV2.Submission.Transition.OperationID, row.TransitionV2.Sequence
-		case "recovered-v1":
-			id, sequence = row.RecoveredV1.Submission.Enrollment.OperationID, row.RecoveredV1.Sequence
 		case "recovered-v2":
 			id, sequence = row.RecoveredV2.Submission.Enrollment.OperationID, row.RecoveredV2.Sequence
 		default:

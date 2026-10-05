@@ -117,3 +117,15 @@ func TestWorkflowStrictOperationsAndProfile(t *testing.T) {
 		t.Fatal("invalid explicit CA accepted")
 	}
 }
+
+func TestEmailCodeWorkflowFields(t *testing.T) {
+	codeOnly := `{"version":1,"operation":"verifyEmail","endpoint":"https://vault.example.invalid","accountId":"account","accountGeneration":"1","code":"A2BC3DE4"}`
+	parsed, err := parseWorkflowCommand(codeOnly)
+	if err != nil || parsed.fields["code"] != "A2BC3DE4" {
+		t.Fatal("eight-character code contract rejected", err)
+	}
+	oldProof := `{"version":1,"operation":"verifyEmail","endpoint":"https://vault.example.invalid","accountId":"account","accountGeneration":"1","challengeId":"legacy-challenge","token":"legacy-token"}`
+	if _, err := parseWorkflowCommand(oldProof); err == nil {
+		t.Fatal("obsolete verification fields accepted")
+	}
+}

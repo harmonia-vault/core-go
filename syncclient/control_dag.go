@@ -36,17 +36,14 @@ func (c *Client) requestDAGEnvironmentControl(ctx context.Context, environment s
 // 历史来源只供保护journal重验，不能让发送前检查绕过当前权限/时间/检查点。
 func (c *Client) verifyEnvironmentControlEvidence(out EnvironmentControlView, historical bool) (VerifiedControlEvidence, error) {
 	if !c.dagControls() {
-		if out.IssuerDAGEvidence != nil {
-			return nil, cryptox.ErrInvalidWire
-		}
-		return c.verifyControlEvidence(out.IssuerEvidence, out.IssuerRecoveryEvidence, out.Sequence, historical)
+		return nil, cryptox.ErrInvalidWire
 	}
 	v := c.config.Verifier.(*PinnedVerifier)
 	state := c.config.Engine.State()
 	if state.AccountClosed || state.SessionEpoch != c.epoch {
 		return nil, localstate.ErrLocalSession
 	}
-	if out.IssuerDAGEvidence == nil || out.IssuerRecoveryEvidence != nil || !sameJSON(out.IssuerEvidence, cryptox.IssuerProofV2{}) {
+	if out.IssuerDAGEvidence == nil {
 		return nil, cryptox.ErrInvalidWire
 	}
 	if len(out.Grants) < 1 || len(out.Grants) > 256 {

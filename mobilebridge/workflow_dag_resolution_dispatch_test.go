@@ -88,7 +88,11 @@ func TestNativeDAGResolutionProjectionNeverGrantsTrust(t *testing.T) {
 }
 func TestNativeDAGResolutionNoOriginalOrRetiredScopeZeroTraffic(t *testing.T) {
 	var requests atomic.Int32
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { requests.Add(1); w.WriteHeader(500) }))
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+		requests.Add(1)
+		w.WriteHeader(500)
+	}))
 	defer server.Close()
 	ca := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw})
 	for _, op := range []string{"dagRecoveryResolutionInfo", "queryDAGRecoveryResolution", "closeDAGRecoveryOriginal", "openDAGRecoveryAfterClosure"} {

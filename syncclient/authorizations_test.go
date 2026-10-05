@@ -31,6 +31,9 @@ func TestPauseAuthorizationCheckpointPreservesDataAndResumeFullCatchup(t *testin
 	check(t, engine.SetPaused(true))
 	var requests []string
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		requests = append(requests, r.URL.RawQuery)
 		pull := f.pull(2)
 		if r.URL.Query().Get("scope") == "authorizations" {
@@ -76,7 +79,7 @@ func TestAuthorizationProjectionRejectsDataAndCannotGrantNewSources(t *testing.T
 		t.Fatal("unmarked ordinary response accepted")
 	}
 	pull.Scope = "authorizations"
-	empty := localstate.CloudSnapshot{AccountID: "acct", AccountGeneration: 1, Sequence: 1, Environments: map[string]localstate.Environment{}}
+	empty := localstate.CloudSnapshot{IssuerEvidence: initial.IssuerEvidence, AccountID: "acct", AccountGeneration: 1, Sequence: 1, Environments: map[string]localstate.Environment{}}
 	out, err := f.verifier.VerifyAuthorizationRefresh(context.Background(), pull, empty)
 	check(t, err)
 	if len(out.Environments) != 0 || out.Sequence != 1 || out.AuthorizationSequence != 2 {

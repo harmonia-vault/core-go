@@ -30,6 +30,9 @@ func TestServerFaultSeparatesTokenExpiryFromAuthorityInvalidation(t *testing.T) 
 			check(t, engine.AcceptSnapshot(cloud, fixedNow))
 			epoch := engine.State().SessionEpoch
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Harmonia-Protocol-Major", "2")
+
+				w.Header().Set("Harmonia-Protocol-Major", "2")
 				w.WriteHeader(tt.status)
 				_ = json.NewEncoder(w).Encode(map[string]string{"error": tt.code})
 			}))
@@ -67,7 +70,13 @@ func TestRejectedBodyCannotLeakValuesOrInjectIdentity(t *testing.T) {
 		cloud, err := (acceptVerifier{}).VerifyPull(context.Background(), Pull{Sequence: 1}, localstate.CloudSnapshot{})
 		check(t, err)
 		check(t, engine.AcceptSnapshot(cloud, fixedNow))
-		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(403); _, _ = w.Write([]byte(body)) }))
+		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Harmonia-Protocol-Major", "2")
+
+			w.Header().Set("Harmonia-Protocol-Major", "2")
+			w.WriteHeader(403)
+			_, _ = w.Write([]byte(body))
+		}))
 		client := testClient(t, server, engine, acceptVerifier{})
 		_, err = client.Pull(context.Background())
 		server.Close()

@@ -87,6 +87,8 @@ func TestDAGManagementTypedJournalBoundsAndBarrier(t *testing.T) {
 	var posts atomic.Int64
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		if r.Header.Get("Harmonia-Protocol-Major") != "2" {
 			t.Error("DAG major lost")
 			w.WriteHeader(400)
@@ -112,7 +114,7 @@ func TestDAGManagementTypedJournalBoundsAndBarrier(t *testing.T) {
 	check(t, e)
 	live, e := client.ManagementControl(context.Background(), env)
 	check(t, e)
-	if live.IssuerDAGEvidence == nil || live.IssuerRecoveryEvidence != nil || live.IssuerEvidence.Profile != "" {
+	if live.IssuerDAGEvidence == nil {
 		t.Fatal("management mixed profiles")
 	}
 	if _, e := client.PrepareGrantUpdate(context.Background(), GrantUpdateIntent{ID: "dag-permanent-denied", EnvironmentID: env, SubjectDeviceID: other.Grant.SubjectDeviceID, Role: "admin", ExpiresAt: 0}, key); !errors.Is(e, ErrWritePermission) {
@@ -154,11 +156,8 @@ func TestDAGManagementTypedJournalBoundsAndBarrier(t *testing.T) {
 	if posts.Load() != 1 {
 		t.Fatal("approved barrier did not send original packet")
 	}
-	if _, e = client.PrepareOtherRevocation(context.Background(), "global-remains-closed", other.Grant.SubjectDeviceID, env, key); !errors.Is(e, ErrWritePermission) {
-		t.Fatal("P4 global revoke opened indirectly")
-	}
-	if _, e = client.RestoreOtherRevocation([]byte(`{}`)); !errors.Is(e, ErrWritePermission) {
-		t.Fatal("P4 global revoke restore opened indirectly")
+	if _, e = client.RestoreOtherRevocation([]byte(`{}`)); !errors.Is(e, cryptox.ErrInvalidWire) {
+		t.Fatal("empty original revocation accepted", e)
 	}
 	check(t, client.CheckManagementControlLowerBounds(live, live))
 	lower := cloneManagementControl(live)
@@ -207,18 +206,18 @@ func environmentValueForManagement(t *testing.T, value string) uint64 {
 	return n
 }
 
-// 只验证旧来源不会被新增P4门槛截断；未构造全局撤销可信包或声称该操作新验收。
-func TestLegacyOtherRevocationEntrypointsRemainAvailable(t *testing.T) {
+// 当前DAG客户端使用同一设备撤销入口，仍拒绝无效密封交易。
+func TestDAGOtherRevocationUsesAuthenticatedReceiptRoute(t *testing.T) {
 	f := newManagementFixture(t)
-	_, e := f.c.PrepareOtherRevocation(context.Background(), "legacy-revoke-route", "synthetic-other", "managed-env", f.key)
+	_, e := f.c.PrepareOtherRevocation(context.Background(), "dag-revoke-route", "synthetic-other", "managed-env", f.key)
 	var request *RequestError
 	if !errors.As(e, &request) || request.Status != http.StatusNotFound {
-		t.Fatal("legacy prepare must reach existing receipt route", e)
+		t.Fatal("dag prepare must reach existing receipt route", e)
 	}
 	if _, e = f.c.RestoreOtherRevocation([]byte(`{}`)); !errors.Is(e, cryptox.ErrInvalidWire) {
-		t.Fatal("legacy restore must retain strict original parser", e)
+		t.Fatal("dag restore must retain strict original parser", e)
 	}
 	if f.posts != 0 {
-		t.Fatal("legacy entrypoint compatibility probe posted")
+		t.Fatal("dag entrypoint compatibility probe posted")
 	}
 }

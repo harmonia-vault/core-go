@@ -257,11 +257,11 @@ func (s localPINSealed) SaveSealed(packet []byte) error { return s.native.SaveWo
 
 func pinIntent(binding appsecurity.Binding, raw, short []byte, mode string) (string, string, error) {
 	c, err := parseWorkflowCommand(string(raw))
-	if err != nil || c.endpoint != binding.Endpoint || recoveryOperation(c.operation) {
+	if err != nil || c.endpoint != binding.Endpoint {
 		return "", "", errInput
 	}
-	approval := c.operation == "approvePairing" || c.operation == "approvePairingV3" || c.operation == "approvePairingV4"
-	enrollment := c.operation == "enrollDeviceV3"
+	approval := c.operation == "approvePairingV5"
+	enrollment := c.operation == "enrollDeviceV5"
 	if mode == "approval" && !approval || mode == "enrollment" && !enrollment || mode == "" && (approval || enrollment) {
 		return "", "", errInput
 	}

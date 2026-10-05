@@ -51,7 +51,7 @@ func offlineSeed(t *testing.T) (string, string, []byte) {
 	defer clear(keys.ReceivingPrivate)
 	mustCLI(t, v.SaveDeviceKeys(keys))
 	// 只作已加密本地存储清理测试，不拿合成收据当真实信任/密码学通过。
-	mustCLI(t, v.SaveTrustContext(localkeys.TrustContext{Endpoint: "https://synthetic.invalid", AccountID: "synthetic-account", AccountGeneration: 1, DeviceID: keys.DeviceID, SigningPublic: keys.SigningPublic, ReceivingPublic: keys.ReceivingPublic, Managers: map[string][]byte{"synthetic-manager": keys.SigningPublic}, PairingProfile: pairing.Profile, EnrollmentCertificate: []byte(`{"syntheticStorageOnly":true}`), EnrollmentKey: "synthetic-old-enrollment", Accepted: true}))
+	mustCLI(t, v.SaveTrustContext(localkeys.TrustContext{Endpoint: "https://synthetic.invalid", AccountID: "synthetic-account", AccountGeneration: 1, DeviceID: keys.DeviceID, SigningPublic: keys.SigningPublic, ReceivingPublic: keys.ReceivingPublic, CertificateVersion: "5", PairingProfile: pairing.Profile, EnrollmentCertificate: []byte(`{"syntheticStorageOnly":true}`), EnrollmentKey: "synthetic-old-enrollment", Accepted: true}))
 	mustCLI(t, v.SaveSession(localkeys.LoginSession{Endpoint: "https://synthetic.invalid", AccountID: "synthetic-account", AccountGeneration: 1, Token: "synthetic-login-only", ExpiresAt: time.Now().Add(time.Hour).UTC().Format(time.RFC3339)}))
 	mustCLI(t, v.Save("writes-v1", []byte(`{"syntheticPendingOnly":true}`)))
 	mustCLI(t, v.Save("recovery-dag-v1", []byte(`{"syntheticJournalOnly":true}`)))

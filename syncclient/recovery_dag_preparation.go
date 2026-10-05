@@ -32,7 +32,6 @@ type DAGTransitionPreparation struct {
 	Version                       int                                  `json:"version"`
 	Kind                          string                               `json:"kind"`
 	AuthorizationKind             string                               `json:"authorizationKind"`
-	ChainMode                     string                               `json:"chainMode"`
 	Phase                         string                               `json:"phase"`
 	Endpoint                      string                               `json:"endpoint"`
 	AccountID                     string                               `json:"accountId"`
@@ -118,7 +117,7 @@ func exactPreparationObject(raw []byte, value any) bool {
 	return true
 }
 func ValidateDAGTransitionPreparation(p DAGTransitionPreparation) error {
-	if p.Version != 1 || p.Kind != "transition-v2" || p.AuthorizationKind != "old-recovery" || p.ChainMode != "continuous" || validateDAGJournalBinding(DAGJournalBinding{Endpoint: p.Endpoint, AccountID: p.AccountID, AccountGeneration: p.AccountGeneration}) != nil || p.Pin.AccountID != p.AccountID || p.Pin.AccountGeneration != strconv.FormatUint(p.AccountGeneration, 10) || !enrollmentID.MatchString(p.OperationID) || !dagHex(p.SessionHash) || p.ExpectedSequence == 0 || p.ExpectedSequence >= 9007199254740991 {
+	if p.Version != 1 || p.Kind != "transition-v2" || p.AuthorizationKind != "old-recovery" || validateDAGJournalBinding(DAGJournalBinding{Endpoint: p.Endpoint, AccountID: p.AccountID, AccountGeneration: p.AccountGeneration}) != nil || p.Pin.AccountID != p.AccountID || p.Pin.AccountGeneration != strconv.FormatUint(p.AccountGeneration, 10) || !enrollmentID.MatchString(p.OperationID) || !dagHex(p.SessionHash) || p.ExpectedSequence == 0 || p.ExpectedSequence >= 9007199254740991 {
 		return cryptox.ErrInvalidWire
 	}
 	raw, err := json.Marshal(p)
@@ -179,7 +178,7 @@ func ValidateDAGTransitionPreparation(p DAGTransitionPreparation) error {
 		if _, err = cryptox.DecodeBase64(c.Nonce, 32, 32); err != nil {
 			return err
 		}
-		if c.OperationID != p.OperationID || c.AccountGeneration != p.Pin.AccountGeneration || c.AuthorizationKind != p.AuthorizationKind || c.ChainMode != p.ChainMode || c.AuthorizerDeviceID != "" || c.SessionHash != p.SessionHash || c.ExpectedSequence != strconv.FormatUint(p.ExpectedSequence, 10) || c.OldRecoveryGeneration != p.OldRecoveryGeneration || c.OldRecoverySigningPublicKey != p.OldRecoverySigningPublicKey || c.OldRecoveryReceivingPublicKey != p.OldRecoveryReceivingPublicKey || c.PreviousTransitionHash != p.PreviousTransitionHash || !sameJSON(c.DependencyBundle, p.BaseBundle) || !sameJSON(c.EnvironmentManifest, p.EnvironmentManifest) || c.IssuerEvidence != nil || c.AuthoritySet == nil || len(c.AuthoritySet) != 0 {
+		if c.OperationID != p.OperationID || c.AccountGeneration != p.Pin.AccountGeneration || c.AuthorizationKind != p.AuthorizationKind || c.AuthorizerDeviceID != "" || c.SessionHash != p.SessionHash || c.ExpectedSequence != strconv.FormatUint(p.ExpectedSequence, 10) || c.OldRecoveryGeneration != p.OldRecoveryGeneration || c.OldRecoverySigningPublicKey != p.OldRecoverySigningPublicKey || c.OldRecoveryReceivingPublicKey != p.OldRecoveryReceivingPublicKey || c.PreviousTransitionHash != p.PreviousTransitionHash || !sameJSON(c.DependencyBundle, p.BaseBundle) || !sameJSON(c.EnvironmentManifest, p.EnvironmentManifest) || c.IssuerEvidence != nil || c.AuthoritySet == nil || len(c.AuthoritySet) != 0 {
 			return cryptox.ErrInvalidWire
 		}
 	default:
@@ -202,7 +201,7 @@ func ValidateDAGPreparationPromotion(p DAGTransitionPreparation, next ProtectedD
 	sub := next.Transition.Submission
 	t := sub.Transition
 	c := p.Challenge
-	if t.ChallengeID != c.ChallengeID || t.Nonce != c.Nonce || t.ExpiresAt != strconv.FormatInt(c.ExpiresAt, 10) || t.SessionHash != p.SessionHash || t.ExpectedSequence != c.ExpectedSequence || t.PreviousTransitionHash != p.PreviousTransitionHash || t.OldRecoveryGeneration != p.OldRecoveryGeneration || t.OldRecoverySigningPublicKey != p.OldRecoverySigningPublicKey || t.OldRecoveryReceivingPublicKey != p.OldRecoveryReceivingPublicKey || t.NewRecoveryGeneration != p.NewRecoveryGeneration || t.NewRecoverySigningPublicKey != p.NewSigningPublicKey || t.NewRecoveryReceivingPublicKey != p.NewReceivingPublicKey || t.AuthorizationKind != p.AuthorizationKind || t.ChainMode != p.ChainMode || t.AuthorizerDeviceID != "" || !sameJSON(next.Transition.DependencyBundle, p.BaseBundle) || !sameJSON(sub.EnvironmentManifest, p.EnvironmentManifest) {
+	if t.ChallengeID != c.ChallengeID || t.Nonce != c.Nonce || t.ExpiresAt != strconv.FormatInt(c.ExpiresAt, 10) || t.SessionHash != p.SessionHash || t.ExpectedSequence != c.ExpectedSequence || t.PreviousTransitionHash != p.PreviousTransitionHash || t.OldRecoveryGeneration != p.OldRecoveryGeneration || t.OldRecoverySigningPublicKey != p.OldRecoverySigningPublicKey || t.OldRecoveryReceivingPublicKey != p.OldRecoveryReceivingPublicKey || t.NewRecoveryGeneration != p.NewRecoveryGeneration || t.NewRecoverySigningPublicKey != p.NewSigningPublicKey || t.NewRecoveryReceivingPublicKey != p.NewReceivingPublicKey || t.AuthorizationKind != p.AuthorizationKind || t.AuthorizerDeviceID != "" || !sameJSON(next.Transition.DependencyBundle, p.BaseBundle) || !sameJSON(sub.EnvironmentManifest, p.EnvironmentManifest) {
 		return cryptox.ErrInvalidWire
 	}
 	return nil
@@ -212,7 +211,7 @@ func (s *DAGRecoverySession) prepareIntent(id string) (DAGTransitionPreparation,
 	if err != nil {
 		return DAGTransitionPreparation{}, err
 	}
-	p := DAGTransitionPreparation{Version: 1, Kind: "transition-v2", AuthorizationKind: "old-recovery", ChainMode: "continuous", Phase: "intent", Endpoint: b.Endpoint, AccountID: b.AccountID, AccountGeneration: b.AccountGeneration, Pin: b.Pin, InitializationHash: b.InitializationHash, InitializationProposalHash: b.InitializationProposalHash, SessionHash: b.SessionHash, OperationID: id, ExpectedSequence: s.vault.Sequence, OldRecoveryGeneration: b.RecoveryGeneration, PreviousTransitionHash: b.RecoveryHeadHash, OldRecoverySigningPublicKey: b.RecoverySigningPublicKey, OldRecoveryReceivingPublicKey: b.RecoveryReceivingPublicKey, BaseBundle: s.vault.DependencyBundle, EnvironmentManifest: []cryptox.RecoveryEnvironmentVersion{}}
+	p := DAGTransitionPreparation{Version: 1, Kind: "transition-v2", AuthorizationKind: "old-recovery", Phase: "intent", Endpoint: b.Endpoint, AccountID: b.AccountID, AccountGeneration: b.AccountGeneration, Pin: b.Pin, InitializationHash: b.InitializationHash, InitializationProposalHash: b.InitializationProposalHash, SessionHash: b.SessionHash, OperationID: id, ExpectedSequence: s.vault.Sequence, OldRecoveryGeneration: b.RecoveryGeneration, PreviousTransitionHash: b.RecoveryHeadHash, OldRecoverySigningPublicKey: b.RecoverySigningPublicKey, OldRecoveryReceivingPublicKey: b.RecoveryReceivingPublicKey, BaseBundle: s.vault.DependencyBundle, EnvironmentManifest: []cryptox.RecoveryEnvironmentVersion{}}
 	for _, row := range s.vault.Environments {
 		p.EnvironmentManifest = append(p.EnvironmentManifest, cryptox.RecoveryEnvironmentVersion{EnvironmentID: row.EnvironmentID, KeyVersion: row.KeyVersion})
 	}

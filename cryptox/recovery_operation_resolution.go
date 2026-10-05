@@ -164,13 +164,13 @@ func RecoveryOperationDependencyBasisHash(b RecoveryDependencyBundle) (string, e
 
 // 原挑战仍按旧已签包/domain验证；此函数只编码公开closure合同的概括摘要。
 type RecoveryOperationTransitionChallenge struct {
-	AccountID, AccountGeneration, OperationID, ChallengeID, Nonce, ExpiresAt, SessionHash      string
-	AuthorizationKind, ChainMode, AuthorizerDeviceID, ExpectedSequence, PreviousTransitionHash string
-	OldRecoveryGeneration, OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey          string
-	EnvironmentManifest                                                                        []RecoveryEnvironmentVersion
-	AuthoritySet                                                                               []RecoveryAdminAuthority
-	IssuerEvidence                                                                             *RecoverySource
-	DependencyBundle                                                                           RecoveryDependencyBundle
+	AccountID, AccountGeneration, OperationID, ChallengeID, Nonce, ExpiresAt, SessionHash string
+	AuthorizationKind, AuthorizerDeviceID, ExpectedSequence, PreviousTransitionHash       string
+	OldRecoveryGeneration, OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey     string
+	EnvironmentManifest                                                                   []RecoveryEnvironmentVersion
+	AuthoritySet                                                                          []RecoveryAdminAuthority
+	IssuerEvidence                                                                        *RecoverySource
+	DependencyBundle                                                                      RecoveryDependencyBundle
 }
 
 func RecoveryOperationTransitionChallengeHash(c RecoveryOperationTransitionChallenge) (string, error) {
@@ -187,7 +187,7 @@ func RecoveryOperationTransitionChallengeHash(c RecoveryOperationTransitionChall
 	if _, e := DecodeBase64(c.Nonce, 32, 32); e != nil {
 		return "", e
 	}
-	if c.ChainMode != "continuous" || !tokenHashPattern.MatchString(c.SessionHash) || !tokenHashPattern.MatchString(c.PreviousTransitionHash) || validatePublicPair(c.OldRecoverySigningPublicKey, c.OldRecoveryReceivingPublicKey) != nil {
+	if !tokenHashPattern.MatchString(c.SessionHash) || !tokenHashPattern.MatchString(c.PreviousTransitionHash) || validatePublicPair(c.OldRecoverySigningPublicKey, c.OldRecoveryReceivingPublicKey) != nil {
 		return "", ErrInvalidWire
 	}
 	mh, e := RecoveryManifestHash(c.EnvironmentManifest)
@@ -218,7 +218,7 @@ func RecoveryOperationTransitionChallengeHash(c RecoveryOperationTransitionChall
 	if e != nil {
 		return "", e
 	}
-	return hashCanonical([]string{"harmonia/recovery-operation-challenge/v1", "transition-v2", c.AccountID, c.AccountGeneration, c.OperationID, c.ChallengeID, c.Nonce, c.ExpiresAt, c.SessionHash, c.AuthorizationKind, c.ChainMode, c.AuthorizerDeviceID, c.ExpectedSequence, c.PreviousTransitionHash, c.OldRecoveryGeneration, c.OldRecoverySigningPublicKey, c.OldRecoveryReceivingPublicKey, mh, ah, sh, bh})
+	return hashCanonical([]string{"harmonia/recovery-operation-challenge/v1", "transition-v2", c.AccountID, c.AccountGeneration, c.OperationID, c.ChallengeID, c.Nonce, c.ExpiresAt, c.SessionHash, c.AuthorizationKind, c.AuthorizerDeviceID, c.ExpectedSequence, c.PreviousTransitionHash, c.OldRecoveryGeneration, c.OldRecoverySigningPublicKey, c.OldRecoveryReceivingPublicKey, mh, ah, sh, bh})
 }
 
 // 回执是HTTPS权威观察，不是设备签授权或可单独搬运的服务器签证。

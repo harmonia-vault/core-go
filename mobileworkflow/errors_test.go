@@ -15,6 +15,8 @@ import (
 func TestMobileHTTPSFaultCannotEchoPasswordEquivalentOrRemoteText(t *testing.T) {
 	for _, body := range []string{`{"error":"synthetic_secret_lowercase"}`, `{"error":"` + strings.Repeat("a", 64) + `"}`, `{"error":"unauthorized","token":"synthetic"}`, `{"error":"unauthorized"} {}`, `{"error":"unauthorized","error":"device_untrusted"}`} {
 		server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Harmonia-Protocol-Major", "2")
+
 			w.WriteHeader(http.StatusForbidden)
 			_, _ = w.Write([]byte(body))
 		}))

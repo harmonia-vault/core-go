@@ -61,6 +61,7 @@ func (c *Client) OpenNotifications(ctx context.Context) (*NotificationSubscripti
 		return nil, ErrNotificationProtocol
 	}
 	header := make(http.Header)
+	header.Set("Harmonia-Protocol-Major", "2")
 	header.Set("Authorization", "Bearer "+ticket.Ticket)
 	header.Set("X-Harmonia-Device-Id", c.config.DeviceID)
 	header.Set("X-Harmonia-Account-Generation", strconv.FormatUint(c.config.AccountGeneration, 10))
@@ -75,6 +76,10 @@ func (c *Client) OpenNotifications(ctx context.Context) (*NotificationSubscripti
 			return nil, ctx.Err()
 		}
 		return nil, ErrNotificationUnavailable
+	}
+	if response == nil || response.Header.Get("Harmonia-Protocol-Major") != "2" {
+		_ = connection.CloseNow()
+		return nil, ErrNotificationProtocol
 	}
 	connection.SetReadLimit(1024)
 	if c.config.Engine.State().SessionEpoch != c.epoch {

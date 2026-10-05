@@ -62,15 +62,11 @@ func TestPairingRelayKnownAnswerAndBindings(t *testing.T) {
 }
 
 func TestEnrollmentApprovalHTTPLayoutAndLimits(t *testing.T) {
-	var v struct {
-		Approval    EnrollmentApproval    `json:"approval"`
-		Certificate EnrollmentCertificate `json:"certificate"`
+	v, anchor := issuerFixture(t)
+	if _, e := VerifyCompletedEnrollmentV5(anchor, v.Approval); e != nil {
+		t.Fatal(e)
 	}
-	readVector(t, "device-enrollment-v1.json", &v)
-	c, e := v.Approval.Certificate()
-	if e != nil || c != v.Certificate {
-		t.Fatalf("HTTP批准对象转换与签名数组不一致: %v", e)
-	}
+	var e error
 	a := v.Approval
 	a.Context.Purpose = "reset-account"
 	if _, e = a.Certificate(); e == nil {

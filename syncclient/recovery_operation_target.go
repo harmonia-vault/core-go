@@ -46,7 +46,7 @@ func RecoveryOperationTargetFromSealedTransition(binding DAGJournalBinding, raw 
 	if e != nil {
 		return out, e
 	}
-	challenge, e := cryptox.RecoveryOperationTransitionChallengeHash(cryptox.RecoveryOperationTransitionChallenge{AccountID: p.AccountID, AccountGeneration: t.AccountGeneration, OperationID: t.OperationID, ChallengeID: t.ChallengeID, Nonce: t.Nonce, ExpiresAt: t.ExpiresAt, SessionHash: t.SessionHash, AuthorizationKind: t.AuthorizationKind, ChainMode: t.ChainMode, AuthorizerDeviceID: t.AuthorizerDeviceID, ExpectedSequence: t.ExpectedSequence, PreviousTransitionHash: t.PreviousTransitionHash, OldRecoveryGeneration: t.OldRecoveryGeneration, OldRecoverySigningPublicKey: t.OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey: t.OldRecoveryReceivingPublicKey, EnvironmentManifest: s.EnvironmentManifest, AuthoritySet: s.AuthoritySet, IssuerEvidence: s.IssuerEvidence, DependencyBundle: command.DependencyBundle})
+	challenge, e := cryptox.RecoveryOperationTransitionChallengeHash(cryptox.RecoveryOperationTransitionChallenge{AccountID: p.AccountID, AccountGeneration: t.AccountGeneration, OperationID: t.OperationID, ChallengeID: t.ChallengeID, Nonce: t.Nonce, ExpiresAt: t.ExpiresAt, SessionHash: t.SessionHash, AuthorizationKind: t.AuthorizationKind, AuthorizerDeviceID: t.AuthorizerDeviceID, ExpectedSequence: t.ExpectedSequence, PreviousTransitionHash: t.PreviousTransitionHash, OldRecoveryGeneration: t.OldRecoveryGeneration, OldRecoverySigningPublicKey: t.OldRecoverySigningPublicKey, OldRecoveryReceivingPublicKey: t.OldRecoveryReceivingPublicKey, EnvironmentManifest: s.EnvironmentManifest, AuthoritySet: s.AuthoritySet, IssuerEvidence: s.IssuerEvidence, DependencyBundle: command.DependencyBundle})
 	if e != nil {
 		return out, e
 	}

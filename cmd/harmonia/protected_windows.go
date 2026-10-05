@@ -67,10 +67,7 @@ func protectedWindowsAccount(ctx context.Context, configFile string, o protected
 		request.Credential = hash[:]
 	case "pair":
 		request.ApproverDeviceID = o.approver
-		request.CertificateVersion = o.certificateVersion
-		if request.CertificateVersion == "" {
-			request.CertificateVersion = "3"
-		}
+		request.CertificateVersion = "5"
 	case "pair-status", "pair-cancel":
 		request.PairingID = pairingID
 	default:
@@ -309,7 +306,6 @@ func runWindowsProtectedOwner(ctx context.Context, c windowsservice.Config, o da
 			options := base
 			options.command = "pair"
 			options.approver = request.ApproverDeviceID
-			options.certificateVersion = request.CertificateVersion
 			runtime := r
 			runtime.pairingProgress = progress
 			runtime.enrollmentEpoch = &epoch

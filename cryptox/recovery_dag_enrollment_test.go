@@ -99,9 +99,9 @@ func TestRecoveryDAGRecoveredManagerApprovesNewDeviceBoundToConfirmedAnchor(t *t
 			case "root-as-manager":
 				an.Context.ApproverDeviceID = f.RootPin.DeviceID
 			case "capability":
-				x.Capabilities = []string{RecoveryAuthorityCapability}
+				x.Capabilities = []string{"issuer-recovery-v1"}
 			case "retired-recovery-as-device":
-				x.Context.InitiatorSigningPublicKey = f.Proof.Records[0].TransitionV1.Submission.Transition.OldRecoverySigningPublicKey
+				x.Context.InitiatorSigningPublicKey = f.Proof.Records[0].TransitionV2.Submission.Transition.OldRecoverySigningPublicKey
 			}
 			if _, e := VerifyCompletedEnrollmentV5(an, x); e == nil {
 				t.Fatal("changed confirmed enrollment accepted")
@@ -288,16 +288,8 @@ func TestRecoveryDAGStrictCommandsAndCommittedGoldenFixture(t *testing.T) {
 		})
 	}
 	// v2 old-code 标量和旧 v1 DTO 同形；旧域验签必须拒绝，绝不因 decode 成功降级。
-	prior, e := VerifyRecoveryInitialization(f.RootPin, f.Proof.Initialization)
-	recoveryCheck(t, e)
-	prior, e = VerifyAcceptedRecoveryTransition(prior, *f.Proof.Records[0].TransitionV1)
-	recoveryCheck(t, e)
-	s := f.Proof.Records[2].TransitionV2.Submission
-	old := RecoveryTransitionSubmission{RecoveryAuthorityTransition(s.Transition), s.EnvironmentManifest, s.AuthoritySet, nil, s.Envelopes, s.NewTrustRoot, s.LegacyState, s.AuthorizationSignature, s.NewRecoverySignature}
-	if _, e = VerifyAcceptedRecoveryTransition(prior, AcceptedRecoveryTransition{old, 40}); e == nil {
-		t.Fatal("v2 signature accepted under old transition domain")
-	}
 }
+
 func findDAGGrant(p IssuerRecoveryDAG, subject, env string) SignedGrantWire {
 	for _, a := range p.Source.View.Authorities {
 		if a.Grant.Grant.SubjectDeviceID == subject && a.Grant.Grant.EnvironmentID == env {

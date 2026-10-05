@@ -45,7 +45,12 @@ func (v environmentWrapperVerifier) VerifyPull(_ context.Context, pull Pull, _ l
 }
 func TestEnvironmentWrapperBindingPauseAndPinnedSignatureBeforeNetwork(t *testing.T) {
 	var requests atomic.Int32
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { requests.Add(1) }))
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+		requests.Add(1)
+	}))
 	defer server.Close()
 	client := testClient(t, server, testEngine(t), acceptVerifier{})
 	signed := environmentWrapperChange(t)
@@ -92,6 +97,9 @@ func TestEnvironmentWrapperRequiresExactVerifiedReceiptAndSequence(t *testing.T)
 	}{{"verified", false, false, 8, true}, {"only-current-value", true, false, 8, false}, {"wrong-payload", false, true, 8, false}, {"wrong-receipt-sequence", false, false, 9, false}} {
 		t.Run(test.name, func(t *testing.T) {
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Harmonia-Protocol-Major", "2")
+
+				w.Header().Set("Harmonia-Protocol-Major", "2")
 				_ = json.NewEncoder(w).Encode(Pull{AccountID: "acct", AccountGeneration: "1", Sequence: 9})
 			}))
 			defer server.Close()
@@ -107,6 +115,9 @@ func TestEnvironmentStatusRejectsInvalidShapesAndBindsHeaders(t *testing.T) {
 	for _, status := range []EnvironmentChangeStatus{{State: "complete", Sequence: 8}, {State: "unknown"}, {State: "complete"}, {State: "unknown", Sequence: 8}, {State: "complete", Sequence: 9007199254740992}, {State: "pending"}} {
 		t.Run(status.State+"/"+strconv.FormatUint(status.Sequence, 10), func(t *testing.T) {
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Harmonia-Protocol-Major", "2")
+
+				w.Header().Set("Harmonia-Protocol-Major", "2")
 				if r.Header.Get("X-Harmonia-Device-Id") != "dev" || r.Header.Get("X-Harmonia-Account-Generation") != "1" || r.Header.Get("Cache-Control") != "no-store" {
 					t.Error("status request lost device binding")
 				}

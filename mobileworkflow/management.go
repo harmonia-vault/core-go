@@ -130,7 +130,7 @@ func (w *Workflow) validateManagementState() error {
 	if r == nil {
 		return nil
 	}
-	if len(s.History) >= 256 || s.History[r.ID].ID != "" || !identifier.MatchString(r.ID) || len(r.ID) > 64 || len(r.Packet) == 0 || len(r.Packet) > 2<<20 || !managementHash(r.ContentHash) || r.Sequence > 9007199254740991 || r.Sequence > 0 && !r.Attempted || w.state.Recovery != nil || len(w.state.SelfRevocation) > 0 || w.enrollmentPending() || w.approvalV4Pending() || w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 || w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+	if len(s.History) >= 256 || s.History[r.ID].ID != "" || !identifier.MatchString(r.ID) || len(r.ID) > 64 || len(r.Packet) == 0 || len(r.Packet) > 2<<20 || !managementHash(r.ContentHash) || r.Sequence > 9007199254740991 || r.Sequence > 0 && !r.Attempted || len(w.state.SelfRevocation) > 0 || w.enrollmentPending() || w.approvalV5Pending() {
 		return ErrManagementConflict
 	}
 	c, v, e := w.managementRecordClient()

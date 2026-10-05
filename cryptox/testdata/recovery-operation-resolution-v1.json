@@ -122,7 +122,6 @@
       "sessionHash": "5472917a436f9ddcfa90b09c3e5408df706f835f8e1c2975ac6c35bbc33a5404",
       "accountGeneration": "1",
       "authorizationKind": "old-recovery",
-      "chainMode": "continuous",
       "authorizerDeviceId": "",
       "expectedSequence": "1",
       "previousTransitionHash": "8da24530f529741d60800bff38bd0b8b09c286fe2bd057d2e5a7cf64509d57b5",
@@ -192,7 +191,7 @@
         "records": []
       }
     },
-    "challengeHash": "3f458898f2942ae4e271395405f7e40ab06134df22b09c478d84ce2446c3e251",
+    "challengeHash": "058ae2eca13a48c4fff4365cb1caa9aa28b78b638d58f81342f33fd0d454d1fb",
     "dependencyBasisHash": "00035b44d3decf851d11ac90f38a913317c735929ccd9f76b2e3482d6af5f8f5",
     "emptyAdminHash": "30e56f9479406d153b3d74e30c72cbcdfd0e9ecb400a4b18f3fa11147bb9c86f"
   },

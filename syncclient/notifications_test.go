@@ -39,6 +39,13 @@ func newNotificationFixture(t *testing.T) *notificationFixture {
 	f := &notificationFixture{crypto: newCryptoFixture(t), engine: testEngine(t), sequence: 1, ready: make(chan *websocket.Conn, 8)}
 	f.events = []Event{f.crypto.event(t, 1, "initial-synthetic")}
 	f.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+		if r.Header.Get("Harmonia-Protocol-Major") != "2" {
+			w.WriteHeader(426)
+			return
+		}
 		if r.TLS == nil || r.URL.RawQuery != "" && !strings.HasSuffix(r.URL.Path, "/pull") || r.Header.Get("X-Harmonia-Device-Id") != "dev" || r.Header.Get("X-Harmonia-Account-Generation") != "1" {
 			t.Error("通知连接身份或HTTPS边界错误")
 		}

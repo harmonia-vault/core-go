@@ -1,4 +1,4 @@
-// Package mobileworkflow 是原生系统认证之后调用的手机业务层。
+// Package mobileworkflow 提供手机账号请求与受保护的保险库业务。
 // 不被当前 mobilebridge AAR 导出；其保护上下文只能在原生 AES 文件中密封，不能由 Dart 提供。
 package mobileworkflow
 
@@ -26,6 +26,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/emailcode"
 	"github.com/harmonia-vault/core-go/localstate"
 	"github.com/harmonia-vault/core-go/syncclient"
 )
@@ -67,11 +68,10 @@ type Registration struct {
 	AccountGeneration    string `json:"accountGeneration"`
 	VerificationRequired bool   `json:"verificationRequired"`
 }
-type EmailProof struct {
+type EmailVerification struct {
 	AccountID         string `json:"accountId"`
 	AccountGeneration string `json:"accountGeneration"`
-	ChallengeID       string `json:"challengeId"`
-	Token             string `json:"token"`
+	Code              string `json:"code"`
 }
 type Initialization struct {
 	State          string   `json:"state"`
@@ -103,39 +103,35 @@ type environmentRecord struct {
 	Applied   bool                            `json:"applied"`
 }
 type protectedState struct {
-	DAGManagement                   *dagManagementJournal         `json:"dagManagement,omitempty"`
-	DAGEnvironments                 *dagEnvironmentJournal        `json:"dagEnvironments,omitempty"`
-	DAGWrites                       *dagWriteJournal              `json:"dagWrites,omitempty"`
-	RecoveryDAGResolution           *recoveryDAGResolutionState   `json:"recoveryDAGResolution,omitempty"`
-	DAGCASRequired                  bool                          `json:"dagCASRequired,omitempty"`
-	RecoveredDAGDevice              *recoveredDAGDeviceRecord     `json:"recoveredDAGDevice,omitempty"`
-	RecoveryDAGRecoveredPreparation *recoveryDAGPreparationState  `json:"recoveryDAGRecoveredPreparation,omitempty"`
-	RecoveryDAGPreparation          *recoveryDAGPreparationState  `json:"recoveryDAGPreparation,omitempty"`
-	RecoveryDAG                     *recoveryDAGState             `json:"recoveryDAG,omitempty"`
-	PendingApprovalV4               *approvalRecordV4             `json:"pendingApprovalV4,omitempty"`
-	RecoveredDevice                 *recoveredDeviceRecord        `json:"recoveredDevice,omitempty"`
-	RecoveryAuthority               *recoveryAuthorityRecord      `json:"recoveryAuthority,omitempty"`
-	Management                      *managementState              `json:"management,omitempty"`
-	Version                         int                           `json:"version"`
-	Endpoint                        string                        `json:"endpoint"`
-	DeviceID                        string                        `json:"deviceId"`
-	SigningPublicKey                string                        `json:"signingPublicKey"`
-	ReceivingPublicKey              string                        `json:"receivingPublicKey"`
-	AccountID                       string                        `json:"accountId"`
-	AccountGeneration               string                        `json:"accountGeneration"`
-	Root                            *cryptox.TrustRoot            `json:"root,omitempty"`
-	Pending                         *pendingInitialization        `json:"pending,omitempty"`
-	Cloud                           localstate.State              `json:"cloud"`
-	Grants                          []cryptox.SignedGrantWire     `json:"grants"`
-	Labels                          map[string]labelState         `json:"labels"`
-	WriteJournal                    []byte                        `json:"writeJournal,omitempty"`
-	EnvironmentWrites               map[string]*environmentRecord `json:"environmentWrites,omitempty"`
-	InitialAuthorities              []cryptox.SignedGrantWire     `json:"initialAuthorities,omitempty"`
-	PendingApproval                 *approvalRecord               `json:"pendingApproval,omitempty"`
-	SelfRevocation                  []byte                        `json:"selfRevocation,omitempty"`
-	Recovery                        *recoveryRecord               `json:"recovery,omitempty"`
-	EnrollmentV3                    *mobileEnrollmentRecord       `json:"enrollmentV3,omitempty"`
-	PendingApprovalV3               *approvalRecordV3             `json:"pendingApprovalV3,omitempty"`
+	Initialization                  *cryptox.OriginalInitialization `json:"initialization,omitempty"`
+	DAGManagement                   *dagManagementJournal           `json:"dagManagement,omitempty"`
+	DAGEnvironments                 *dagEnvironmentJournal          `json:"dagEnvironments,omitempty"`
+	DAGWrites                       *dagWriteJournal                `json:"dagWrites,omitempty"`
+	RecoveryDAGResolution           *recoveryDAGResolutionState     `json:"recoveryDAGResolution,omitempty"`
+	DAGCASRequired                  bool                            `json:"dagCASRequired,omitempty"`
+	RecoveredDAGDevice              *recoveredDAGDeviceRecord       `json:"recoveredDAGDevice,omitempty"`
+	RecoveryDAGRecoveredPreparation *recoveryDAGPreparationState    `json:"recoveryDAGRecoveredPreparation,omitempty"`
+	RecoveryDAGPreparation          *recoveryDAGPreparationState    `json:"recoveryDAGPreparation,omitempty"`
+	RecoveryDAG                     *recoveryDAGState               `json:"recoveryDAG,omitempty"`
+	PendingApprovalV5               *approvalRecordV5               `json:"pendingApprovalV5,omitempty"`
+	Management                      *managementState                `json:"management,omitempty"`
+	Version                         int                             `json:"version"`
+	Endpoint                        string                          `json:"endpoint"`
+	DeviceID                        string                          `json:"deviceId"`
+	SigningPublicKey                string                          `json:"signingPublicKey"`
+	ReceivingPublicKey              string                          `json:"receivingPublicKey"`
+	AccountID                       string                          `json:"accountId"`
+	AccountGeneration               string                          `json:"accountGeneration"`
+	Root                            *cryptox.TrustRoot              `json:"root,omitempty"`
+	Pending                         *pendingInitialization          `json:"pending,omitempty"`
+	Cloud                           localstate.State                `json:"cloud"`
+	Grants                          []cryptox.SignedGrantWire       `json:"grants"`
+	Labels                          map[string]labelState           `json:"labels"`
+	WriteJournal                    []byte                          `json:"writeJournal,omitempty"`
+	EnvironmentWrites               map[string]*environmentRecord   `json:"environmentWrites,omitempty"`
+	InitialAuthorities              []cryptox.SignedGrantWire       `json:"initialAuthorities,omitempty"`
+	SelfRevocation                  []byte                          `json:"selfRevocation,omitempty"`
+	EnrollmentV5                    *mobileEnrollmentRecord         `json:"enrollmentV5,omitempty"`
 }
 type memoryStore struct{ state localstate.State }
 
@@ -157,7 +153,6 @@ type Workflow struct {
 	saveNativeCAS        func(string, []byte) error
 	checkNativeState     func(string) error
 	protectedSHA256      string
-	recoverySession      *RecoverySession
 	mu                   sync.Mutex
 	signing              ed25519.PrivateKey
 	receiving            []byte
@@ -229,7 +224,7 @@ func New(config Config) (*Workflow, error) {
 		now = time.Now
 	}
 	id := sha256.Sum256(signing)
-	state := protectedState{Version: 1, Endpoint: endpoint.String(), DeviceID: hex.EncodeToString(id[:]), SigningPublicKey: cryptox.EncodeBase64(signing), ReceivingPublicKey: cryptox.EncodeBase64(receive.PublicKey().Bytes()), Cloud: localstate.EmptyState(), Labels: map[string]labelState{}}
+	state := protectedState{Version: 2, Endpoint: endpoint.String(), DeviceID: hex.EncodeToString(id[:]), SigningPublicKey: cryptox.EncodeBase64(signing), ReceivingPublicKey: cryptox.EncodeBase64(receive.PublicKey().Bytes()), Cloud: localstate.EmptyState(), Labels: map[string]labelState{}}
 	if len(config.ProtectedState) > 0 {
 		if len(config.ProtectedState) > 8<<20 {
 			return nil, errors.New("protected mobile context too large")
@@ -238,7 +233,7 @@ func New(config Config) (*Workflow, error) {
 		if err = decode(config.ProtectedState, &decoded); err != nil {
 			return nil, errors.New("protected mobile context invalid")
 		}
-		if decoded.Version != 1 || decoded.Endpoint != state.Endpoint || decoded.DeviceID != state.DeviceID || decoded.SigningPublicKey != state.SigningPublicKey || decoded.ReceivingPublicKey != state.ReceivingPublicKey || decoded.Cloud.Synthetic {
+		if decoded.Version != 2 || decoded.Endpoint != state.Endpoint || decoded.DeviceID != state.DeviceID || decoded.SigningPublicKey != state.SigningPublicKey || decoded.ReceivingPublicKey != state.ReceivingPublicKey || decoded.Cloud.Synthetic {
 			return nil, errors.New("protected mobile context does not bind endpoint and device")
 		}
 		state = decoded
@@ -275,7 +270,7 @@ func New(config Config) (*Workflow, error) {
 		if state.Root != nil {
 			root := state.Root
 			pub, e := cryptox.DecodeBase64(root.RecoverySigningPublicKey, 32, 32)
-			if e != nil || (state.EnrollmentV3 == nil && state.RecoveredDevice == nil && state.RecoveredDAGDevice == nil && (root.RootDeviceID != state.DeviceID || root.RootSigningPublicKey != state.SigningPublicKey || root.RootReceivingPublicKey != state.ReceivingPublicKey)) || cryptox.VerifyTrustRoot(state.AccountID, state.AccountGeneration, *root, pub) != nil {
+			if e != nil || (state.EnrollmentV5 == nil && state.RecoveredDAGDevice == nil && (root.RootDeviceID != state.DeviceID || root.RootSigningPublicKey != state.SigningPublicKey || root.RootReceivingPublicKey != state.ReceivingPublicKey)) || cryptox.VerifyTrustRoot(state.AccountID, state.AccountGeneration, *root, pub) != nil {
 				return nil, errors.New("protected root binding invalid")
 			}
 		}
@@ -323,23 +318,11 @@ func New(config Config) (*Workflow, error) {
 			return nil, err
 		}
 	}
-	if err := workflow.validateRecoveryState(); err != nil {
-		workflow.Close()
-		return nil, err
-	}
-	if err := workflow.observeRecoveryClock(); err != nil {
-		workflow.Close()
-		return nil, err
-	}
 	if err := workflow.validateMobileEnrollment(); err != nil {
 		workflow.Close()
 		return nil, err
 	}
 	if err := workflow.observeEnrollmentClock(); err != nil {
-		workflow.Close()
-		return nil, err
-	}
-	if err := workflow.validateRecoveredDeviceRecord(); err != nil {
 		workflow.Close()
 		return nil, err
 	}
@@ -353,19 +336,11 @@ func New(config Config) (*Workflow, error) {
 			return nil, err
 		}
 	}
-	if err := workflow.validateApprovalV4(state.PendingApprovalV4); err != nil {
-		workflow.Close()
-		return nil, err
-	}
-	if err := workflow.validateApprovalV3(state.PendingApprovalV3); err != nil {
+	if err := workflow.validateApprovalV5(state.PendingApprovalV5); err != nil {
 		workflow.Close()
 		return nil, err
 	}
 	if err := workflow.validateInitialAuthorities(); err != nil {
-		workflow.Close()
-		return nil, err
-	}
-	if err := workflow.validateApprovalRecord(state.PendingApproval); err != nil {
 		workflow.Close()
 		return nil, err
 	}
@@ -387,7 +362,6 @@ func (w *Workflow) Close() {
 	if w.dagOwnerCancel != nil {
 		w.dagOwnerCancel()
 	}
-	w.recoverySession = nil // native registry independently owns this process resource
 	if w.writer != nil {
 		w.writer.Close()
 		w.writer = nil
@@ -402,14 +376,13 @@ func (w *Workflow) Close() {
 	}
 	w.client = nil
 	w.login = nil
-	if r := w.state.EnrollmentV3; r != nil && r.Login != nil {
+	if r := w.state.EnrollmentV5; r != nil && r.Login != nil {
 		r.Login.Token = ""
 	}
 	clear(w.state.SelfRevocation)
 	if w.managementPending() {
 		clear(w.state.Management.Pending.Packet)
 	}
-	w.clearRecovery()
 	if w.http != nil {
 		w.http.CloseIdleConnections()
 		w.http = nil
@@ -456,23 +429,11 @@ func (w *Workflow) checkWithoutManagement() error {
 	if len(w.state.SelfRevocation) > 0 {
 		return ErrSelfRevocationPending
 	}
-	if w.state.Recovery != nil {
-		return ErrRecoveryRestricted
-	}
-	if w.recoveredDevicePending() {
-		return ErrRecoveryPending
-	}
-	if w.approvalV4Pending() {
+	if w.approvalV5Pending() {
 		return ErrApprovalPending
 	}
 	if w.enrollmentPending() {
 		return ErrMobileEnrollmentPending
-	}
-	if w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
-		return ErrApprovalPending
-	}
-	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 {
-		return ErrApprovalPending
 	}
 	return nil
 }
@@ -505,31 +466,69 @@ func (w *Workflow) Register(ctx context.Context, email, password string) (Regist
 	if w.state.Root != nil || w.state.Pending != nil {
 		return Registration{}, ErrNotTrusted
 	}
+	return RegisterAccount(ctx, w.http, w.state.Endpoint, email, password)
+}
+
+// RegisterAccount 只创建服务器账号，不生成或读取本机设备密钥。
+func RegisterAccount(ctx context.Context, client *http.Client, endpoint, email, password string) (Registration, error) {
 	value, err := credential(password)
 	if err != nil {
 		return Registration{}, err
 	}
 	var result Registration
-	err = w.request(ctx, "/v1/register", "", map[string]string{"email": email, "credential": value}, &result)
+	err = requestJSON(ctx, client, endpoint, "/v1/register", nil, map[string]string{"email": email, "credential": value}, &result)
 	return result, err
 }
-func (w *Workflow) VerifyEmail(ctx context.Context, p EmailProof) error {
+func (w *Workflow) VerifyEmail(ctx context.Context, p EmailVerification) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if err := w.check(); err != nil {
 		return err
 	}
+	return VerifyAccountEmail(ctx, w.http, w.state.Endpoint, p)
+}
+
+// RequestVerificationEmail 只申请验证邮件，不登录或授予设备信任。
+func RequestVerificationEmail(ctx context.Context, client *http.Client, endpoint, email string) error {
+	if len(email) == 0 || len(email) > 254 || !utf8.ValidString(email) {
+		return errors.New("email input invalid")
+	}
+	var result struct {
+		Accepted bool `json:"accepted"`
+	}
+	if err := requestJSON(ctx, client, endpoint, "/v1/email-verification/request", nil, map[string]string{"email": email}, &result); err != nil {
+		return err
+	}
+	if !result.Accepted {
+		return errors.New("email request not accepted")
+	}
+	return nil
+}
+
+func (w *Workflow) RequestVerificationEmail(ctx context.Context, email string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if err := w.check(); err != nil {
+		return err
+	}
+	return RequestVerificationEmail(ctx, w.http, w.state.Endpoint, email)
+}
+
+// VerifyAccountEmail 只提交邮件证明，不打开保险库或改变设备信任。
+func VerifyAccountEmail(ctx context.Context, client *http.Client, endpoint string, p EmailVerification) error {
 	if !identifier.MatchString(p.AccountID) {
 		return errors.New("proof account invalid")
 	}
+
 	var result struct {
 		Verified bool `json:"verified"`
 	}
-	err := w.request(ctx, "/v1/accounts/"+p.AccountID+"/email-verification/complete", "", struct {
-		AccountGeneration string `json:"accountGeneration"`
-		ChallengeID       string `json:"challengeId"`
-		Token             string `json:"token"`
-	}{p.AccountGeneration, p.ChallengeID, p.Token}, &result)
+	code, valid := emailcode.Normalize(p.Code)
+	if !valid {
+		return errors.New("email code invalid")
+	}
+	err := requestJSON(ctx, client, endpoint, "/v1/accounts/"+p.AccountID+"/email-verification/complete", nil,
+		map[string]string{"accountGeneration": p.AccountGeneration, "code": code}, &result)
 	if err == nil && !result.Verified {
 		return errors.New("email proof not confirmed")
 	}
@@ -773,6 +772,24 @@ func (w *Workflow) CompleteInitialization(ctx context.Context, completeCodeReent
 		return View{}, err
 	}
 	id, name := p.Proposal.Environments[0].EnvironmentID, p.Name
+	proof, err := cryptox.NewInitializationProof(w.state.AccountID, w.state.AccountGeneration, p.Login.Token, view.ChallengeID, view.Nonce, strconv.FormatInt(view.ExpiresAt, 10), view.ProposalHash)
+	if err != nil {
+		return View{}, err
+	}
+	deviceSignature, err := cryptox.SignInitializationProof(proof, w.signing)
+	if err != nil {
+		return View{}, err
+	}
+	recoverySignature, err := cryptox.SignInitializationProof(proof, recovery.SigningPrivate)
+	if err != nil {
+		return View{}, err
+	}
+	original := cryptox.OriginalInitialization{Proposal: p.Proposal, Proof: proof, DeviceSignature: deviceSignature, RecoverySignature: recoverySignature, Sequence: 1}
+	if _, err = original.Hash(); err != nil {
+		return View{}, err
+	}
+	previousInitialization := w.state.Initialization
+	w.state.Initialization = &original
 	w.state.Root = &root
 	previousAuthorities := w.state.InitialAuthorities
 	w.state.InitialAuthorities = nil
@@ -782,6 +799,7 @@ func (w *Workflow) CompleteInitialization(ctx context.Context, completeCodeReent
 	w.state.Pending = nil
 	if err = w.persist(); err != nil {
 		w.state.Root = nil
+		w.state.Initialization = previousInitialization
 		w.state.InitialAuthorities = previousAuthorities
 		w.state.Pending = p
 		return View{}, errors.Join(ErrPending, err)
@@ -801,9 +819,19 @@ func (w *Workflow) accountPath(suffix string) string {
 var errMobileResponseMalformed = errors.New("mobile HTTPS response malformed")
 
 func (w *Workflow) request(ctx context.Context, path, token string, body any, out any) error {
-	endpoint, err := url.Parse(w.state.Endpoint)
-	if err != nil {
-		return err
+	headers := make(http.Header)
+	if token != "" {
+		headers.Set("Authorization", "Bearer "+token)
+		headers.Set("X-Harmonia-Account-Generation", w.state.AccountGeneration)
+		headers.Set("X-Harmonia-Device-Id", w.state.DeviceID)
+	}
+	return requestJSON(ctx, w.http, w.state.Endpoint, path, headers, body, out)
+}
+
+func requestJSON(ctx context.Context, client *http.Client, baseURL, path string, headers http.Header, body any, out any) error {
+	endpoint, err := url.Parse(baseURL)
+	if err != nil || client == nil || endpoint.Scheme != "https" || endpoint.Host == "" || endpoint.User != nil || endpoint.RawQuery != "" || endpoint.Fragment != "" {
+		return errors.New("mobile HTTPS endpoint invalid")
 	}
 	requestPath, err := url.ParseRequestURI(path)
 	if err != nil || requestPath.Scheme != "" || requestPath.Host != "" || requestPath.Fragment != "" || !strings.HasPrefix(requestPath.Path, "/") {
@@ -829,20 +857,22 @@ func (w *Workflow) request(ctx context.Context, path, token string, body any, ou
 		return errors.New("could not create mobile HTTPS request")
 	}
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Harmonia-Protocol-Major", "2")
 	req.Header.Set("Cache-Control", "no-store")
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-		req.Header.Set("X-Harmonia-Account-Generation", w.state.AccountGeneration)
-		req.Header.Set("X-Harmonia-Device-Id", w.state.DeviceID)
+	for name, values := range headers {
+		req.Header[name] = values
 	}
-	response, err := w.http.Do(req)
+	response, err := client.Do(req)
 	if err != nil {
 		return errors.New("mobile HTTPS request failed")
 	}
 	defer response.Body.Close()
+	if response.Header.Get("Harmonia-Protocol-Major") != "2" {
+		return errMobileResponseMalformed
+	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, (8<<20)+1))
 	if err != nil {
 		return errors.New("mobile HTTPS response read failed")
@@ -853,13 +883,14 @@ func (w *Workflow) request(ctx context.Context, path, token string, body any, ou
 	defer clear(data)
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		var wire struct {
-			Error string `json:"error"`
+			Error             string `json:"error"`
+			RetryAfterSeconds *int   `json:"retryAfterSeconds,omitempty"`
 		}
 		code := "request_rejected"
 		if len(data) <= 4096 && decode(data, &wire) == nil {
 			code = wire.Error
 		}
-		return syncclient.NewRequestError(response.StatusCode, code)
+		return syncclient.NewRequestErrorWithRetry(response.StatusCode, code, wire.RetryAfterSeconds)
 	}
 	if err := decode(data, out); err != nil {
 		return errors.Join(errMobileResponseMalformed, err)
@@ -989,18 +1020,15 @@ func (w *Workflow) invalidateTrust() error {
 	}
 	w.state.Management = nil
 	w.state.Root = nil
+	w.state.Initialization = nil
 	w.state.Pending = nil
 	w.state.InitialAuthorities = nil
-	w.state.PendingApproval = nil
-	w.state.PendingApprovalV3 = nil
-	w.state.PendingApprovalV4 = nil
-	if r := w.state.EnrollmentV3; r != nil && r.Login != nil {
+	w.state.PendingApprovalV5 = nil
+	if r := w.state.EnrollmentV5; r != nil && r.Login != nil {
 		r.Login.Token = ""
 	}
-	w.state.EnrollmentV3 = nil
-	w.state.RecoveredDevice = nil
+	w.state.EnrollmentV5 = nil
 	clear(w.state.SelfRevocation)
-	w.clearRecovery()
 	w.state.SelfRevocation = nil
 	w.state.Grants = nil
 	w.state.Labels = map[string]labelState{}
@@ -1028,23 +1056,11 @@ func (w *Workflow) refresh(ctx context.Context) error {
 	if w.managementPending() {
 		return ErrManagementPending
 	}
-	if w.state.Recovery != nil {
-		return ErrRecoveryRestricted
-	}
-	if w.recoveredDevicePending() {
-		return ErrRecoveryPending
-	}
-	if w.approvalV4Pending() {
+	if w.approvalV5Pending() {
 		return ErrApprovalPending
 	}
 	if w.enrollmentPending() {
 		return ErrMobileEnrollmentPending
-	}
-	if w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
-		return ErrApprovalPending
-	}
-	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 {
-		return ErrApprovalPending
 	}
 	return w.refreshForApproval(ctx)
 }
@@ -1093,6 +1109,14 @@ func (w *Workflow) refreshForApproval(ctx context.Context) error {
 		record.Sequence = tail
 		record.Applied = true
 		if err := w.rememberLabel(c, seen.Sequence); err != nil {
+			return err
+		}
+	}
+	if w.state.RecoveredDAGDevice != nil {
+		w.state.Cloud = w.engine.State()
+		cleanDAGLabels(&w.state, w.state.Cloud)
+		if err := w.validateRecoveredDAGDeviceLocked(); err != nil {
+			w.failDAGPersistenceLocked()
 			return err
 		}
 	}
@@ -1235,7 +1259,7 @@ func (j nativeJournal) Save(data []byte) error {
 func (w *Workflow) persist() error {
 	w.state.Cloud = w.engine.State()
 	if w.requiresDAGCAS {
-		return w.saveDAGCandidateLocked(clone(w.state))
+		return w.saveDAGCandidateLocked(w.state)
 	}
 	encoded, err := json.Marshal(w.state)
 	if err != nil {

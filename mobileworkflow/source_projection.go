@@ -96,31 +96,8 @@ func (w *Workflow) sourceViewLocked() (TrustedSourceView, error) {
 	if err != nil || generation == 0 || strconv.FormatUint(generation, 10) != w.state.AccountGeneration {
 		return TrustedSourceView{}, ErrNotTrusted
 	}
-	// 结构只选择必须重验的成熟来源分支；任何校验失败都不能换 parser 或降级。
-	version, profile := "3", "certificate3-issuer-origin-v1"
-	switch {
-	case w.state.RecoveredDevice != nil:
-		if !w.state.RecoveredDevice.Applied || w.state.RecoveredDevice.AcceptedSequence == 0 {
-			return TrustedSourceView{}, ErrRecoveryPending
-		}
-		if err = w.validateRecoveredDeviceRecord(); err != nil {
-			return TrustedSourceView{}, err
-		}
-		version, profile = "4", "certificate4-continuous-recovery-v1"
-	case w.state.EnrollmentV3 != nil:
-		if !w.state.EnrollmentV3.Applied || w.state.EnrollmentV3.Sequence == 0 {
-			return TrustedSourceView{}, ErrMobileEnrollmentPending
-		}
-		if err = w.validateMobileEnrollment(); err != nil {
-			return TrustedSourceView{}, err
-		}
-	default:
-		if len(w.state.InitialAuthorities) == 0 {
-			return TrustedSourceView{}, ErrApprovalEvidence
-		}
-		if err = w.validateInitialAuthorities(); err != nil {
-			return TrustedSourceView{}, err
-		}
+	if w.state.EnrollmentV5 != nil && (!w.state.EnrollmentV5.Applied || w.state.EnrollmentV5.Sequence == 0) {
+		return TrustedSourceView{}, ErrMobileEnrollmentPending
 	}
 	verifier, err := w.originVerifier()
 	if err != nil {
@@ -150,27 +127,17 @@ func (w *Workflow) sourceViewLocked() (TrustedSourceView, error) {
 	if err != nil {
 		return TrustedSourceView{}, err
 	}
-	if version == "4" {
-		if _, err = reader.CurrentIssuerRecoveryEvidence(); err != nil {
-			return TrustedSourceView{}, err
-		}
-	} else {
-		if _, err = reader.CurrentIssuerEvidence(); err != nil {
-			return TrustedSourceView{}, err
-		}
+	if _, err = reader.CurrentIssuerDAGEvidence(); err != nil {
+		return TrustedSourceView{}, err
 	}
 	view := w.view()
-	source := ApprovalSource{Profile: profile, CertificateVersion: version, Checkpoint: view.Checkpoint, AdminEnvironmentIDs: []string{}}
+	source := ApprovalSource{Profile: "issuer-recovery-dag-v1", CertificateVersion: "5", Checkpoint: view.Checkpoint, AdminEnvironmentIDs: []string{}}
 	if !state.Paused {
 		for _, env := range view.Environments {
 			if env.Role != localstate.Admin {
 				continue
 			}
-			if version == "4" {
-				_, _, err = reader.PrepareEnrollmentProofV4([]string{env.ID})
-			} else {
-				_, _, _, err = reader.PrepareEnrollmentProofV3([]string{env.ID})
-			}
+			_, _, err = reader.PrepareEnrollmentProofV5([]string{env.ID})
 			if err != nil {
 				return TrustedSourceView{}, err
 			}

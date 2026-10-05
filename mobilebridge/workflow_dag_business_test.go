@@ -14,6 +14,7 @@ import (
 
 	"encoding/json"
 	"github.com/harmonia-vault/core-go/cryptox"
+	"github.com/harmonia-vault/core-go/internal/dagfixture"
 	"github.com/harmonia-vault/core-go/localstate"
 	"github.com/harmonia-vault/core-go/syncclient"
 	"strings"
@@ -93,11 +94,6 @@ func TestDAGBusinessUntrustedHasNoViewAndConsumesValues(t *testing.T) {
 func TestDAGBusinessWriterMetadataKeepsFixedItemSequenceSlots(t *testing.T) {
 	for _, accepted := range []bool{false, true} {
 		t.Run(map[bool]string{false: "unknown-zero-slot", true: "accepted-not-applied-positive-slot"}[accepted], func(t *testing.T) {
-			managerPub, managerKey, e := ed25519.GenerateKey(rand.Reader)
-			if e != nil {
-				t.Fatal(e)
-			}
-			defer clear(managerKey)
 			devicePub, deviceKey, e := ed25519.GenerateKey(rand.Reader)
 			if e != nil {
 				t.Fatal(e)
@@ -113,17 +109,44 @@ func TestDAGBusinessWriterMetadataKeepsFixedItemSequenceSlots(t *testing.T) {
 				t.Fatal(e)
 			}
 			defer clear(envKey)
-			grant := cryptox.Grant{AccountID: "synthetic-acct", AccountGeneration: "1", IssuerDeviceID: "synthetic-manager", SubjectDeviceID: "synthetic-dev", SubjectSigningPublicKey: cryptox.EncodeBase64(devicePub), SubjectReceivingPublicKey: cryptox.EncodeBase64(recvPub), EnvironmentID: "synthetic-env", KeyVersion: "1", GrantGeneration: "1", Role: "rw", ExpiresAt: "0", IdempotencyKey: "synthetic-grant"}
-			envelope, e := cryptox.WrapEnvironmentKey(envKey, cryptox.EnvelopeContext{AccountID: grant.AccountID, AccountGeneration: "1", EnvironmentID: grant.EnvironmentID, KeyVersion: "1", RecipientType: "device", RecipientID: grant.SubjectDeviceID, RecipientGeneration: "1", RecipientPublicKey: grant.SubjectReceivingPublicKey})
+			grant := cryptox.Grant{AccountID: "synthetic-acct", AccountGeneration: "1", IssuerDeviceID: "synthetic-dev", SubjectDeviceID: "synthetic-dev", SubjectSigningPublicKey: cryptox.EncodeBase64(devicePub), SubjectReceivingPublicKey: cryptox.EncodeBase64(recvPub), EnvironmentID: "synthetic-env", KeyVersion: "1", GrantGeneration: "2", Role: "rw", ExpiresAt: "0", IdempotencyKey: "synthetic-grant"}
+			envelope, e := cryptox.WrapEnvironmentKey(envKey, cryptox.EnvelopeContext{AccountID: grant.AccountID, AccountGeneration: "1", EnvironmentID: grant.EnvironmentID, KeyVersion: "1", RecipientType: "device", RecipientID: grant.SubjectDeviceID, RecipientGeneration: "2", RecipientPublicKey: grant.SubjectReceivingPublicKey})
 			if e != nil {
 				t.Fatal(e)
 			}
 			grant.Envelope = cryptox.EncodeBase64(envelope)
-			signed, e := cryptox.SignGrant(grant, managerKey)
+			signed, e := cryptox.SignGrant(grant, deviceKey)
 			if e != nil {
 				t.Fatal(e)
 			}
-			verifier, e := syncclient.NewPinnedVerifier(syncclient.PinnedTrust{AccountID: grant.AccountID, AccountGeneration: 1, DeviceID: grant.SubjectDeviceID, DeviceSigningPublicKey: devicePub, ReceivingPrivateKey: recvKey, Managers: map[string]ed25519.PublicKey{grant.IssuerDeviceID: managerPub}})
+			recovery, e := cryptox.DeriveRecoveryKeys(bytes.Repeat([]byte{77}, 32), grant.AccountID, "1", "1")
+			if e != nil {
+				t.Fatal(e)
+			}
+			root, e := cryptox.SignTrustRoot(grant.AccountID, "1", cryptox.TrustRoot{RootDeviceID: grant.SubjectDeviceID, RootSigningPublicKey: grant.SubjectSigningPublicKey, RootReceivingPublicKey: grant.SubjectReceivingPublicKey, RecoveryGeneration: "1", RecoverySigningPublicKey: cryptox.EncodeBase64(recovery.SigningPublic), RecoveryReceivingPublicKey: cryptox.EncodeBase64(recovery.ReceivingPublic)}, recovery.SigningPrivate)
+			if e != nil {
+				t.Fatal(e)
+			}
+			initial := grant
+			initial.Role = "admin"
+			initial.GrantGeneration = "1"
+			initial.IdempotencyKey = "fixture-root"
+			initialSigned, e := cryptox.SignGrant(initial, deviceKey)
+			if e != nil {
+				t.Fatal(e)
+			}
+			proof := dagfixture.Root(t, grant.AccountID, root, deviceKey, recovery.SigningPrivate, []cryptox.InitializationEnvironment{{EnvironmentID: grant.EnvironmentID, KeyVersion: "1", RecoveryEnvelope: cryptox.EncodeBase64(make([]byte, 80)), Grant: cryptox.GrantToWire(initialSigned)}})
+			parent, e := cryptox.IssuerAuthorityHash(cryptox.GrantToWire(initialSigned))
+			if e != nil {
+				t.Fatal(e)
+			}
+			current, e := cryptox.IssuerAuthorityHash(cryptox.GrantToWire(signed))
+			if e != nil {
+				t.Fatal(e)
+			}
+			proof.Source.View.Authorities = append(proof.Source.View.Authorities, cryptox.IssuerRecoveryAuthority{Grant: cryptox.GrantToWire(signed), ParentHash: parent})
+			proof.Source.View.Targets = []cryptox.IssuerTarget{{EnvironmentID: grant.EnvironmentID, AuthorityHash: current}}
+			verifier, e := syncclient.NewRootDAGPinnedVerifier(syncclient.PinnedTrust{AccountID: grant.AccountID, AccountGeneration: 1, DeviceID: grant.SubjectDeviceID, DeviceSigningPublicKey: devicePub, ReceivingPrivateKey: recvKey}, proof.Initialization)
 			if e != nil {
 				t.Fatal(e)
 			}
@@ -135,6 +158,8 @@ func TestDAGBusinessWriterMetadataKeepsFixedItemSequenceSlots(t *testing.T) {
 			journal := &dagBusinessMetadataJournal{}
 			var posted atomic.Bool
 			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Harmonia-Protocol-Major", "2")
+
 				if r.Method == http.MethodPost {
 					var mutation syncclient.SignedMutation
 					if json.NewDecoder(r.Body).Decode(&mutation) != nil || cryptox.VerifyMutation(cryptox.SignedMutation{Mutation: mutation.Mutation, Signature: mutation.Signature}, devicePub) != nil {
@@ -158,7 +183,7 @@ func TestDAGBusinessWriterMetadataKeepsFixedItemSequenceSlots(t *testing.T) {
 					_ = json.NewEncoder(w).Encode(syncclient.MutationStatus{IdempotencyKey: r.URL.Query().Get("idempotencyKey")})
 					return
 				}
-				_ = json.NewEncoder(w).Encode(syncclient.Pull{AccountID: grant.AccountID, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{{Grant: signed.Grant, Signature: signed.Signature}}})
+				_ = json.NewEncoder(w).Encode(syncclient.Pull{IssuerDAGEvidence: &proof, AccountID: grant.AccountID, AccountGeneration: "1", Sequence: 1, Grants: []syncclient.SignedGrant{{Grant: signed.Grant, Signature: signed.Signature}}})
 			}))
 			defer server.Close()
 			client, e := syncclient.New(syncclient.Config{Endpoint: server.URL, HTTPClient: server.Client(), AccountID: grant.AccountID, AccountGeneration: 1, DeviceID: grant.SubjectDeviceID, Token: cryptox.EncodeBase64(make([]byte, 32)), Verifier: verifier, Engine: engine})

@@ -565,6 +565,10 @@ func (w *Workflow) runDAGEnvironment(ctx context.Context, op, authorityEnv, env,
 		w.mu.Unlock()
 		return out, syncclient.ErrPaused
 	}
+	if w.approvalV5Pending() {
+		w.mu.Unlock()
+		return out, ErrApprovalPending
+	}
 	if w.dagManagementPending() {
 		w.mu.Unlock()
 		return out, ErrManagementPending

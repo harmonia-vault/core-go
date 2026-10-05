@@ -19,7 +19,7 @@ import (
 )
 
 type issuerClientFixture struct {
-	Approval                cryptox.EnrollmentApprovalV2 `json:"approval"`
+	Approval                cryptox.EnrollmentApprovalV5 `json:"approval"`
 	HistoricalMutation      cryptox.SignedMutation       `json:"historicalMutation"`
 	HistoricalAuthorization cryptox.SignedGrantWire      `json:"historicalAuthorization"`
 }
@@ -32,21 +32,22 @@ func issuerClientVector(t *testing.T) issuerClientFixture {
 	check(t, json.Unmarshal(data, &f))
 	return f
 }
-func issuerClientTrust(t *testing.T, f issuerClientFixture) IssuerPinnedTrust {
+func issuerClientTrust(t *testing.T, f issuerClientFixture) IssuerDAGPinnedTrust {
 	t.Helper()
-	return IssuerPinnedTrust{AccountID: "account-chain", AccountGeneration: 1, DeviceID: "device-C", DeviceSigningPublicKey: ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)).Public().(ed25519.PublicKey), ReceivingPrivateKey: bytes.Repeat([]byte{13}, 32), Receipt: EnrollmentReceiptV2{IdempotencyKey: "pair-C", Approval: f.Approval}, Now: func() time.Time { return time.Unix(2030000000, 0) }}
+	return IssuerDAGPinnedTrust{AccountID: "account-fixture", AccountGeneration: 1, DeviceID: "device-C", DeviceSigningPublicKey: ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)).Public().(ed25519.PublicKey), ReceivingPrivateKey: bytes.Repeat([]byte{13}, 32), Receipt: EnrollmentReceiptV5{IdempotencyKey: "pair-C", Approval: f.Approval}, Now: func() time.Time { return time.Unix(2030000000, 0) }}
 }
 func issuerClientPull(f issuerClientFixture) Pull {
 	auth := SignedGrant{Grant: f.HistoricalAuthorization.Grant, Signature: f.HistoricalAuthorization.Signature}
-	return Pull{Full: true, Sequence: 1, AccountID: "account-chain", AccountGeneration: "1", Grants: []SignedGrant{{Grant: f.Approval.Grants[0].Grant, Signature: f.Approval.Grants[0].Signature}}, Events: []Event{{Sequence: 1, Mutation: SignedMutation{Mutation: f.HistoricalMutation.Mutation, Signature: f.HistoricalMutation.Signature}, Authorization: &auth}}}
+	p, _ := completedEvidenceV5(EnrollmentReceiptV5{IdempotencyKey: "pair-C", Approval: f.Approval})
+	return Pull{IssuerDAGEvidence: &p, Full: true, Sequence: 1, AccountID: "account-fixture", AccountGeneration: "1", Grants: []SignedGrant{{Grant: f.Approval.Grants[0].Grant, Signature: f.Approval.Grants[0].Signature}}, Events: []Event{{Sequence: 1, Mutation: SignedMutation{Mutation: f.HistoricalMutation.Mutation, Signature: f.HistoricalMutation.Signature}, Authorization: &auth}}}
 }
 func TestIssuerScopedVerifierReadsTwoManagersAndRejectsExpansion(t *testing.T) {
 	f := issuerClientVector(t)
-	v, err := NewPinnedVerifierV2(issuerClientTrust(t, f))
+	v, err := NewPinnedVerifierV5(issuerClientTrust(t, f))
 	check(t, err)
 	defer v.Close()
-	if len(v.trust.Managers) != 0 || len(v.IssuerBindings()) != 2 {
-		t.Fatal("v2 constructed global managers")
+	if len(v.IssuerBindings()) != 3 {
+		t.Fatal("DAG lost signed device bindings")
 	}
 	pull := issuerClientPull(f)
 	b := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{2}, 32))
@@ -55,13 +56,13 @@ func TestIssuerScopedVerifierReadsTwoManagersAndRejectsExpansion(t *testing.T) {
 	mutation.DeviceID = "device-B"
 	mutation.Name = "B_VALUE"
 	mutation.IdempotencyKey = "B-write"
-	payload, err := cryptox.EncryptValue(bytes.Repeat([]byte{9}, 32), cryptox.ValueContext{AccountID: "account-chain", AccountGeneration: "1", EnvironmentID: "env-fixture", KeyVersion: "1", Name: mutation.Name}, []byte("synthetic-B"))
+	payload, err := cryptox.EncryptValue(bytes.Repeat([]byte{9}, 32), cryptox.ValueContext{AccountID: "account-fixture", AccountGeneration: "1", EnvironmentID: "env-fixture", KeyVersion: "1", Name: mutation.Name}, []byte("synthetic-B"))
 	check(t, err)
 	mutation.Payload = cryptox.EncodeBase64(payload)
 	signed, err := cryptox.SignMutation(mutation, b)
 	check(t, err)
 	var bgrant cryptox.SignedGrantWire
-	for _, a := range f.Approval.IssuerProof.Authorities {
+	for _, a := range f.Approval.IssuerProof.Source.View.Authorities {
 		if a.Grant.Grant.SubjectDeviceID == "device-B" {
 			bgrant = a.Grant
 		}
@@ -71,7 +72,7 @@ func TestIssuerScopedVerifierReadsTwoManagersAndRejectsExpansion(t *testing.T) {
 	pull.Sequence = 2
 	state, err := v.VerifyPull(context.Background(), pull, localstate.CloudSnapshot{})
 	check(t, err)
-	if state.Environments["env-fixture"].Values["FIXTURE_KEY"] != "synthetic-only" || state.Environments["env-fixture"].Values["B_VALUE"] != "synthetic-B" {
+	if state.Environments["env-fixture"].Values["SYNTHETIC_VALUE"] != "synthetic-only" || state.Environments["env-fixture"].Values["B_VALUE"] != "synthetic-B" {
 		t.Fatal("ancestor history not decrypted")
 	}
 	for _, field := range []string{"unknown-env", "unknown-key-version", "new-issuer", "account-generation"} {
@@ -99,7 +100,7 @@ func TestIssuerScopedVerifierReadsTwoManagersAndRejectsExpansion(t *testing.T) {
 	// 已有历史签名来源不产生当前权限：当前过期/撤销授权必须停止本地环境。
 	expired := issuerClientTrust(t, f)
 	expired.Now = func() time.Time { return time.Unix(2030000301, 0) }
-	ev, err := NewPinnedVerifierV2(expired)
+	ev, err := NewPinnedVerifierV5(expired)
 	check(t, err)
 	defer ev.Close()
 	expiredPull := issuerClientPull(f)
@@ -127,7 +128,7 @@ func TestIssuerScopedVerifierReadsTwoManagersAndRejectsExpansion(t *testing.T) {
 		t.Fatal("proof reactivated revoked grant")
 	}
 }
-func TestIssuerReceiptNeedsExactLocalDualKeysAndStrictV2(t *testing.T) {
+func TestIssuerReceiptNeedsExactLocalDualKeysAndStrictV5(t *testing.T) {
 	f := issuerClientVector(t)
 	trust := issuerClientTrust(t, f)
 	for _, field := range []string{"account", "generation", "device", "signing", "receiving", "initiator-signature", "proof", "version"} {
@@ -147,11 +148,11 @@ func TestIssuerReceiptNeedsExactLocalDualKeysAndStrictV2(t *testing.T) {
 			case "initiator-signature":
 				x.Receipt.Approval.InitiatorSignature = ""
 			case "proof":
-				x.Receipt.Approval.IssuerProof.Path = nil
+				x.Receipt.Approval.IssuerProof.Source.View.Path = nil
 			case "version":
 				x.Receipt.Approval.CertificateVersion = "1"
 			}
-			if v, err := NewPinnedVerifierV2(x); err == nil {
+			if v, err := NewPinnedVerifierV5(x); err == nil {
 				v.Close()
 				t.Fatal("unbound local trust accepted")
 			}
@@ -159,38 +160,35 @@ func TestIssuerReceiptNeedsExactLocalDualKeysAndStrictV2(t *testing.T) {
 	}
 	data, err := json.Marshal(trust.Receipt)
 	check(t, err)
-	if _, err = DecodeEnrollmentReceiptV2(data); err != nil {
+	if _, err = DecodeEnrollmentReceiptV5(data); err != nil {
 		t.Fatal(err)
 	}
-	for _, bad := range [][]byte{append(append([]byte(nil), data...), []byte(" {}")...), []byte(strings.Replace(string(data), `"certificateVersion":"2"`, `"certificateVersion":"1"`, 1)), []byte(strings.Replace(string(data), `"idempotencyKey":"pair-C"`, `"idempotencyKey":"pair-C","managers":{}`, 1)), bytes.Repeat([]byte{' '}, cryptox.MaxIssuerProofBytes+513)} {
-		if _, err = DecodeEnrollmentReceiptV2(bad); err == nil {
+	for _, bad := range [][]byte{append(append([]byte(nil), data...), []byte(" {}")...), []byte(strings.Replace(string(data), `"certificateVersion":"5"`, `"certificateVersion":"1"`, 1)), []byte(strings.Replace(string(data), `"idempotencyKey":"pair-C"`, `"idempotencyKey":"pair-C","managers":{}`, 1)), bytes.Repeat([]byte{' '}, cryptox.MaxRecoveryAuthorityBytes+513)} {
+		if _, err = DecodeEnrollmentReceiptV5(bad); err == nil {
 			t.Fatal("invalid receipt JSON accepted")
 		}
 	}
-	// v1 decoder 不允许吸收 v2 proof 字段。
-	var old EnrollmentReceipt
-	d := json.NewDecoder(bytes.NewReader(data))
-	d.DisallowUnknownFields()
-	if d.Decode(&old) == nil {
-		t.Fatal("v2 downgraded to legacy receipt")
-	}
+
 }
-func TestIssuerResumeQueriesExactCompletedV2WithoutRestoringPAKE(t *testing.T) {
+func TestIssuerResumeQueriesExactCompletedV5WithoutRestoringPAKE(t *testing.T) {
 	f := issuerClientVector(t)
-	receipt := EnrollmentReceiptV2{IdempotencyKey: "pair-C", Approval: f.Approval}
+	receipt := EnrollmentReceiptV5{IdempotencyKey: "pair-C", Approval: f.Approval}
 	seq := uint64(4)
-	status := PairingStatusV2{State: "complete", IdempotencyKey: receipt.IdempotencyKey, CertificateVersion: "2", Capabilities: []string{cryptox.IssuerProofCapability}, PairingProfile: pairing.Profile, Context: pairing.Context(f.Approval.Context), Approval: &f.Approval, Sequence: &seq}
+	status := PairingStatusV5{State: "complete", IdempotencyKey: receipt.IdempotencyKey, CertificateVersion: "5", Capabilities: []string{cryptox.RecoveryDAGCapability}, PairingProfile: pairing.Profile, Context: pairing.Context(f.Approval.Context), Approval: &f.Approval, Sequence: &seq}
 	calls := 0
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		calls++
-		if r.Method != "GET" || !strings.HasSuffix(r.URL.Path, "/pairings-v2/pair-C") {
+		if r.Method != "GET" || !strings.HasSuffix(r.URL.Path, "/pairings-v5/pair-C") {
 			t.Error("resumed through wrong route")
 		}
 		_ = json.NewEncoder(w).Encode(status)
 	}))
 	defer server.Close()
-	cfg := EnrollmentConfig{Endpoint: server.URL, HTTPClient: server.Client(), AccountID: "account-chain", AccountGeneration: 1, DeviceID: "device-C", LoginToken: cryptox.EncodeBase64(make([]byte, 32)), SigningKey: ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)), ReceivingPrivateKey: bytes.Repeat([]byte{13}, 32), Engine: testEngine(t), Now: func() time.Time { return time.Unix(2030000400, 0) }}
-	e, err := ResumeEnrollmentV2(cfg, receipt)
+	cfg := EnrollmentConfig{Endpoint: server.URL, HTTPClient: server.Client(), AccountID: "account-fixture", AccountGeneration: 1, DeviceID: "device-C", LoginToken: cryptox.EncodeBase64(make([]byte, 32)), SigningKey: ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)), ReceivingPrivateKey: bytes.Repeat([]byte{13}, 32), Engine: testEngine(t), Now: func() time.Time { return time.Unix(2030000400, 0) }}
+	e, err := ResumeEnrollmentV5(cfg, receipt)
 	check(t, err)
 	defer e.Close()
 	result, err := e.Complete(context.Background())
@@ -213,7 +211,7 @@ func TestIssuerResumeQueriesExactCompletedV2WithoutRestoringPAKE(t *testing.T) {
 				status.Capabilities = []string{"directory-tofu"}
 			case "changed-proof":
 				a := f.Approval
-				a.IssuerProof.Targets = nil
+				a.IssuerProof.Source.View.Targets = nil
 				status.Approval = &a
 			}
 			if _, err = e.Complete(context.Background()); err == nil {
@@ -223,10 +221,10 @@ func TestIssuerResumeQueriesExactCompletedV2WithoutRestoringPAKE(t *testing.T) {
 		})
 	}
 }
-func TestIssuerDefaultEnrollmentV2FailsBeforeNetwork(t *testing.T) {
+func TestIssuerDefaultEnrollmentV5FailsBeforeNetwork(t *testing.T) {
 	f := issuerClientVector(t)
-	cfg := EnrollmentConfig{Endpoint: "https://synthetic.invalid", AccountID: "account-chain", AccountGeneration: 1, DeviceID: "device-C", LoginToken: cryptox.EncodeBase64(make([]byte, 32)), SigningKey: ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)), ReceivingPrivateKey: bytes.Repeat([]byte{13}, 32), Engine: testEngine(t)}
-	e, err := NewEnrollmentV2(cfg)
+	cfg := EnrollmentConfig{Endpoint: "https://synthetic.invalid", AccountID: "account-fixture", AccountGeneration: 1, DeviceID: "device-C", LoginToken: cryptox.EncodeBase64(make([]byte, 32)), SigningKey: ed25519.NewKeyFromSeed(bytes.Repeat([]byte{3}, 32)), ReceivingPrivateKey: bytes.Repeat([]byte{13}, 32), Engine: testEngine(t)}
+	e, err := NewEnrollmentV5(cfg)
 	check(t, err)
 	defer e.Close()
 	if !pairing.NativeAvailable() {
@@ -235,7 +233,7 @@ func TestIssuerDefaultEnrollmentV2FailsBeforeNetwork(t *testing.T) {
 		}
 	}
 	f.Approval.InitiatorSignature = ""
-	if _, err = ResumeEnrollmentV2(cfg, EnrollmentReceiptV2{IdempotencyKey: "pair-C", Approval: f.Approval}); err == nil {
+	if _, err = ResumeEnrollmentV5(cfg, EnrollmentReceiptV5{IdempotencyKey: "pair-C", Approval: f.Approval}); err == nil {
 		t.Fatal("unsigned pending receipt resumed")
 	}
 	e.Close()

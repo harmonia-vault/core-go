@@ -75,6 +75,9 @@ func TestDAGEnvironmentControlsExplicitProfileHistoryAndPause(t *testing.T) {
 	var fault atomic.Int64
 	var requests atomic.Int64
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		requests.Add(1)
 		w.Header().Set("Harmonia-Protocol-Major", "2")
 		if r.Method != "GET" || r.URL.Query().Get("capability") != cryptox.RecoveryDAGCapability || r.Header.Get("Harmonia-Protocol-Major") != "2" {
@@ -86,14 +89,14 @@ func TestDAGEnvironmentControlsExplicitProfileHistoryAndPause(t *testing.T) {
 		var evidence any = candidate
 		switch fault.Load() {
 		case 1:
-			evidence = cryptox.IssuerProofV2{Profile: cryptox.IssuerProofV2Profile}
+			evidence = map[string]any{"profile": "harmonia/issuer-proof/v2"}
 		case 2:
-			evidence = cryptox.IssuerRecoveryProof{Profile: cryptox.IssuerRecoveryProfile}
+			evidence = map[string]any{"profile": "harmonia/issuer-proof/v3"}
 		case 3:
 			candidate.Records = []cryptox.RecoveryDAGRecord{}
 			evidence = candidate
 		case 4:
-			candidate.Records[0].TransitionV1.Sequence++
+			candidate.Records[0].TransitionV2.Sequence++
 			evidence = candidate
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"sequence": cloud.Sequence, "grants": []cryptox.SignedGrantWire{actor}, "issuerEvidence": evidence})
@@ -103,7 +106,7 @@ func TestDAGEnvironmentControlsExplicitProfileHistoryAndPause(t *testing.T) {
 	check(t, e)
 	control, e := client.EnvironmentControl(context.Background(), env)
 	check(t, e)
-	if control.IssuerDAGEvidence == nil || control.IssuerRecoveryEvidence != nil || control.IssuerEvidence.Profile != "" {
+	if control.IssuerDAGEvidence == nil {
 		t.Fatal("DAG cast as old profile")
 	}
 	for _, kind := range []int64{1, 2, 3, 4} {
@@ -114,7 +117,7 @@ func TestDAGEnvironmentControlsExplicitProfileHistoryAndPause(t *testing.T) {
 	}
 	fault.Store(0)
 	mixed := control
-	mixed.IssuerRecoveryEvidence = &cryptox.IssuerRecoveryProof{}
+	mixed.IssuerDAGEvidence = nil
 	if _, e := client.VerifyEnvironmentControl(mixed, env, true); e == nil {
 		t.Fatal("mixed profiles accepted")
 	}
@@ -133,12 +136,6 @@ func TestDAGEnvironmentControlsExplicitProfileHistoryAndPause(t *testing.T) {
 	_, e = client.VerifyEnvironmentControl(control, env, true)
 	check(t, e)
 	before := requests.Load()
-	if _, e := client.EnvironmentStatusV2(context.Background(), "old-id"); !errors.Is(e, ErrWritePermission) {
-		t.Fatal("P4 used P2 namespace")
-	}
-	if _, e := client.PrepareEnvironmentChangeV3(context.Background(), cryptox.SignedEnvironmentChange{}, key); !errors.Is(e, ErrWritePermission) {
-		t.Fatal("P4 used P3 namespace")
-	}
 	check(t, engine.SetPaused(true))
 	if _, e := client.EnvironmentControl(context.Background(), env); !errors.Is(e, ErrPaused) {
 		t.Fatal("paused environment preparation allowed")

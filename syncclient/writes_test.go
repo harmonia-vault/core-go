@@ -60,6 +60,9 @@ func newWriteFixture(t *testing.T) *writeFixture {
 	f := &writeFixture{crypto: newCryptoFixture(t), engine: testEngine(t), receipts: map[string]MutationStatus{}, seq: 1, journal: &memoryJournal{}}
 	f.events = []Event{f.crypto.event(t, 1, "initial")}
 	f.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		f.mu.Lock()
 		defer f.mu.Unlock()
 		switch {

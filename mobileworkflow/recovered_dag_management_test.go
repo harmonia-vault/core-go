@@ -75,6 +75,8 @@ func TestDAGConfirmedGrantConstrainsSharedReceiversAndCold(t *testing.T) {
 	var posts atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(out http.ResponseWriter, r *http.Request) {
 		out.Header().Set("Harmonia-Protocol-Major", "2")
+
+		out.Header().Set("Harmonia-Protocol-Major", "2")
 		if r.Method == "POST" {
 			posts.Add(1)
 			out.WriteHeader(500)

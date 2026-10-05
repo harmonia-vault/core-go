@@ -23,7 +23,7 @@ type memoryTransport func(*http.Request) (*http.Response, error)
 
 func (f memoryTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 func answer(status int, body string) *http.Response {
-	return &http.Response{StatusCode: status, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}
+	return &http.Response{StatusCode: status, Header: http.Header{"Harmonia-Protocol-Major": {"2"}}, Body: io.NopCloser(strings.NewReader(body))}
 }
 func proofFixture() Proof {
 	return Proof{AccountID: "synthetic-account", AccountGeneration: "7", ChallengeID: "synthetic-reset", Token: cryptox.EncodeBase64(bytes.Repeat([]byte{21}, 32))}

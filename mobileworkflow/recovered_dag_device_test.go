@@ -128,6 +128,8 @@ func TestB3bInFlightCloseLogoutAndNativeConflict(t *testing.T) {
 			entered := make(chan struct{})
 			release := make(chan struct{})
 			server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+				rw.Header().Set("Harmonia-Protocol-Major", "2")
+
 				close(entered)
 				select {
 				case <-r.Context().Done():
@@ -233,6 +235,8 @@ func (tr b3bRejectTransport) RoundTrip(*http.Request) (*http.Response, error) {
 func TestB3bStickyCleanMarkerJITScopeAndClosedGate(t *testing.T) {
 	var hits atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Harmonia-Protocol-Major", "2")
+
 		hits.Add(1)
 		if r.URL.Path != "/v1/login" {
 			t.Error("unexpected nonlogin route")

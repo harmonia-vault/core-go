@@ -13,7 +13,7 @@ import (
 )
 
 func TestPendingPairingsNativeStrictCommandAndProjection(t *testing.T) {
-	valid := `{"version":1,"endpoint":"https://synthetic.example.invalid","operation":"pendingPairingRequestsV3"}`
+	valid := `{"version":1,"endpoint":"https://synthetic.example.invalid","operation":"pendingPairingRequestsV5"}`
 	if ValidatePendingPairingsCommand(valid) != nil {
 		t.Fatal("valid command")
 	}
@@ -23,7 +23,7 @@ func TestPendingPairingsNativeStrictCommandAndProjection(t *testing.T) {
 		strings.Replace(valid, `"version":1`, `"version":1,"version":1`, 1),
 		strings.Replace(valid, `"version":1`, `"version":1,"accountId":"caller-choice"`, 1),
 		strings.Replace(valid, "https://", "http://", 1),
-		strings.Replace(valid, "pendingPairingRequestsV3", "view", 1),
+		strings.Replace(valid, "pendingPairingRequestsV5", "view", 1),
 		strings.Replace(valid, "example.invalid", "example.invalid/?token=synthetic", 1),
 	} {
 		if ValidatePendingPairingsCommand(raw) == nil {
@@ -34,15 +34,15 @@ func TestPendingPairingsNativeStrictCommandAndProjection(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	for _, operation := range []string{"pendingPairingRequestsV3", "pendingPairingRequestsV4"} {
+	for _, operation := range []string{"pendingPairingRequestsV5"} {
 		if strings.Contains(profile, operation) {
 			t.Fatal("closed entry added to ordinary profile")
 		}
-		if _, e := parseWorkflowCommand(strings.Replace(valid, "pendingPairingRequestsV3", operation, 1)); e == nil {
+		if _, e := parseWorkflowCommand(strings.Replace(valid, "pendingPairingRequestsV5", operation, 1)); e == nil {
 			t.Fatal("ordinary parser opened entry")
 		}
 	}
-	source := syncclient.PendingPairingRequests{AccountGeneration: "1", CertificateVersion: "3", Capabilities: []string{cryptox.EnvironmentOriginCapability}, Requests: []syncclient.PendingPairingRequest{{IdempotencyKey: "request-1", InitiatorDeviceID: "device-c", State: "pending", ExpiresAt: "2030000060"}}}
+	source := syncclient.PendingPairingRequests{AccountGeneration: "1", CertificateVersion: "5", Capabilities: []string{cryptox.RecoveryDAGCapability}, Requests: []syncclient.PendingPairingRequest{{IdempotencyKey: "request-1", InitiatorDeviceID: "device-c", State: "pending", ExpiresAt: "2030000060"}}}
 	b := stateBinding{AccountID: "synthetic-account", AccountGeneration: "1", DeviceID: "device-b"}
 	out, e := nativePendingPairings(source, b)
 	if e != nil {
@@ -62,10 +62,10 @@ func TestPendingPairingsNativeStrictCommandAndProjection(t *testing.T) {
 	}
 	source.Capabilities[0] = "mutated"
 	source.Requests[0].IdempotencyKey = "mutated"
-	if strings.Contains(string(raw), "mutated") || out["capabilities"].([]string)[0] != cryptox.EnvironmentOriginCapability {
+	if strings.Contains(string(raw), "mutated") || out["capabilities"].([]string)[0] != cryptox.RecoveryDAGCapability {
 		t.Fatal("mutable input retained")
 	}
-	source.Capabilities[0] = cryptox.EnvironmentOriginCapability
+	source.Capabilities[0] = cryptox.RecoveryDAGCapability
 	for _, field := range []string{"generation", "duplicate", "capability", "closed"} {
 		candidate := source
 		candidate.Requests = append([]syncclient.PendingPairingRequest(nil), source.Requests...)
@@ -76,7 +76,7 @@ func TestPendingPairingsNativeStrictCommandAndProjection(t *testing.T) {
 		case "duplicate":
 			candidate.Requests = append(candidate.Requests, candidate.Requests[0])
 		case "capability":
-			candidate.Capabilities = []string{"issuer-recovery-dag-v1"}
+			candidate.Capabilities = []string{"issuer-origin-v1"}
 		case "closed":
 			binding.AccountClosed = true
 		}
@@ -88,7 +88,11 @@ func TestPendingPairingsNativeStrictCommandAndProjection(t *testing.T) {
 
 func TestPendingPairingsNativeUntrustedZeroNetworkAndNoCAS(t *testing.T) {
 	var hits atomic.Int32
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hits.Add(1); w.WriteHeader(500) }))
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+		hits.Add(1)
+		w.WriteHeader(500)
+	}))
 	defer server.Close()
 	for _, version := range []string{"3", "4"} {
 		d, e := NewDevice()

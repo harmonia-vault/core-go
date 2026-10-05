@@ -84,6 +84,12 @@ func (w *Workflow) dagManagementPending() bool {
 	return false
 }
 func (w *Workflow) dagOtherBusinessPending() (bool, error) {
+	if w.approvalV5Pending() {
+		return true, nil
+	}
+	return w.dagDataPending()
+}
+func (w *Workflow) dagDataPending() (bool, error) {
 	if j := w.state.DAGEnvironments; j != nil {
 		for _, r := range j.Records {
 			if r != nil && !r.Applied {

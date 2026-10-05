@@ -32,11 +32,10 @@ func TestGrantControlBarriersPreserveProducerAndZeroPOST(t *testing.T) {
 	if _, e = tx.submit(context.Background(), func() error { postBarrier++; return rejected }, func(control ManagementControl) error { control.Subjects = nil; control.KeyVersion = "99"; return nil }); !errors.Is(e, rejected) || postBarrier != 1 || f.posts != 0 {
 		t.Fatal("Attempted barrier failed open", e)
 	}
-	// 新export本身明确DAG。不能由普通客户端带一个回调而打开P4入口。
-	if _, e = f.c.PrepareDAGGrantUpdate(context.Background(), in, f.key, func(ManagementControl) error { return nil }); !errors.Is(e, cryptox.ErrInvalidWire) {
-		t.Fatal("nonDAG used DAG producer", e)
+	if _, e = f.c.PrepareDAGGrantUpdate(context.Background(), in, f.key, nil); !errors.Is(e, cryptox.ErrInvalidWire) {
+		t.Fatal("missing persistence barrier accepted", e)
 	}
-	if _, e = tx.SubmitDAGWithControlBarrier(context.Background(), func(ManagementControl) error { return nil }, func() error { return nil }); !errors.Is(e, cryptox.ErrInvalidWire) {
-		t.Fatal("nonDAG used DAG submit", e)
+	if _, e = tx.SubmitDAGWithControlBarrier(context.Background(), func(ManagementControl) error { return nil }, nil); !errors.Is(e, cryptox.ErrInvalidWire) {
+		t.Fatal("missing post barrier accepted", e)
 	}
 }

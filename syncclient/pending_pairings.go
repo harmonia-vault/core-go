@@ -69,20 +69,15 @@ func (p *PendingPairingRequests) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 func (c *Client) pendingPairingPermission(version string) error {
-	capability := ""
-	switch version {
-	case "3":
-		capability = cryptox.EnvironmentOriginCapability
-	case "4":
-		capability = cryptox.RecoveryAuthorityCapability
-	default:
+	if version != "5" {
 		return cryptox.ErrInvalidWire
 	}
+	capability := cryptox.RecoveryDAGCapability
 	if c == nil || c.config.Engine == nil || c.config.Token == "" {
 		return ErrWritePermission
 	}
 	v, ok := c.config.Verifier.(*PinnedVerifier)
-	if !ok || v.evidenceRoot == nil || v.issuerOriginProof == nil || c.controlCapability() != capability {
+	if !ok || v.evidenceRoot == nil || v.issuerOriginProof == nil || cryptox.RecoveryDAGCapability != capability {
 		return ErrWritePermission
 	}
 	s := c.config.Engine.State()
@@ -98,12 +93,10 @@ func (c *Client) pendingPairingPermission(version string) error {
 	return ErrWritePermission
 }
 func validatePendingPairingsSnapshot(out PendingPairingRequests, generation, version string, now int64) (PendingPairingRequests, error) {
-	expected := cryptox.EnvironmentOriginCapability
-	if version == "4" {
-		expected = cryptox.RecoveryAuthorityCapability
-	} else if version != "3" {
+	if version != "5" {
 		return PendingPairingRequests{}, cryptox.ErrInvalidWire
 	}
+	expected := cryptox.RecoveryDAGCapability
 	if out.AccountGeneration != generation || out.CertificateVersion != version || len(out.Capabilities) != 1 || out.Capabilities[0] != expected || out.Requests == nil || len(out.Requests) > 64 || now <= 0 {
 		return PendingPairingRequests{}, cryptox.ErrInvalidWire
 	}
@@ -142,9 +135,6 @@ func (c *Client) pendingPairingRequests(ctx context.Context, version string) (Pe
 	}
 	return validatePendingPairingsSnapshot(out, strconv.FormatUint(c.config.AccountGeneration, 10), version, c.config.Now().Unix())
 }
-func (c *Client) PendingPairingRequestsV3(ctx context.Context) (PendingPairingRequests, error) {
-	return c.pendingPairingRequests(ctx, "3")
-}
-func (c *Client) PendingPairingRequestsV4(ctx context.Context) (PendingPairingRequests, error) {
-	return c.pendingPairingRequests(ctx, "4")
+func (c *Client) PendingPairingRequestsV5(ctx context.Context) (PendingPairingRequests, error) {
+	return c.pendingPairingRequests(ctx, "5")
 }

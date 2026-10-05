@@ -15,7 +15,7 @@ import (
 	"github.com/harmonia-vault/core-go/syncclient"
 )
 
-type approvalRecordV4 struct {
+type approvalRecordV5 struct {
 	Version             int                          `json:"version"`
 	SessionEpoch        uint64                       `json:"sessionEpoch"`
 	SessionID           string                       `json:"sessionId"`
@@ -25,13 +25,13 @@ type approvalRecordV4 struct {
 	LastObservedAt      int64                        `json:"lastObservedAt"`
 	DeadlineClosed      bool                         `json:"deadlineClosed,omitempty"`
 	Attempted           bool                         `json:"attempted"`
-	Approval            cryptox.EnrollmentApprovalV4 `json:"approval"`
+	Approval            cryptox.EnrollmentApprovalV5 `json:"approval"`
 	Sequence            uint64                       `json:"sequence,omitempty"`
 	Approved            bool                         `json:"approved,omitempty"`
 	CompletionSignature string                       `json:"completionSignature,omitempty"`
 }
 
-func approvalSelectionsV4(r *approvalRecordV4) []ApprovalSelection {
+func approvalSelectionsV5(r *approvalRecordV5) []ApprovalSelection {
 	out := make([]ApprovalSelection, 0, len(r.Approval.Grants))
 	for _, s := range r.Approval.Grants {
 		g := s.Grant
@@ -40,57 +40,57 @@ func approvalSelectionsV4(r *approvalRecordV4) []ApprovalSelection {
 	sort.Slice(out, func(i, j int) bool { return out[i].EnvironmentID < out[j].EnvironmentID })
 	return out
 }
-func (w *Workflow) validateApprovalV4(r *approvalRecordV4) error {
+func (w *Workflow) validateApprovalV5(r *approvalRecordV5) error {
 	if r == nil {
 		return nil
 	}
 	if w.state.Root == nil || w.state.Cloud.AccountClosed || r.Version != 1 || r.SessionID != r.Approval.Context.SessionID || r.SessionEpoch != w.engine.State().SessionEpoch || r.CreatedAt <= 0 || r.LastObservedAt < r.CreatedAt || r.Approval.InitiatorSignature != "" || r.Approval.Context.ApproverDeviceID != w.state.DeviceID || r.Approval.Context.ApproverSigningPublicKey != w.state.SigningPublicKey || r.Approval.Context.ApproverReceivingPublicKey != w.state.ReceivingPublicKey || r.Approval.Context.AccountID != w.state.AccountID || r.Approval.Context.AccountGeneration != w.state.AccountGeneration {
-		return errors.New("protected v4 approval manager/account/epoch invalid")
+		return errors.New("protected v5 approval manager/account/epoch invalid")
 	}
 	expires, err := strconv.ParseInt(r.Approval.Context.ExpiresAt, 10, 64)
 	if err != nil || r.CreatedAt >= expires || expires-r.CreatedAt > 120 || r.CreatedAt > w.now().Unix()+5 {
-		return errors.New("protected v4 approval deadline invalid")
+		return errors.New("protected v5 approval deadline invalid")
 	}
-	h, err := choicesHash(r.PairingID, approvalSelectionsV4(r))
+	h, err := choicesHash(r.PairingID, approvalSelectionsV5(r))
 	if err != nil || h != r.ChoicesHash {
-		return errors.New("protected v4 approval explicit choices changed")
+		return errors.New("protected v5 approval explicit choices changed")
 	}
 	raw, err := json.Marshal(r.Approval)
 	if err != nil {
 		return err
 	}
-	if _, err = cryptox.DecodeEnrollmentApprovalV4(raw); err != nil {
+	if _, err = cryptox.DecodeEnrollmentApprovalV5(raw); err != nil {
 		return err
 	}
-	pin, err := w.approvalRootV4()
+	pin, err := w.approvalRootV5()
 	if err != nil {
 		return err
 	}
-	if _, err = cryptox.VerifyIssuerRecoveryEvidence(pin, r.Approval.IssuerProof); err != nil {
+	if _, err = cryptox.VerifyIssuerRecoveryDAG(pin, r.Approval.IssuerProof); err != nil {
 		return err
 	}
 	anchor := cryptox.ConfirmedEnrollmentAnchor{Context: r.Approval.Context, TranscriptHash: r.Approval.TranscriptHash}
-	if _, err = cryptox.VerifyEnrollmentApprovalV4(anchor, r.Approval); err != nil {
+	if _, err = cryptox.VerifyEnrollmentApprovalV5(anchor, r.Approval); err != nil {
 		return err
 	}
 	if r.Approved && !r.Attempted {
-		return errors.New("protected v4 approval lacks attempted journal")
+		return errors.New("protected v5 approval lacks attempted journal")
 	}
 	if r.Sequence != 0 {
 		if !r.Approved || !r.Attempted || r.Sequence > 9007199254740991 || r.CompletionSignature == "" {
-			return errors.New("protected v4 approval completion invalid")
+			return errors.New("protected v5 approval completion invalid")
 		}
 		a := r.Approval
 		a.InitiatorSignature = r.CompletionSignature
-		if _, err = cryptox.VerifyCompletedEnrollmentV4(anchor, a); err != nil {
+		if _, err = cryptox.VerifyCompletedEnrollmentV5(anchor, a); err != nil {
 			return err
 		}
 	} else if r.CompletionSignature != "" {
-		return errors.New("v4 approval completion signature lacks accepted sequence")
+		return errors.New("v5 approval completion signature lacks accepted sequence")
 	}
 	return nil
 }
-func (w *Workflow) observeApprovalV4(r *approvalRecordV4) error {
+func (w *Workflow) observeApprovalV5(r *approvalRecordV5) error {
 	now := w.now().Unix()
 	if now < r.LastObservedAt-5 {
 		r.DeadlineClosed = true
@@ -111,20 +111,20 @@ func (w *Workflow) observeApprovalV4(r *approvalRecordV4) error {
 	}
 	return nil
 }
-func (w *Workflow) ApprovalInfoV4() (ApprovalInfo, error) {
+func (w *Workflow) ApprovalInfoV5() (ApprovalInfo, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if err := w.approvalGateV4(); err != nil {
+	if err := w.approvalGateV5(); err != nil {
 		return ApprovalInfo{}, err
 	}
-	r := w.state.PendingApprovalV4
+	r := w.state.PendingApprovalV5
 	if r == nil {
 		return ApprovalInfo{State: "none"}, nil
 	}
-	if err := w.validateApprovalV4(r); err != nil {
+	if err := w.validateApprovalV5(r); err != nil {
 		return ApprovalInfo{}, err
 	}
-	if err := w.observeApprovalV4(r); err != nil {
+	if err := w.observeApprovalV5(r); err != nil {
 		return ApprovalInfo{}, err
 	}
 	state := "prepared"
@@ -139,27 +139,27 @@ func (w *Workflow) ApprovalInfoV4() (ApprovalInfo, error) {
 	} else if r.DeadlineClosed {
 		state = "expired-pending"
 	}
-	return ApprovalInfo{State: state, PairingID: r.PairingID, DeviceID: r.Approval.Context.InitiatorDeviceID, Selections: approvalSelectionsV4(r), ExpiresAt: r.Approval.Context.ExpiresAt, Sequence: r.Sequence}, nil
+	return ApprovalInfo{State: state, PairingID: r.PairingID, DeviceID: r.Approval.Context.InitiatorDeviceID, Selections: approvalSelectionsV5(r), ExpiresAt: r.Approval.Context.ExpiresAt, Sequence: r.Sequence}, nil
 }
-func (w *Workflow) currentApprovalV4(choices []ApprovalSelection, original *approvalRecordV4) (cryptox.IssuerRecoveryProof, cryptox.PinnedIssuerRoot, error) {
-	var p cryptox.IssuerRecoveryProof
+func (w *Workflow) currentApprovalV5(choices []ApprovalSelection, original *approvalRecordV5) (cryptox.IssuerRecoveryDAG, cryptox.PinnedIssuerRoot, error) {
+	var p cryptox.IssuerRecoveryDAG
 	var pin cryptox.PinnedIssuerRoot
 	envs := make([]string, 0, len(choices))
 	for _, s := range choices {
 		envs = append(envs, s.EnvironmentID)
 	}
-	p, pin, err := w.client.PrepareEnrollmentProofV4(envs)
+	p, pin, err := w.client.PrepareEnrollmentProofV5(envs)
 	if err != nil {
 		return p, pin, err
 	}
 	originalTargets := map[string]string{}
 	if original != nil {
-		for _, t := range original.Approval.IssuerProof.Targets {
+		for _, t := range original.Approval.IssuerProof.Source.View.Targets {
 			originalTargets[t.EnvironmentID] = t.AuthorityHash
 		}
 	}
 	currentTargets := map[string]string{}
-	for _, t := range p.Targets {
+	for _, t := range p.Source.View.Targets {
 		currentTargets[t.EnvironmentID] = t.AuthorityHash
 	}
 	for _, s := range choices {
@@ -178,12 +178,12 @@ func (w *Workflow) currentApprovalV4(choices []ApprovalSelection, original *appr
 	}
 	return p, pin, nil
 }
-func (w *Workflow) approvalResultV4(r *approvalRecordV4, state string) ApprovalResult {
+func (w *Workflow) approvalResultV5(r *approvalRecordV5, state string) ApprovalResult {
 	return ApprovalResult{State: state, PairingID: r.PairingID, DeviceID: r.Approval.Context.InitiatorDeviceID, Sequence: r.Sequence}
 }
-func (w *Workflow) acceptApprovalV4(r *approvalRecordV4, a *syncclient.ApproverV4, s syncclient.PairingStatusV4) (ApprovalResult, error) {
+func (w *Workflow) acceptApprovalV5(r *approvalRecordV5, a *syncclient.ApproverV5, s syncclient.PairingStatusV5) (ApprovalResult, error) {
 	if err := a.MatchApproval(s, r.Approval); err != nil {
-		return w.approvalResultV4(r, "unknown"), errors.Join(ErrApprovalPending, err)
+		return w.approvalResultV5(r, "unknown"), errors.Join(ErrApprovalPending, err)
 	}
 	oldSeq, oldSig, oldApproved := r.Sequence, r.CompletionSignature, r.Approved
 	r.Approved = true
@@ -197,25 +197,25 @@ func (w *Workflow) acceptApprovalV4(r *approvalRecordV4, a *syncclient.ApproverV
 		r.Sequence = oldSeq
 		r.CompletionSignature = oldSig
 		r.Approved = oldApproved
-		return w.approvalResultV4(r, "unknown"), errors.Join(ErrApprovalPending, err)
+		return w.approvalResultV5(r, "unknown"), errors.Join(ErrApprovalPending, err)
 	}
-	return w.approvalResultV4(r, state), nil
+	return w.approvalResultV5(r, state), nil
 }
-func (w *Workflow) ApprovePairingV4(ctx context.Context, input ApprovalInput) (ApprovalResult, error) {
+func (w *Workflow) ApprovePairingV5(ctx context.Context, input ApprovalInput) (ApprovalResult, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if err := w.approvalGateV4(); err != nil {
+	if err := w.approvalGateV5(); err != nil {
 		return ApprovalResult{}, err
 	}
 	fingerprint, err := choicesHash(input.PairingID, input.Selections)
 	if err != nil {
 		return ApprovalResult{}, err
 	}
-	if old := w.state.PendingApprovalV4; old != nil && old.Sequence == 0 {
+	if old := w.state.PendingApprovalV5; old != nil && old.Sequence == 0 {
 		if old.PairingID != input.PairingID || old.ChoicesHash != fingerprint {
 			return ApprovalResult{}, syncclient.ErrWriteConflict
 		}
-		return w.approvalResultV4(old, "unknown"), ErrApprovalPending
+		return w.approvalResultV5(old, "unknown"), ErrApprovalPending
 	}
 	if !pairing.NativeAvailable() {
 		return ApprovalResult{}, pairing.ErrUnavailable
@@ -231,10 +231,10 @@ func (w *Workflow) ApprovePairingV4(ctx context.Context, input ApprovalInput) (A
 	if err = w.refresh(ctx); err != nil {
 		return ApprovalResult{}, err
 	}
-	if _, _, err = w.currentApprovalV4(input.Selections, nil); err != nil {
+	if _, _, err = w.currentApprovalV5(input.Selections, nil); err != nil {
 		return ApprovalResult{}, err
 	}
-	approver, err := w.client.NewApproverV4(input.PairingID, w.signing)
+	approver, err := w.client.NewApproverV5(input.PairingID, w.signing)
 	if err != nil {
 		return ApprovalResult{}, err
 	}
@@ -246,18 +246,18 @@ func (w *Workflow) ApprovePairingV4(ctx context.Context, input ApprovalInput) (A
 	if err = w.refresh(ctx); err != nil {
 		return ApprovalResult{}, err
 	}
-	proof, _, err := w.currentApprovalV4(input.Selections, nil)
+	proof, _, err := w.currentApprovalV5(input.Selections, nil)
 	if err != nil {
 		return ApprovalResult{}, err
 	}
-	approval := cryptox.EnrollmentApprovalV4{CertificateVersion: "4", Capabilities: []string{cryptox.RecoveryAuthorityCapability}, Context: anchor.Context, PairingProfile: pairing.Profile, TranscriptHash: anchor.TranscriptHash, IssuerProof: proof, Grants: []cryptox.SignedGrantWire{}}
+	approval := cryptox.EnrollmentApprovalV5{CertificateVersion: "5", Capabilities: []string{cryptox.RecoveryDAGCapability}, Context: anchor.Context, PairingProfile: pairing.Profile, TranscriptHash: anchor.TranscriptHash, IssuerProof: proof, Grants: []cryptox.SignedGrantWire{}}
 	sources := map[string]cryptox.SignedGrantWire{}
 	byHash := map[string]cryptox.SignedGrantWire{}
-	for _, a := range proof.Authorities {
+	for _, a := range proof.Source.View.Authorities {
 		h, _ := cryptox.IssuerAuthorityHash(a.Grant)
 		byHash[h] = a.Grant
 	}
-	for _, t := range proof.Targets {
+	for _, t := range proof.Source.View.Targets {
 		sources[t.EnvironmentID] = byHash[t.AuthorityHash]
 	}
 	ordered := append([]ApprovalSelection(nil), input.Selections...)
@@ -274,7 +274,7 @@ func (w *Workflow) ApprovePairingV4(ctx context.Context, input ApprovalInput) (A
 			return ApprovalResult{}, e
 		}
 		sum := sha256.Sum256([]byte(input.PairingID))
-		id := "pair4-grant-" + hex.EncodeToString(sum[:16]) + "-" + strconv.Itoa(i)
+		id := "pair5-grant-" + hex.EncodeToString(sum[:16]) + "-" + strconv.Itoa(i)
 		g := cryptox.Grant{AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, IssuerDeviceID: w.state.DeviceID, SubjectDeviceID: anchor.Context.InitiatorDeviceID, SubjectSigningPublicKey: anchor.Context.InitiatorSigningPublicKey, SubjectReceivingPublicKey: anchor.Context.InitiatorReceivingPublicKey, EnvironmentID: s.EnvironmentID, KeyVersion: source.Grant.KeyVersion, GrantGeneration: "1", Role: s.Role, ExpiresAt: s.ExpiresAt, IdempotencyKey: id, Envelope: cryptox.EncodeBase64(packet)}
 		signed, e := cryptox.SignGrant(g, w.signing)
 		if e != nil {
@@ -290,42 +290,42 @@ func (w *Workflow) ApprovePairingV4(ctx context.Context, input ApprovalInput) (A
 		return ApprovalResult{}, ErrApprovalEvidence
 	}
 	now := w.now().Unix()
-	record := &approvalRecordV4{Version: 1, SessionEpoch: w.engine.State().SessionEpoch, PairingID: input.PairingID, SessionID: approval.Context.SessionID, ChoicesHash: fingerprint, CreatedAt: now, LastObservedAt: now, Approval: approval}
-	w.state.PendingApprovalV4 = record
+	record := &approvalRecordV5{Version: 1, SessionEpoch: w.engine.State().SessionEpoch, PairingID: input.PairingID, SessionID: approval.Context.SessionID, ChoicesHash: fingerprint, CreatedAt: now, LastObservedAt: now, Approval: approval}
+	w.state.PendingApprovalV5 = record
 	if err = w.persist(); err != nil {
-		return w.approvalResultV4(record, "unknown"), err
+		return w.approvalResultV5(record, "unknown"), err
 	}
-	return w.retryApprovalV4(ctx, record)
+	return w.retryApprovalV5(ctx, record)
 }
-func (w *Workflow) RetryApprovalV4(ctx context.Context, id string) (ApprovalResult, error) {
+func (w *Workflow) RetryApprovalV5(ctx context.Context, id string) (ApprovalResult, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if err := w.approvalGateV4(); err != nil {
+	if err := w.approvalGateV5(); err != nil {
 		return ApprovalResult{}, err
 	}
-	r := w.state.PendingApprovalV4
+	r := w.state.PendingApprovalV5
 	if r == nil || r.PairingID != id {
 		return ApprovalResult{}, syncclient.ErrWriteConflict
 	}
-	return w.retryApprovalV4(ctx, r)
+	return w.retryApprovalV5(ctx, r)
 }
-func (w *Workflow) retryApprovalV4(ctx context.Context, r *approvalRecordV4) (ApprovalResult, error) {
-	unknown := w.approvalResultV4(r, "unknown")
-	if err := w.validateApprovalV4(r); err != nil {
+func (w *Workflow) retryApprovalV5(ctx context.Context, r *approvalRecordV5) (ApprovalResult, error) {
+	unknown := w.approvalResultV5(r, "unknown")
+	if err := w.validateApprovalV5(r); err != nil {
 		return unknown, err
 	}
-	if err := w.observeApprovalV4(r); err != nil {
+	if err := w.observeApprovalV5(r); err != nil {
 		return unknown, err
 	}
 	if r.Sequence != 0 {
-		return w.approvalResultV4(r, "complete"), nil
+		return w.approvalResultV5(r, "complete"), nil
 	}
 	if w.client == nil {
 		if err := w.boot(ctx); err != nil {
 			return unknown, errors.Join(ErrApprovalPending, err)
 		}
 	}
-	approver, err := w.client.NewApproverV4(r.PairingID, w.signing)
+	approver, err := w.client.NewApproverV5(r.PairingID, w.signing)
 	if err != nil {
 		return unknown, err
 	}
@@ -338,7 +338,7 @@ func (w *Workflow) retryApprovalV4(ctx context.Context, r *approvalRecordV4) (Ap
 	if errors.As(err, &fault) && fault.Status == 401 && fault.Code == "unauthorized" {
 		if err = w.boot(ctx); err == nil {
 			approver.Close()
-			approver, err = w.client.NewApproverV4(r.PairingID, w.signing)
+			approver, err = w.client.NewApproverV5(r.PairingID, w.signing)
 			if err == nil {
 				defer approver.Close()
 				err = approver.BindProtectedApproval(r.Approval)
@@ -355,7 +355,7 @@ func (w *Workflow) retryApprovalV4(ctx context.Context, r *approvalRecordV4) (Ap
 		return unknown, errors.Join(ErrApprovalPending, err)
 	}
 	if status.Approval != nil {
-		return w.acceptApprovalV4(r, approver, status)
+		return w.acceptApprovalV5(r, approver, status)
 	}
 	if r.DeadlineClosed {
 		return unknown, pairing.ErrExpired
@@ -363,7 +363,7 @@ func (w *Workflow) retryApprovalV4(ctx context.Context, r *approvalRecordV4) (Ap
 	if err = w.refreshForApproval(ctx); err != nil {
 		return unknown, errors.Join(ErrApprovalPending, err)
 	}
-	if _, _, err = w.currentApprovalV4(approvalSelectionsV4(r), r); err != nil {
+	if _, _, err = w.currentApprovalV5(approvalSelectionsV5(r), r); err != nil {
 		return unknown, errors.Join(ErrApprovalPending, err)
 	}
 	if err = ctx.Err(); err != nil {
@@ -380,63 +380,76 @@ func (w *Workflow) retryApprovalV4(ctx context.Context, r *approvalRecordV4) (Ap
 		}
 		return unknown, errors.Join(ErrApprovalPending, err)
 	}
-	return w.acceptApprovalV4(r, approver, status)
+	return w.acceptApprovalV5(r, approver, status)
 }
-func (w *Workflow) CancelApprovalV4(id string) error {
+func (w *Workflow) CancelApprovalV5(id string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if err := w.approvalGateV4(); err != nil {
+	if err := w.approvalGateV5(); err != nil {
 		return err
 	}
-	r := w.state.PendingApprovalV4
+	r := w.state.PendingApprovalV5
 	if r == nil || r.PairingID != id {
 		return syncclient.ErrWriteConflict
 	}
 	if r.Attempted || r.Sequence != 0 {
 		return ErrApprovalPending
 	}
-	w.state.PendingApprovalV4 = nil
+	w.state.PendingApprovalV5 = nil
 	if err := w.persist(); err != nil {
-		w.state.PendingApprovalV4 = r
+		w.state.PendingApprovalV5 = r
 		return err
 	}
 	return nil
 }
 
-func (w *Workflow) approvalV4Pending() bool {
-	return w.state.PendingApprovalV4 != nil && w.state.PendingApprovalV4.Sequence == 0
+func (w *Workflow) approvalV5Pending() bool {
+	return w.state.PendingApprovalV5 != nil && w.state.PendingApprovalV5.Sequence == 0
 }
-func (w *Workflow) approvalRootV4() (cryptox.PinnedIssuerRoot, error) {
-	r := w.state.RecoveredDevice
-	if r == nil || !r.Applied || r.Evidence == nil || w.state.Root == nil {
+func (w *Workflow) approvalRootV5() (cryptox.PinnedIssuerRoot, error) {
+	if w.state.Root == nil {
 		return cryptox.PinnedIssuerRoot{}, ErrApprovalEvidence
 	}
 	if err := w.validateOriginCache(); err != nil {
 		return cryptox.PinnedIssuerRoot{}, err
 	}
-	return r.Pin, nil
+	r := w.state.Root
+	return cryptox.PinnedIssuerRoot{AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, DeviceID: r.RootDeviceID, SigningPublicKey: r.RootSigningPublicKey, ReceivingPublicKey: r.RootReceivingPublicKey}, nil
 }
-func (w *Workflow) approvalGateV4() error {
+func (w *Workflow) approvalGateV5() error {
+	if w.dagPersistenceFailed {
+		return ErrDAGPersistence
+	}
+	if w.state.RecoveryDAG != nil || w.state.RecoveryDAGPreparation != nil || w.state.RecoveryDAGRecoveredPreparation != nil || w.dagResolutionPending() {
+		return ErrRecoveryRestricted
+	}
+	if w.state.RecoveredDAGDevice != nil {
+		if w.dagDeviceCancel != nil || w.dagOwnerCancel != nil || w.dagQueryCancel != nil {
+			return ErrDAGQueryBusy
+		}
+		if err := w.validateRecoveredDAGDeviceLocked(); err != nil {
+			return err
+		}
+		if w.dagManagementPending() {
+			return ErrManagementPending
+		}
+		if pending, err := w.dagDataPending(); err != nil {
+			return err
+		} else if pending {
+			return ErrSourceProjectionPending
+		}
+	}
 	if w.closed {
 		return ErrClosed
 	}
 	if len(w.state.SelfRevocation) > 0 {
 		return ErrSelfRevocationPending
 	}
-	if w.state.Recovery != nil {
-		return ErrRecoveryRestricted
-	}
-	if w.recoveredDevicePending() {
-		return ErrRecoveryPending
-	}
 	if w.enrollmentPending() {
 		return ErrMobileEnrollmentPending
 	}
 	if w.managementPending() {
 		return ErrManagementPending
-	}
-	if w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 || w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
-		return ErrApprovalPending
 	}
 	return nil
 }

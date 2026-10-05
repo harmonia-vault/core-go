@@ -24,6 +24,8 @@ func TestAccountLoginIntentUsesVerifiedHTTPSAndNeverTrustsDevice(t *testing.T) {
 	credential := hex.EncodeToString(hash[:])
 	var calls atomic.Uint64
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
 		calls.Add(1)
 		var request struct {
 			Email      string `json:"email"`

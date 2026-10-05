@@ -28,9 +28,8 @@ func (v *VaultWorkflow) Invalidate() {
 		return
 	}
 	v.saveFailed.Store(true)
-	v.invalidateRecoveryOwner()
+	v.invalidateNativeDAGRegistry()
 	v.cancelOperation()
 }
 
 // Invalidate 不等待在途owner.Close；native不可因此省略最终Clear/Close。
-func (r *RecoveryRegistry) Invalidate() { r.invalidate() }

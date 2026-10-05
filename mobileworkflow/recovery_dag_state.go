@@ -77,7 +77,7 @@ func (w *Workflow) dagBindingLocked() (syncclient.DAGJournalBinding, error) {
 		return syncclient.DAGJournalBinding{}, ErrDAGProtectedState
 	}
 	state := w.engine.State()
-	if state.Synthetic || state.AccountClosed || w.state.RecoveredDAGDevice != nil || w.dagDeviceCancel != nil || state.Cloud.AccountID != "" || w.state.Root != nil || w.state.Pending != nil || w.state.Recovery != nil || w.state.RecoveryAuthority != nil || w.state.RecoveredDevice != nil || w.state.EnrollmentV3 != nil || w.state.PendingApproval != nil || w.state.PendingApprovalV3 != nil || w.state.PendingApprovalV4 != nil || w.state.Management != nil || len(w.state.SelfRevocation) > 0 || len(w.state.WriteJournal) > 0 || len(w.state.EnvironmentWrites) > 0 || len(w.state.InitialAuthorities) > 0 || len(w.state.Grants) > 0 || len(w.state.Labels) > 0 {
+	if state.Synthetic || state.AccountClosed || w.state.RecoveredDAGDevice != nil || w.dagDeviceCancel != nil || state.Cloud.AccountID != "" || w.state.Root != nil || w.state.Pending != nil || w.state.EnrollmentV5 != nil || w.state.PendingApprovalV5 != nil || w.state.Management != nil || len(w.state.SelfRevocation) > 0 || len(w.state.WriteJournal) > 0 || len(w.state.EnvironmentWrites) > 0 || len(w.state.InitialAuthorities) > 0 || len(w.state.Grants) > 0 || len(w.state.Labels) > 0 {
 		return syncclient.DAGJournalBinding{}, ErrDAGProtectedState
 	}
 	return syncclient.DAGJournalBinding{Endpoint: w.state.Endpoint, AccountID: w.state.AccountID, AccountGeneration: generation, OwnerEpoch: state.SessionEpoch}, nil

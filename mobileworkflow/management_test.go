@@ -58,7 +58,7 @@ func TestManagementUntrustedClosedAndOtherPendingGates(t *testing.T) {
 	if _, e = w.View(); !errors.Is(e, ErrManagementPending) {
 		t.Fatal("management pending did not gate cache view", e)
 	}
-	w.state.Recovery = &recoveryRecord{}
+	w.state.RecoveryDAG = &recoveryDAGState{}
 	if _, e = w.RetryManagement(context.Background(), "pending"); !errors.Is(e, ErrRecoveryRestricted) {
 		t.Fatal("recovery proof reused as device manager", e)
 	}

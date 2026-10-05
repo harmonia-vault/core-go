@@ -25,7 +25,7 @@ import (
 type approvalFixture struct {
 	base             *selfFixture
 	mu               sync.Mutex
-	status           syncclient.PairingStatusV2
+	status           syncclient.PairingStatusV5
 	peer             *pairing.Session
 	peerKey          ed25519.PrivateKey
 	peerReceive      []byte
@@ -64,7 +64,7 @@ func newApprovalFixture(t *testing.T) *approvalFixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(f.peer.Close)
-	f.status = syncclient.PairingStatusV2{State: "pending", IdempotencyKey: "pair-native", CertificateVersion: "2", Capabilities: []string{cryptox.IssuerProofCapability}, PairingProfile: pairing.Profile, Context: c, Messages: map[string]string{"initiator": cryptox.EncodeBase64(message)}, Confirmations: map[string]string{}}
+	f.status = syncclient.PairingStatusV5{State: "pending", IdempotencyKey: "pair-native", CertificateVersion: "5", Capabilities: []string{cryptox.RecoveryDAGCapability}, PairingProfile: pairing.Profile, Context: c, Messages: map[string]string{"initiator": cryptox.EncodeBase64(message)}, Confirmations: map[string]string{}}
 	var state protectedState
 	if json.Unmarshal(base.config.ProtectedState, &state) != nil {
 		t.Fatal("fixture context")
@@ -73,7 +73,9 @@ func newApprovalFixture(t *testing.T) *approvalFixture {
 	base.config.ProtectedState = mustApproval(json.Marshal(state))
 	old := base.server.Config.Handler
 	base.server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.URL.Path, "/pairings-v2/") {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		if !strings.Contains(r.URL.Path, "/pairings-v5/") {
 			old.ServeHTTP(w, r)
 			return
 		}
@@ -84,11 +86,11 @@ func newApprovalFixture(t *testing.T) *approvalFixture {
 		if json.Unmarshal(data, &st) != nil {
 			return errors.New("invalid seal")
 		}
-		if st.PendingApproval != nil {
+		if st.PendingApprovalV5 != nil {
 			if f.failSave.Load() {
 				return errors.New("synthetic AES save failed")
 			}
-			if st.PendingApproval.Attempted {
+			if st.PendingApprovalV5.Attempted {
 				if f.failAttemptSeal.Load() {
 					return errors.New("attempted AES save failed")
 				}
@@ -111,7 +113,7 @@ func mustApproval[T any](v T, e error) T {
 func (f *approvalFixture) handle(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	write := func(s syncclient.PairingStatusV2) { _ = json.NewEncoder(w).Encode(s) }
+	write := func(s syncclient.PairingStatusV5) { _ = json.NewEncoder(w).Encode(s) }
 	if r.Header.Get("X-Harmonia-Device-Id") != f.base.device || r.Header.Get("X-Harmonia-Account-Generation") != "1" || !f.base.tokens[strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")] {
 		f.base.t.Error("not a bound manager session")
 		w.WriteHeader(403)
@@ -122,7 +124,7 @@ func (f *approvalFixture) handle(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "admin_required"})
 		return
 	}
-	body, _ := io.ReadAll(io.LimitReader(r.Body, cryptox.MaxIssuerProofBytes+1))
+	body, _ := io.ReadAll(io.LimitReader(r.Body, cryptox.MaxRecoveryAuthorityBytes+1))
 	if bytes.Contains(body, f.shortCode) {
 		f.base.t.Error("short code reached HTTP")
 	}
@@ -183,12 +185,12 @@ func (f *approvalFixture) handle(w http.ResponseWriter, r *http.Request) {
 			Capabilities       []string                  `json:"capabilities"`
 			Grants             []cryptox.SignedGrantWire `json:"grants"`
 			TranscriptHash     string                    `json:"transcriptHash"`
-			IssuerProof        cryptox.IssuerProof       `json:"issuerProof"`
+			IssuerProof        cryptox.IssuerRecoveryDAG `json:"issuerProof"`
 			Signature          string                    `json:"signature"`
 		}
 		d := json.NewDecoder(bytes.NewReader(body))
 		d.DisallowUnknownFields()
-		if d.Decode(&input) != nil || input.CertificateVersion != "2" || len(input.Capabilities) != 1 || input.Capabilities[0] != cryptox.IssuerProofCapability {
+		if d.Decode(&input) != nil || input.CertificateVersion != "5" || len(input.Capabilities) != 1 || input.Capabilities[0] != cryptox.RecoveryDAGCapability {
 			f.base.t.Error("invalid approve schema")
 			w.WriteHeader(400)
 			return
@@ -199,9 +201,9 @@ func (f *approvalFixture) handle(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(403)
 			return
 		}
-		a := cryptox.EnrollmentApprovalV2{CertificateVersion: "2", Context: cryptox.EnrollmentContext(f.status.Context), PairingProfile: pairing.Profile, TranscriptHash: input.TranscriptHash, Grants: input.Grants, IssuerProof: input.IssuerProof, ApproverSignature: input.Signature}
+		a := cryptox.EnrollmentApprovalV5{CertificateVersion: "5", Capabilities: []string{cryptox.RecoveryDAGCapability}, Context: cryptox.EnrollmentContext(f.status.Context), PairingProfile: pairing.Profile, TranscriptHash: input.TranscriptHash, Grants: input.Grants, IssuerProof: input.IssuerProof, ApproverSignature: input.Signature}
 		anchor := cryptox.ConfirmedEnrollmentAnchor{Context: a.Context, TranscriptHash: transcript}
-		if _, err = cryptox.VerifyEnrollmentApprovalV2(anchor, a, time.Now()); err != nil {
+		if _, err = cryptox.VerifyEnrollmentApprovalV5(anchor, a); err != nil {
 			f.base.t.Error(err)
 			w.WriteHeader(403)
 			return
@@ -224,7 +226,7 @@ func (f *approvalFixture) handle(w http.ResponseWriter, r *http.Request) {
 		f.status.Approval = &a
 		if f.complete {
 			cert := mustApproval(a.Certificate())
-			a.InitiatorSignature = mustApproval(cryptox.SignEnrollmentCertificateV2(cert, f.peerKey))
+			a.InitiatorSignature = mustApproval(cryptox.SignEnrollmentCertificateV5(cert, f.peerKey))
 			f.status.Approval = &a
 			seq := uint64(3)
 			f.status.Sequence = &seq
@@ -249,20 +251,20 @@ func TestNativeApprovalRealPAKEHPKEAndOriginalJournalRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.dropResponse = true
-	result, err := w.ApprovePairing(context.Background(), approvalInput())
+	result, err := w.ApprovePairingV5(context.Background(), approvalInput())
 	if !errors.Is(err, ErrApprovalPending) || result.State != "unknown" || len(f.posts) != 1 || !f.savePrepared.Load() || !f.sealed.Load() {
 		t.Fatal("lost reply not pending", result, err)
 	}
 	if _, err = w.View(); !errors.Is(err, ErrApprovalPending) {
 		t.Fatal("unknown approval allowed ordinary vault view")
 	}
-	if err = w.CancelApproval("pair-native"); !errors.Is(err, ErrApprovalPending) {
+	if err = w.CancelApprovalV5("pair-native"); !errors.Is(err, ErrApprovalPending) {
 		t.Fatal("inflight approval canceled without terminal server proof")
 	}
 	if _, err = w.RevokeSelf(context.Background(), "revoke-while-approval"); !errors.Is(err, ErrApprovalPending) {
 		t.Fatal("self revoke bypassed pending approval")
 	}
-	original := clone(w.state.PendingApproval)
+	original := clone(w.state.PendingApprovalV5)
 	if bytes.Contains(f.base.native, []byte("12345678")) || bytes.Contains(f.base.native, []byte("sessionToken")) {
 		t.Fatal("journal stored PAKE code/token")
 	}
@@ -273,26 +275,26 @@ func TestNativeApprovalRealPAKEHPKEAndOriginalJournalRecovery(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer w.Close()
-	result, err = w.RetryApproval(context.Background(), "pair-native")
-	if err != nil || result.State != "approved" || result.Sequence != 0 || len(f.posts) != 1 || !sameApprovalPackage(original.Approval, w.state.PendingApproval.Approval) {
+	result, err = w.RetryApprovalV5(context.Background(), "pair-native")
+	if err != nil || result.State != "approved" || result.Sequence != 0 || len(f.posts) != 1 || !sameJSONValue(original.Approval, w.state.PendingApprovalV5.Approval) {
 		t.Fatal("retry rewrote original package or falsely trusted CLI", result, err)
 	}
 	if input := approvalInput(); true {
 		input.Selections[0].Role = "admin"
-		if _, err = w.ApprovePairing(context.Background(), input); !errors.Is(err, syncclient.ErrWriteConflict) {
+		if _, err = w.ApprovePairingV5(context.Background(), input); !errors.Is(err, syncclient.ErrWriteConflict) {
 			t.Fatal("unknown result changed role")
 		}
 	}
 	f.mu.Lock()
 	a := *f.status.Approval
 	cert := mustApproval(a.Certificate())
-	a.InitiatorSignature = mustApproval(cryptox.SignEnrollmentCertificateV2(cert, f.peerKey))
+	a.InitiatorSignature = mustApproval(cryptox.SignEnrollmentCertificateV5(cert, f.peerKey))
 	f.status.Approval = &a
 	f.status.State = "complete"
 	seq := uint64(3)
 	f.status.Sequence = &seq
 	f.mu.Unlock()
-	result, err = w.RetryApproval(context.Background(), "pair-native")
+	result, err = w.RetryApprovalV5(context.Background(), "pair-native")
 	if err != nil || result.State != "complete" || result.Sequence != 3 {
 		t.Fatal("real CLI dual-sign completion not observed", result, err)
 	}
@@ -313,7 +315,7 @@ func TestNativeApprovalRefusesWrongCodeContextAndAuthority(t *testing.T) {
 			case "missing-initial":
 				var s protectedState
 				_ = json.Unmarshal(f.base.config.ProtectedState, &s)
-				s.InitialAuthorities = nil
+				s.Initialization = nil
 				f.base.config.ProtectedState = mustApproval(json.Marshal(s))
 			case "other-env":
 				input.Selections[0].EnvironmentID = "unproven"
@@ -342,7 +344,7 @@ func TestNativeApprovalRefusesWrongCodeContextAndAuthority(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer w.Close()
-			if _, err = w.ApprovePairing(context.Background(), input); err == nil || len(f.posts) != 0 {
+			if _, err = w.ApprovePairingV5(context.Background(), input); err == nil || len(f.posts) != 0 {
 				t.Fatal("invalid approval uploaded", err)
 			}
 		})
@@ -359,17 +361,17 @@ func TestNativeApprovalAESFailurePreparedCancelAndAuthorityLoss(t *testing.T) {
 			defer w.Close()
 			if mode == "save-failure" {
 				f.failSave.Store(true)
-				if _, err = w.ApprovePairing(context.Background(), approvalInput()); err == nil || len(f.posts) != 0 || w.state.PendingApproval == nil || w.state.PendingApproval.Attempted {
+				if _, err = w.ApprovePairingV5(context.Background(), approvalInput()); err == nil || len(f.posts) != 0 || w.state.PendingApprovalV5 == nil || w.state.PendingApprovalV5.Attempted {
 					t.Fatal("AES failure uploaded")
 				}
 				f.failSave.Store(false)
-				if err = w.CancelApproval("pair-native"); err != nil || w.state.PendingApproval != nil {
+				if err = w.CancelApprovalV5("pair-native"); err != nil || w.state.PendingApprovalV5 != nil {
 					t.Fatal("unsent prepared cancel failed", err)
 				}
 				return
 			}
 			f.dropResponse = true
-			if _, err = w.ApprovePairing(context.Background(), approvalInput()); !errors.Is(err, ErrApprovalPending) {
+			if _, err = w.ApprovePairingV5(context.Background(), approvalInput()); !errors.Is(err, ErrApprovalPending) {
 				t.Fatal(err)
 			}
 			f.mu.Lock()
@@ -381,7 +383,7 @@ func TestNativeApprovalAESFailurePreparedCancelAndAuthorityLoss(t *testing.T) {
 				f.status.Approval = nil
 			}
 			f.mu.Unlock()
-			if _, err = w.RetryApproval(context.Background(), "pair-native"); err == nil || len(f.posts) != 1 || w.state.PendingApproval == nil {
+			if _, err = w.RetryApprovalV5(context.Background(), "pair-native"); err == nil || len(f.posts) != 1 || w.state.PendingApprovalV5 == nil {
 				t.Fatal("lost authority/expired challenge replaced approval", err)
 			}
 			if _, err = w.View(); !errors.Is(err, ErrApprovalPending) {
@@ -401,7 +403,7 @@ func TestNativeApprovalUnacceptedRetryReusesBytesAndPreparedSeal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = w.ApprovePairing(context.Background(), approvalInput())
+			_, err = w.ApprovePairingV5(context.Background(), approvalInput())
 			if err == nil {
 				t.Fatal("expected unknown/seal failure")
 			}
@@ -417,17 +419,17 @@ func TestNativeApprovalUnacceptedRetryReusesBytesAndPreparedSeal(t *testing.T) {
 			}
 			defer w.Close()
 			if mode == "attempt-seal-fails" {
-				if w.state.PendingApproval.Attempted {
+				if w.state.PendingApprovalV5.Attempted {
 					t.Fatal("failed attempted seal appeared committed")
 				}
-				if err = w.CancelApproval("pair-native"); err != nil {
+				if err = w.CancelApprovalV5("pair-native"); err != nil {
 					t.Fatal("persisted unsent record could not cancel", err)
 				}
 				return
 			}
 			original := bytes.Clone(f.posts[0])
 			f.dropBeforeAccept = false
-			result, err := w.RetryApproval(context.Background(), "pair-native")
+			result, err := w.RetryApprovalV5(context.Background(), "pair-native")
 			if err != nil || result.State != "approved" || len(f.posts) != 2 || !bytes.Equal(original, f.posts[1]) {
 				t.Fatal("retry minted ciphertext/signature/roles", result, err)
 			}
@@ -441,7 +443,7 @@ func TestNativeApprovalProtectedJournalRejectsTamperingAndCoexistingSelfGate(t *
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = w.ApprovePairing(context.Background(), approvalInput())
+	_, err = w.ApprovePairingV5(context.Background(), approvalInput())
 	if !errors.Is(err, ErrApprovalPending) {
 		t.Fatal(err)
 	}
@@ -455,17 +457,17 @@ func TestNativeApprovalProtectedJournalRejectsTamperingAndCoexistingSelfGate(t *
 			}
 			switch field {
 			case "epoch":
-				state.PendingApproval.SessionEpoch++
+				state.PendingApprovalV5.SessionEpoch++
 			case "choices":
-				state.PendingApproval.ChoicesHash = strings.Repeat("0", 64)
+				state.PendingApprovalV5.ChoicesHash = strings.Repeat("0", 64)
 			case "signature":
-				state.PendingApproval.Approval.ApproverSignature = cryptox.EncodeBase64(make([]byte, 64))
+				state.PendingApprovalV5.Approval.ApproverSignature = cryptox.EncodeBase64(make([]byte, 64))
 			case "initial-authority":
-				state.InitialAuthorities = nil
+				state.Initialization = nil
 			case "time":
-				state.PendingApproval.CreatedAt += 200
+				state.PendingApprovalV5.CreatedAt += 200
 			case "completed":
-				state.PendingApproval.Sequence = 3
+				state.PendingApprovalV5.Sequence = 3
 			case "self-revoke":
 				state.SelfRevocation = []byte(`{}`)
 			}

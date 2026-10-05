@@ -395,12 +395,8 @@ func recoveryBundleSequence(bundle cryptox.RecoveryDependencyBundle) uint64 {
 	for _, r := range bundle.Records {
 		var n uint64
 		switch r.Kind {
-		case "transition-v1":
-			n = r.TransitionV1.Sequence
 		case "transition-v2":
 			n = r.TransitionV2.Sequence
-		case "recovered-v1":
-			n = r.RecoveredV1.Sequence
 		case "recovered-v2":
 			n = r.RecoveredV2.Sequence
 		}

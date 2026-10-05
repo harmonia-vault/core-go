@@ -46,44 +46,6 @@ func enrollmentMaterial(t *testing.T, version string) (localkeys.TrustContext, l
 	}
 	const key = "synthetic-local-check-receipt"
 	switch version {
-	case "3":
-		var f struct {
-			Approval cryptox.EnrollmentApprovalV3 `json:"approval"`
-			Seeds    map[string]string            `json:"syntheticSigningSeedsHex"`
-		}
-		read("environment-origin-v1", &f)
-		context, profile = f.Approval.Context, f.Approval.PairingProfile
-		receipt = syncclient.EnrollmentReceiptV3{IdempotencyKey: key, Approval: f.Approval}
-		seed, receiving = decode(f.Seeds["D"]), bytes.Repeat([]byte{15}, 32)
-	case "4":
-		var f struct {
-			Proof    cryptox.IssuerRecoveryProof `json:"proof"`
-			Seed     string                      `json:"syntheticChildEdSeedHex"`
-			Recovery struct {
-				Accepted cryptox.AcceptedRecoveredDevice `json:"recoveredDevice"`
-			} `json:"recovery"`
-		}
-		read("issuer-recovery-v1", &f)
-		a := f.Proof.Path[len(f.Proof.Path)-1].Enrollment.Approval
-		p := f.Proof
-		p.Path = p.Path[:len(p.Path)-1]
-		p.Targets = []cryptox.IssuerTarget{}
-		filtered := []cryptox.IssuerRecoveryAuthority{}
-		for _, x := range p.Authorities {
-			if x.Grant.Grant.SubjectDeviceID != a.Context.InitiatorDeviceID {
-				filtered = append(filtered, x)
-			}
-		}
-		p.Authorities = filtered
-		for _, g := range f.Recovery.Accepted.Submission.Grants {
-			h, e := cryptox.IssuerAuthorityHash(g)
-			mustCLI(t, e)
-			p.Targets = append(p.Targets, cryptox.IssuerTarget{EnvironmentID: g.Grant.EnvironmentID, AuthorityHash: h})
-		}
-		approval := cryptox.EnrollmentApprovalV4{CertificateVersion: "4", Capabilities: []string{cryptox.RecoveryAuthorityCapability}, Context: a.Context, PairingProfile: a.PairingProfile, TranscriptHash: a.TranscriptHash, Grants: a.Grants, IssuerProof: p, ApproverSignature: a.ApproverSignature, InitiatorSignature: a.InitiatorSignature}
-		context, profile = a.Context, a.PairingProfile
-		receipt = syncclient.EnrollmentReceiptV4{IdempotencyKey: key, Approval: approval}
-		seed, receiving = decode(f.Seed), bytes.Repeat([]byte{17}, 32)
 	case "5":
 		var f struct {
 			Approval cryptox.EnrollmentApprovalV5 `json:"approval"`
@@ -174,8 +136,8 @@ func runEnrollmentCheck(ctx context.Context, directory, uid string) (string, err
 	return out.String(), e, tr.calls.Load()
 }
 
-func TestLocalEnrollmentCheckSignedV3V4V5ReadOnlyNoHTTP(t *testing.T) {
-	for _, version := range []string{"3", "4", "5"} {
+func TestLocalEnrollmentCheckSignedDAGReadOnlyNoHTTP(t *testing.T) {
+	for _, version := range []string{"5"} {
 		t.Run("cert"+version, func(t *testing.T) {
 			dir, uid := seedEnrollmentCheck(t, version, nil)
 			before := enrollmentFiles(t, dir)
@@ -192,7 +154,7 @@ func TestLocalEnrollmentCheckSignedV3V4V5ReadOnlyNoHTTP(t *testing.T) {
 }
 
 func TestLocalEnrollmentCheckRevalidatesSignedStoredIssuerLedger(t *testing.T) {
-	for _, version := range []string{"3", "4", "5"} {
+	for _, version := range []string{"5"} {
 		t.Run("cert"+version, func(t *testing.T) {
 			dir, uid := seedEnrollmentCheck(t, version, nil)
 			s, e := localkeys.OpenExistingEncryptedStateStore(localkeys.Config{Directory: dir, UserID: uid})
@@ -227,7 +189,7 @@ func TestLocalEnrollmentCheckRevalidatesSignedStoredIssuerLedger(t *testing.T) {
 }
 
 func TestLocalEnrollmentCheckRejectsStoredTrustAndLedger(t *testing.T) {
-	for _, version := range []string{"3", "4", "5"} {
+	for _, version := range []string{"5"} {
 		for _, kind := range []string{"pending", "bad-signature", "wrong-generation", "wrong-device", "unknown-version", "closed", "missing-ledger", "corrupt-ledger"} {
 			t.Run("cert"+version+"-"+kind, func(t *testing.T) {
 				dir, uid := seedEnrollmentCheck(t, version, func(trust *localkeys.TrustContext, state *localstate.State) {
@@ -285,7 +247,7 @@ func TestLocalEnrollmentCheckMissingAndBusyNeverCreatesOrWrites(t *testing.T) {
 	})
 	for _, missing := range []string{"machine-key.v1", "vault.lock", "device-v1", "trust-v1"} {
 		t.Run(missing, func(t *testing.T) {
-			dir, uid := seedEnrollmentCheck(t, "3", nil)
+			dir, uid := seedEnrollmentCheck(t, "5", nil)
 			filename := missing
 			if missing == "device-v1" || missing == "trust-v1" {
 				s, e := localkeys.OpenExistingEncryptedStateStore(localkeys.Config{Directory: dir, UserID: uid})
@@ -340,7 +302,7 @@ func (s *checkObservedStore) Close() error {
 func TestLocalEnrollmentCheckCloseAndCancelCannotReportSuccess(t *testing.T) {
 	for _, kind := range []string{"success", "close-failure", "cancel-before", "cancel-on-close", "verification-failure-and-close"} {
 		t.Run(kind, func(t *testing.T) {
-			dir, uid := seedEnrollmentCheck(t, "4", func(trust *localkeys.TrustContext, _ *localstate.State) {
+			dir, uid := seedEnrollmentCheck(t, "5", func(trust *localkeys.TrustContext, _ *localstate.State) {
 				if kind == "verification-failure-and-close" {
 					trust.Accepted = false
 				}
@@ -385,7 +347,7 @@ func TestLocalEnrollmentCheckCloseAndCancelCannotReportSuccess(t *testing.T) {
 }
 
 func TestLocalEnrollmentCheckArgumentsDoNotOpenExtraInputs(t *testing.T) {
-	dir, uid := seedEnrollmentCheck(t, "3", nil)
+	dir, uid := seedEnrollmentCheck(t, "5", nil)
 	base := []string{"local-enrollment-check", "--local-directory", dir, "--local-user", uid}
 	for _, extra := range [][]string{{"--server", "https://synthetic.invalid"}, {"--ca-file", "/synthetic-never-open"}, {"--fixture"}, {"--offline-local=false"}, {"--current-env"}, {"--once"}, {"extra"}} {
 		t.Run(strings.Join(extra, "-"), func(t *testing.T) {

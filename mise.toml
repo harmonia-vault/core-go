@@ -1,9 +1,27 @@
 [tools]
 go = "1.26.4"
 
+[tasks.format-mobile-account]
+description = "格式化手机公开账号通道"
+run = "gofmt -w mobilebridge/account.go mobileworkflow/vaultworkflow.go"
+
 [tasks.test]
 description = "运行全部合成 Go 测试"
 run = "go test ./... -count=1"
+
+[tasks.format-email-limits]
+run = "gofmt -w syncclient/errors.go syncclient/fault_codes.go mobileworkflow/vaultworkflow.go mobilebridge/workflow.go mobilebridge/account.go mobilebridge/email_limit.go mobilebridge/account_reset_mail.go accountreset/client.go mobilebridge/email_limit_test.go"
+
+[tasks.test-email-limits]
+description = "检查邮件 HTTPS 重发、429 秒数传递及账号/错误解析回归"
+run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./accountreset -run 'Test(Email|AccountReset|NativeAccountReset|Reset|MobileHTTPSFault|ServerFault|RejectedBody|OldRejectedEpoch)' -count=1 -timeout=90s"
+
+[tasks.test-email-code]
+description = "邮件短码与原生账号重置、注册桥接回归"
+run = "go test -race ./accountreset ./mobileworkflow ./mobilebridge ./syncclient -run 'TestEmailCode|TestReset|TestNativeAccountReset|TestWorkflow|TestNativeWorkflow|TestServerFault|TestRejectedBody' -count=1 -timeout=90s"
+
+[tasks.format-email-code]
+run = "gofmt -w emailcode/code.go mobilebridge/workflow_test.go mobilebridge/account_reset_native_test.go mobilebridge/email_code.go mobilebridge/account.go mobilebridge/workflow.go accountreset/client.go accountreset/email_code_test.go mobilebridge/account_reset_native.go mobileworkflow/vaultworkflow.go syncclient/fault_codes.go"
 
 [tasks.test-race]
 description = "运行全部 Go 测试与 race detector"
@@ -19,7 +37,7 @@ run = "go test -race -count=1 ./cmd/harmonia ./localkeys ./platform -run 'TestOf
 
 [tasks.test-mobile-dag-s1]
 description = "手机 DAG 持久 journal/CAS、原生 owner 与既有恢复业务的有界 race 回归"
-run = "go test -race ./syncclient ./localkeys ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"
+run = "go test -race ./syncclient ./localkeys ./mobileworkflow ./mobilebridge -count=1 -timeout=180s -json"
 
 [tasks.test-local-enrollment-check]
 description = "验证只读本机入网材料、真实签名来源及零写入边界"
@@ -27,11 +45,11 @@ run = "go test -race -count=1 ./cmd/harmonia -run TestLocalEnrollmentCheck"
 
 [tasks.test-mobile-dag-query]
 description = "手机 DAG 原 ID 查询及受影响 Go 业务/owner 的有界 race 回归"
-run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"
+run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge -count=1 -timeout=180s -json"
 
 [tasks.test-mobile-dag-owner]
 description = "B1 typed RAM owner/lease 与受影响恢复路径的有界 race 回归"
-run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"
+run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge -count=1 -timeout=180s -json"
 
 [tasks.test-mobile-dag-owner-components]
 description = "B1 只读 owner/binding/lease 定向组件"
@@ -42,8 +60,8 @@ description = "B2 prepare 原 ID、原子提升、冷中断与受控换代的有
 run = "go test -race ./syncclient ./mobileworkflow -run 'Test(DAGPreparation|MobileDAGPreparation|MobileDAGTransition)' -count=1 -timeout=90s -json"
 
 [tasks.test-mobile-dag-transition]
-description = "B2 连续恢复有限接线与现有 S1/S2a/B1/cert4/registry 的受影响 race 回归"
-run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=180s -json"
+description = "B2 连续恢复有限接线与现有 S1/S2a/B1/DAG/registry 的受影响 race 回归"
+run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge -count=1 -timeout=180s -json"
 
 [tasks.build-macos-service]
 description = "构建有限 macOS 安装入口，不安装、启动或发布"
@@ -58,8 +76,8 @@ description = "B3a 明确环境/角色/期限登记 preparation、whole-state CA
 run = "go test -race ./syncclient ./mobileworkflow -run 'Test(B3a|DAGRecovered|MobileDAGRecovered)' -count=1 -timeout=90s -json"
 
 [tasks.test-mobile-dag-recovered]
-description = "B3a 同 owner 原包登记与 S1/S2a/B1/B2/cert4/registry 有界 race 回归"
-run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge ./mobilebridge/internal/recoverysessions -count=1 -timeout=240s -json"
+description = "B3a 同 owner 原包登记与 S1/S2a/B1/B2/DAG/registry 有界 race 回归"
+run = "go test -race ./syncclient ./mobileworkflow ./mobilebridge -count=1 -timeout=240s -json"
 
 [tasks.test-mobile-dag-recovered-schema]
 description = "B3a 所有 preparation 嵌套对象精确字段、必填与 nullable 回归"
@@ -78,5 +96,46 @@ description = "恢复原ID终态wire、whole-state CAS与冷历史的有限组�
 run = "go test -race -p 2 ./cryptox ./syncclient ./mobileworkflow -run '^(Test(RecoveryOperation|DAGResolution)|TestDAGVerifiedBinding)' -count=1 -timeout=180s -json"
 
 [tasks.test-systemd-unit-contract]
-description = "验证新 exec 模板、历史 simple receipt/journal 与不可变完整摘要"
+description = "验证 exec 模板并拒绝旧 simple receipt/journal"
 run = "go test -race -count=1 ./platform ./linuxinstall"
+
+[tasks.test-no-compat]
+description = "检查旧入网、缓存和安装记录拒绝边界及当前业务回归"
+run = ["go test -race ./cmd/harmonia ./localkeys ./localipc ./localstate ./linuxinstall -count=1 -timeout=90s", "go test -race ./syncclient -run 'TestIssuerOrigin|TestCachedSource|TestPausedCache' -count=1 -timeout=90s"]
+
+[tasks.build-dag]
+description = "构建唯一 DAG 协议下的所有 Go 包"
+run = "go build ./..."
+
+[tasks.format-dag]
+run = "gofmt -w cryptox syncclient mobileworkflow mobilebridge cmd/harmonia localkeys accountreset internal"
+
+[tasks.test-dag-crypto]
+run = "go test ./cryptox -count=1"
+
+[tasks.generate-dag-vectors]
+run = "HARMONIA_WRITE_SYNTHETIC_DAG_VECTOR=1 HARMONIA_WRITE_SYNTHETIC_ORIGIN_VECTOR=1 go test ./cryptox -run 'TestRecoveryDAGActual|TestEnvironmentOriginDual|TestWriteSyntheticIssuerDAGFixture' -count=1"
+
+[tasks.test-dag-local]
+run = "go test ./localkeys ./localipc -count=1"
+
+[tasks.test-dag-sync]
+run = "go test -gcflags=-e ./syncclient -count=1"
+
+[tasks.test-dag-cli]
+run = "go test -gcflags=-e ./cmd/harmonia -count=1 -timeout=90s"
+
+[tasks.test-dag-mobile]
+run = "go test -gcflags=-e ./mobileworkflow -count=1 -timeout=120s"
+
+[tasks.test-dag-bridge]
+run = "go test -gcflags=-e ./mobilebridge -count=1 -timeout=90s"
+
+[tasks.test-native]
+run = "go test -tags harmonia_boringssl ./... -count=1 -timeout=180s"
+
+[tasks.format-dag-approval]
+run = "gofmt -w mobileworkflow/approval_v5.go mobileworkflow/recovered_dag_management.go mobileworkflow/recovered_dag_device.go mobileworkflow/pending_pairings.go mobileworkflow/recovered_dag_business.go mobileworkflow/recovered_dag_environments.go mobileworkflow/approval_dag_test.go"
+
+[tasks.test-dag-review-fixes]
+run = "go test -race ./cryptox ./syncclient ./mobileworkflow -run 'TestRecoveredDAGApproval|TestNotification|TestEnrollmentApprovalHTTP|TestIssuerProofCross|TestIssuerProofEvery|TestRecoveryDAGRecoveredManager' -count=1 -timeout=240s"

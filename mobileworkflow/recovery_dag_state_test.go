@@ -224,28 +224,23 @@ func TestMobileDAGJournalRejectsEpochAndMutuallyExclusiveSchemasBeforeNetwork(t 
 		t.Fatal("decode")
 	}
 	changes := map[string]func(*protectedState){
-		"profile":      func(s *protectedState) { s.RecoveryDAG.Profile = "issuer-recovery-v1" },
-		"version":      func(s *protectedState) { s.RecoveryDAG.Version = 2 },
-		"epoch":        func(s *protectedState) { s.Cloud.SessionEpoch++ },
-		"closed":       func(s *protectedState) { s.Cloud.AccountClosed = true },
-		"synthetic":    func(s *protectedState) { s.Cloud.Synthetic = true },
-		"device":       func(s *protectedState) { s.RecoveryDAG.DeviceID = "other" },
-		"key":          func(s *protectedState) { s.RecoveryDAG.SigningPublicKey = s.ReceivingPublicKey },
-		"endpoint":     func(s *protectedState) { s.RecoveryDAG.Endpoint = "https://other.invalid" },
-		"account":      func(s *protectedState) { s.RecoveryDAG.AccountID = "other" },
-		"generation":   func(s *protectedState) { s.RecoveryDAG.AccountGeneration++ },
-		"root":         func(s *protectedState) { s.Root = &cryptox.TrustRoot{} },
-		"init":         func(s *protectedState) { s.Pending = &pendingInitialization{} },
-		"oldRecovery":  func(s *protectedState) { s.Recovery = &recoveryRecord{} },
-		"oldAuthority": func(s *protectedState) { s.RecoveryAuthority = &recoveryAuthorityRecord{} },
-		"oldRecovered": func(s *protectedState) { s.RecoveredDevice = &recoveredDeviceRecord{} },
-		"enrollment":   func(s *protectedState) { s.EnrollmentV3 = &mobileEnrollmentRecord{} },
-		"approval":     func(s *protectedState) { s.PendingApproval = &approvalRecord{} },
-		"approval3":    func(s *protectedState) { s.PendingApprovalV3 = &approvalRecordV3{} },
-		"approval4":    func(s *protectedState) { s.PendingApprovalV4 = &approvalRecordV4{} },
-		"management":   func(s *protectedState) { s.Management = &managementState{} },
-		"selfRevoke":   func(s *protectedState) { s.SelfRevocation = []byte("synthetic") },
-		"writes":       func(s *protectedState) { s.WriteJournal = []byte("synthetic") },
+		"profile":    func(s *protectedState) { s.RecoveryDAG.Profile = "issuer-recovery-v1" },
+		"version":    func(s *protectedState) { s.RecoveryDAG.Version = 2 },
+		"epoch":      func(s *protectedState) { s.Cloud.SessionEpoch++ },
+		"closed":     func(s *protectedState) { s.Cloud.AccountClosed = true },
+		"synthetic":  func(s *protectedState) { s.Cloud.Synthetic = true },
+		"device":     func(s *protectedState) { s.RecoveryDAG.DeviceID = "other" },
+		"key":        func(s *protectedState) { s.RecoveryDAG.SigningPublicKey = s.ReceivingPublicKey },
+		"endpoint":   func(s *protectedState) { s.RecoveryDAG.Endpoint = "https://other.invalid" },
+		"account":    func(s *protectedState) { s.RecoveryDAG.AccountID = "other" },
+		"generation": func(s *protectedState) { s.RecoveryDAG.AccountGeneration++ },
+		"root":       func(s *protectedState) { s.Root = &cryptox.TrustRoot{} },
+		"init":       func(s *protectedState) { s.Pending = &pendingInitialization{} },
+		"enrollment": func(s *protectedState) { s.EnrollmentV5 = &mobileEnrollmentRecord{} },
+		"approval4":  func(s *protectedState) { s.PendingApprovalV5 = &approvalRecordV5{} },
+		"management": func(s *protectedState) { s.Management = &managementState{} },
+		"selfRevoke": func(s *protectedState) { s.SelfRevocation = []byte("synthetic") },
+		"writes":     func(s *protectedState) { s.WriteJournal = []byte("synthetic") },
 	}
 	for name, change := range changes {
 		t.Run(name, func(t *testing.T) {
@@ -298,9 +293,6 @@ func TestMobileDAGJournalRejectsEpochAndMutuallyExclusiveSchemasBeforeNetwork(t 
 	}
 	if err = reopened.Login(context.Background(), "synthetic@example.invalid", "not-a-real-password"); !errors.Is(err, ErrRecoveryRestricted) {
 		t.Fatal("login replaced DAG pending", err)
-	}
-	if _, _, err = reopened.BeginRecoveryAuthoritySession(context.Background(), "not-a-real-code"); !errors.Is(err, ErrRecoveryRestricted) {
-		t.Fatal("old recovery consumed DAG state", err)
 	}
 	if network.Load() != 0 {
 		t.Fatal("invalid native state reached network")

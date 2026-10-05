@@ -48,7 +48,7 @@ func validateAccountRequest(r AccountRequest) error {
 			return ErrProtocol
 		}
 	case "pair":
-		if r.Endpoint != "" || r.Email != "" || len(r.Credential) != 0 || !idPattern.MatchString(r.ApproverDeviceID) || r.PairingID != "" || (r.CertificateVersion != "2" && r.CertificateVersion != "3" && r.CertificateVersion != "4") {
+		if r.Endpoint != "" || r.Email != "" || len(r.Credential) != 0 || !idPattern.MatchString(r.ApproverDeviceID) || r.PairingID != "" || r.CertificateVersion != "5" {
 			return ErrProtocol
 		}
 	case "pair-status", "pair-cancel":

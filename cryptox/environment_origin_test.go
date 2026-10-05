@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 )
 
 type originFixture struct {
@@ -17,7 +16,7 @@ type originFixture struct {
 	SigningSeeds          map[string]string    `json:"syntheticSigningSeedsHex"`
 	Rotation              EnvironmentChangeV2  `json:"rotation"`
 	Creation              EnvironmentChangeV2  `json:"creation"`
-	Approval              EnrollmentApprovalV3 `json:"approval"`
+	Approval              EnrollmentApprovalV5 `json:"approval"`
 	RotationSigningHex    string               `json:"rotationSigningHex"`
 	RotationHash          string               `json:"rotationHash"`
 	CreationSigningHex    string               `json:"creationSigningHex"`
@@ -34,8 +33,8 @@ func makeOriginFixture(t *testing.T) originFixture {
 	cKey := ed25519.NewKeyFromSeed(mustHex(t, old.SigningSeeds["C"]))
 	old.SigningSeeds["D"] = strings.Repeat("05", 32)
 	dKey := ed25519.NewKeyFromSeed(mustHex(t, old.SigningSeeds["D"]))
-	oldA := old.Approval.IssuerProof.Authorities[0].Grant
-	oldB := old.Approval.IssuerProof.Authorities[1].Grant
+	oldA := old.Approval.IssuerProof.Source.View.Authorities[0].Grant
+	oldB := old.Approval.IssuerProof.Source.View.Authorities[1].Grant
 	if oldA.Grant.SubjectDeviceID != "device-A" {
 		oldA, oldB = oldB, oldA
 	}
@@ -45,17 +44,17 @@ func makeOriginFixture(t *testing.T) originFixture {
 		t.Fatal(e)
 	}
 	oldB = GrantToWire(s)
-	path := old.Approval.IssuerProof.Path[0]
+	path := *old.Approval.IssuerProof.Source.View.Path[0].Enrollment
 	path.Approval.Grants = []SignedGrantWire{oldB}
 	pc, e := path.Approval.Certificate()
 	if e != nil {
 		t.Fatal(e)
 	}
-	path.Approval.ApproverSignature, e = SignEnrollmentCertificate(pc, aKey)
+	path.Approval.ApproverSignature, e = SignEnrollmentCertificateV5(EnrollmentCertificateV5{pc, path.IssuerProofHash}, aKey)
 	if e != nil {
 		t.Fatal(e)
 	}
-	path.Approval.InitiatorSignature, e = SignEnrollmentCertificate(pc, bKey)
+	path.Approval.InitiatorSignature, e = SignEnrollmentCertificateV5(EnrollmentCertificateV5{pc, path.IssuerProofHash}, bKey)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -94,11 +93,18 @@ func makeOriginFixture(t *testing.T) originFixture {
 	if e != nil {
 		t.Fatal(e)
 	}
-	ac.ApproverSignature, e = SignEnrollmentCertificate(acc, aKey)
+	rootProof := recoveryClone(t, old.Approval.IssuerProof)
+	rootProof.Source.View.Path = []IssuerRecoveryArchive{}
+	rootProof.Source.View.Authorities = []IssuerRecoveryAuthority{{Grant: oldA}}
+	rootHash, _ := IssuerAuthorityHash(oldA)
+	rootProof.Source.View.Targets = []IssuerTarget{{oldA.Grant.EnvironmentID, rootHash}}
+	rootProofHash, e := rootProof.Hash()
+	recoveryCheck(t, e)
+	ac.ApproverSignature, e = SignEnrollmentCertificateV5(EnrollmentCertificateV5{acc, rootProofHash}, aKey)
 	if e != nil {
 		t.Fatal(e)
 	}
-	ac.InitiatorSignature, e = SignEnrollmentCertificate(acc, cKey)
+	ac.InitiatorSignature, e = SignEnrollmentCertificateV5(EnrollmentCertificateV5{acc, rootProofHash}, cKey)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -145,7 +151,8 @@ func makeOriginFixture(t *testing.T) originFixture {
 	hb, _ := IssuerAuthorityHash(oldB)
 	hgb, _ := IssuerAuthorityHash(gb)
 	hc, _ := IssuerAuthorityHash(oldC)
-	p := IssuerProofV2{Profile: IssuerProofV2Profile, AccountID: old.Approval.Context.AccountID, AccountGeneration: "1", TrustRoot: old.Approval.IssuerProof.TrustRoot, Path: []IssuerEnrollment{path}, Authorities: []IssuerAuthorityV2{{Grant: oldA}, {Grant: oldB, ParentHash: ha}, {Grant: ga, ParentHash: hb, OriginHash: rh, PreviousGrantHash: ha}, {Grant: gb, ParentHash: hb, OriginHash: rh, PreviousGrantHash: hb}, {Grant: gy, ParentHash: hb, OriginHash: yh}, {Grant: oldC, ParentHash: ha}, {Grant: grc, ParentHash: hb, OriginHash: rh, PreviousGrantHash: hc}}, Targets: []IssuerTarget{{oldA.Grant.EnvironmentID, hgb}}, Origins: []SignedEnvironmentOrigin{rotation.Origin, creation.Origin}, IdentityPaths: [][]IssuerEnrollment{{{CertificateVersion: "1", Approval: ac}}}}
+	view := RecoverySourceView{Profile: RecoverySourceViewProfile, InitializationHash: rootProof.Source.View.InitializationHash, RecoveryHeadHash: rootProof.Source.View.RecoveryHeadHash, Dependencies: []RecoveryDependency{}, AccountID: old.Approval.Context.AccountID, AccountGeneration: "1", TrustRoot: old.Approval.IssuerProof.Source.View.TrustRoot, Path: []IssuerRecoveryArchive{{Kind: "paired", Enrollment: &path}}, Authorities: []IssuerRecoveryAuthority{{Grant: oldA}, {Grant: oldB, ParentHash: ha}, {Grant: ga, ParentHash: hb, OriginHash: rh, PreviousGrantHash: ha}, {Grant: gb, ParentHash: hb, OriginHash: rh, PreviousGrantHash: hb}, {Grant: gy, ParentHash: hb, OriginHash: yh}, {Grant: oldC, ParentHash: ha}, {Grant: grc, ParentHash: hb, OriginHash: rh, PreviousGrantHash: hc}}, Targets: []IssuerTarget{{oldA.Grant.EnvironmentID, hgb}}, Origins: []SignedEnvironmentOrigin{rotation.Origin, creation.Origin}, IdentityPaths: [][]IssuerRecoveryArchive{{{Kind: "paired", Enrollment: &IssuerEnrollment{CertificateVersion: "5", IssuerProofHash: rootProofHash, Approval: ac}}}}}
+	p := IssuerRecoveryDAG{Profile: IssuerRecoveryDAGProfile, AccountID: view.AccountID, AccountGeneration: "1", Initialization: rootProof.Initialization, Source: RecoverySource{Kind: "proof3", View: &view}, Records: []RecoveryDAGRecord{}}
 	grantC := old.Approval.Grants[0].Grant
 	grantC.KeyVersion = "2"
 	grantC.ExpiresAt = oldB.Grant.ExpiresAt
@@ -155,7 +162,7 @@ func makeOriginFixture(t *testing.T) originFixture {
 	dk, _ := ecdh.X25519().NewPrivateKey(bytes.Repeat([]byte{15}, 32))
 	grantC.SubjectReceivingPublicKey = EncodeBase64(dk.PublicKey().Bytes())
 	gc := signG(grantC, bKey)
-	app := EnrollmentApprovalV3{CertificateVersion: "3", Context: old.Approval.Context, PairingProfile: old.Approval.PairingProfile, TranscriptHash: old.Approval.TranscriptHash, Grants: []SignedGrantWire{gc}, IssuerProof: p}
+	app := EnrollmentApprovalV5{CertificateVersion: "5", Capabilities: []string{RecoveryDAGCapability}, Context: old.Approval.Context, PairingProfile: old.Approval.PairingProfile, TranscriptHash: old.Approval.TranscriptHash, Grants: []SignedGrantWire{gc}, IssuerProof: p}
 	app.Context.InitiatorDeviceID = grantC.SubjectDeviceID
 	app.Context.InitiatorSigningPublicKey = grantC.SubjectSigningPublicKey
 	app.Context.InitiatorReceivingPublicKey = grantC.SubjectReceivingPublicKey
@@ -163,11 +170,11 @@ func makeOriginFixture(t *testing.T) originFixture {
 	if e != nil {
 		t.Fatal(e)
 	}
-	app.ApproverSignature, e = SignEnrollmentCertificateV3(cert, bKey)
+	app.ApproverSignature, e = SignEnrollmentCertificateV5(cert, bKey)
 	if e != nil {
 		t.Fatal(e)
 	}
-	app.InitiatorSignature, e = SignEnrollmentCertificateV3(cert, dKey)
+	app.InitiatorSignature, e = SignEnrollmentCertificateV5(cert, dKey)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -182,7 +189,7 @@ func originAnchor(v originFixture) ConfirmedEnrollmentAnchor {
 	return ConfirmedEnrollmentAnchor{v.Approval.Context, v.Approval.TranscriptHash}
 }
 func originPin(v originFixture) PinnedIssuerRoot {
-	r := v.Approval.IssuerProof.TrustRoot
+	r := v.Approval.IssuerProof.Source.View.TrustRoot
 	return PinnedIssuerRoot{v.Approval.Context.AccountID, "1", r.RootDeviceID, r.RootSigningPublicKey, r.RootReceivingPublicKey}
 }
 func cloneOriginFixture(t *testing.T, v originFixture) originFixture {
@@ -196,11 +203,11 @@ func cloneOriginFixture(t *testing.T, v originFixture) originFixture {
 }
 func TestEnvironmentOriginDualParentsAndV3(t *testing.T) {
 	v := makeOriginFixture(t)
-	p, e := VerifyCompletedEnrollmentV3(originAnchor(v), v.Approval)
+	p, e := VerifyCompletedEnrollmentV5(originAnchor(v), v.Approval)
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = VerifyEnrollmentApprovalV3(originAnchor(v), v.Approval, time.Unix(v.SyntheticNow, 0)); e != nil {
+	if _, e = VerifyEnrollmentApprovalV5(originAnchor(v), v.Approval); e != nil {
 		t.Fatal(e)
 	}
 	// 临时 B 保留 A 已有的永久权限；不能按普通委派期限错误拒绝它。
@@ -224,7 +231,7 @@ func TestEnvironmentOriginDualParentsAndV3(t *testing.T) {
 			t.Fatal(e)
 		}
 		b = append(b, '\n')
-		for _, path := range []string{"testdata/environment-origin-v1.json", "../../protocol/vectors/environment-origin-v1.json"} {
+		for _, path := range []string{"testdata/environment-origin-v1.json", "../../protocol/vectors/environment-origin-v1.json", "../../server/test/vectors/environment-origin-v1.json"} {
 			if e = os.WriteFile(path, b, 0644); e != nil {
 				t.Fatal(e)
 			}
@@ -247,17 +254,17 @@ func TestEnvironmentOriginRejectsEverySignedFieldReplacement(t *testing.T) {
 }
 func TestIssuerProofV2RejectsMissingConflictingSources(t *testing.T) {
 	v := makeOriginFixture(t)
-	mutations := map[string]func(*IssuerProofV2){"missingActor": func(p *IssuerProofV2) { p.Authorities = append(p.Authorities[:1], p.Authorities[2:]...) }, "missingRecipient": func(p *IssuerProofV2) { p.Authorities = p.Authorities[1:] }, "missingOrigin": func(p *IssuerProofV2) { p.Origins = nil }, "wrongRecipientEdge": func(p *IssuerProofV2) { p.Authorities[2].PreviousGrantHash = p.Authorities[1].ParentHash + "0" }, "wrongActorEdge": func(p *IssuerProofV2) { p.Authorities[2].ParentHash = p.Authorities[1].ParentHash }, "wrongPub": func(p *IssuerProofV2) {
+	mutations := map[string]func(*RecoverySourceView){"missingActor": func(p *RecoverySourceView) { p.Authorities = append(p.Authorities[:1], p.Authorities[2:]...) }, "missingRecipient": func(p *RecoverySourceView) { p.Authorities = p.Authorities[1:] }, "missingOrigin": func(p *RecoverySourceView) { p.Origins = nil }, "wrongRecipientEdge": func(p *RecoverySourceView) { p.Authorities[2].PreviousGrantHash = p.Authorities[1].ParentHash + "0" }, "wrongActorEdge": func(p *RecoverySourceView) { p.Authorities[2].ParentHash = p.Authorities[1].ParentHash }, "wrongPub": func(p *RecoverySourceView) {
 		p.Authorities[2].Grant.Grant.SubjectReceivingPublicKey = EncodeBase64(make([]byte, 32))
-	}, "crossGeneration": func(p *IssuerProofV2) { p.AccountGeneration = "2" }, "untrustedActorDirectory": func(p *IssuerProofV2) { p.Path = nil }, "duplicateBranch": func(p *IssuerProofV2) { p.IdentityPaths = [][]IssuerEnrollment{p.Path, p.Path} }, "cycle": func(p *IssuerProofV2) {
+	}, "crossGeneration": func(p *RecoverySourceView) { p.AccountGeneration = "2" }, "untrustedActorDirectory": func(p *RecoverySourceView) { p.Path = nil }, "duplicateBranch": func(p *RecoverySourceView) { p.IdentityPaths = [][]IssuerRecoveryArchive{p.Path, p.Path} }, "cycle": func(p *RecoverySourceView) {
 		h, _ := IssuerAuthorityHash(p.Authorities[1].Grant)
 		p.Authorities[1].ParentHash = h
-	}, "extraDataProfile": func(p *IssuerProofV2) { p.Profile = IssuerProofProfile }}
+	}, "extraDataProfile": func(p *RecoverySourceView) { p.Profile = "old-profile" }}
 	for name, f := range mutations {
 		t.Run(name, func(t *testing.T) {
 			c := cloneOriginFixture(t, v)
-			f(&c.Approval.IssuerProof)
-			if _, e := VerifyIssuerEvidenceV2(originPin(v), c.Approval.IssuerProof, proofGenesisV2(v.Approval.IssuerProof)...); e == nil {
+			f(c.Approval.IssuerProof.Source.View)
+			if _, e := VerifyIssuerRecoveryDAG(originPin(v), c.Approval.IssuerProof); e == nil {
 				t.Fatal("接受缺失/冲突来源")
 			}
 		})
@@ -272,19 +279,19 @@ func TestEnvironmentOriginControlOnlyAndStrictV3(t *testing.T) {
 		}
 	}
 	full, _ := json.Marshal(v.Approval)
-	if _, e := DecodeEnrollmentApprovalV3(full); e != nil {
+	if _, e := DecodeEnrollmentApprovalV5(full); e != nil {
 		t.Fatal(e)
 	}
 	injected := append([]byte(`{"shortCode":"12345678",`), full[1:]...)
-	if _, e := DecodeEnrollmentApprovalV3(injected); e == nil {
+	if _, e := DecodeEnrollmentApprovalV5(injected); e == nil {
 		t.Fatal("未知字段接受")
 	}
-	if _, e := DecodeEnrollmentApprovalV2(full); e == nil {
-		t.Fatal("旧profile静默接受新证明")
-	}
-	cert, _ := v.Approval.Certificate()
-	key, _ := DecodeBase64(v.Approval.Context.ApproverSigningPublicKey, 32, 32)
-	if VerifyEnrollmentCertificateV2(EnrollmentCertificateV2{cert.EnrollmentCertificate, cert.IssuerProofHash}, v.Approval.ApproverSignature, key) == nil {
-		t.Fatal("证书v3降级v2")
+	for _, version := range []string{"1", "2", "3", "4"} {
+		bad := cloneOriginFixture(t, v).Approval
+		bad.CertificateVersion = version
+		raw, _ := json.Marshal(bad)
+		if _, e := DecodeEnrollmentApprovalV5(raw); e == nil {
+			t.Fatal("old certificate accepted", version)
+		}
 	}
 }

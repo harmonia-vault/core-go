@@ -8,7 +8,7 @@ import (
 )
 
 // 新恢复 DTO 必须显式携带每个字段。空字符串不等于缺字段或 null，
-// 只有过渡顶层 issuerEvidence/legacyState 允许规范 null。
+// 只有过渡顶层 issuerEvidence 允许规范 null。
 func validateRecoveryJSONShape(data []byte, t reflect.Type, nullable map[string]bool) error {
 	if err := ValidateStrictJSON(data, MaxRecoveryAuthorityBytes); err != nil {
 		return err

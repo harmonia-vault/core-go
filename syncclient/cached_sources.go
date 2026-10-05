@@ -20,30 +20,6 @@ type cachedSourceLedger struct {
 	targets map[string]string
 }
 
-func newCachedSourceLedger(p cryptox.IssuerProofV2, proof verifiedAuthorityGraph) (*cachedSourceLedger, error) {
-	if proof == nil {
-		return nil, cryptox.ErrInvalidSignature
-	}
-	l := &cachedSourceLedger{proof: proof, rights: map[string]cryptox.IssuerAuthorityV2{}, origins: map[string]cryptox.SignedEnvironmentOrigin{}, targets: map[string]string{}}
-	for _, n := range p.Authorities {
-		h, e := cryptox.IssuerAuthorityHash(n.Grant)
-		if e != nil {
-			return nil, e
-		}
-		l.rights[h] = n
-	}
-	for _, o := range p.Origins {
-		h, e := cryptox.EnvironmentOriginHash(o)
-		if e != nil {
-			return nil, e
-		}
-		l.origins[h] = o
-	}
-	for _, t := range p.Targets {
-		l.targets[t.EnvironmentID] = t.AuthorityHash
-	}
-	return l, nil
-}
 func (v *PinnedVerifier) boundCachedGrant(l *cachedSourceLedger, h, id string) (cryptox.SignedGrantWire, error) {
 	s, ok := l.proof.Authority(h)
 	g := s.Grant
@@ -277,47 +253,13 @@ func (v *PinnedVerifier) validateSourceTarget(previous localstate.CloudSnapshot,
 	}
 	return nil
 }
-func (v *PinnedVerifier) sourceForPrevious(old localstate.Environment, previous localstate.CloudSnapshot) (*localstate.EnvironmentSource, error) {
-	if old.Source != nil {
-		s := *old.Source
-		s.AuthorizationPath = append([]string(nil), s.AuthorizationPath...)
-		return &s, nil
+func sourceForPrevious(old localstate.Environment) (*localstate.EnvironmentSource, error) {
+	if old.Source == nil {
+		return nil, errors.New("cached environment requires its protected source")
 	}
-	if v.initialRecoveryEvidence != nil || v.initialDAGEvidence != nil {
-		return nil, cryptox.ErrInvalidWire
-	}
-	p := *v.initialEvidence
-	if len(previous.IssuerEvidence) > 0 {
-		var e error
-		p, e = decodeEvidence(previous.IssuerEvidence)
-		if e != nil {
-			return nil, e
-		}
-	}
-	var h string
-	for _, t := range p.Targets {
-		if t.EnvironmentID == old.ID {
-			h = t.AuthorityHash
-		}
-	}
-	proof, e := cryptox.VerifyIssuerEvidenceV2(*v.evidenceRoot, p, v.genesisAuthorities...)
-	if e != nil {
-		return nil, e
-	}
-	l, e := newCachedSourceLedger(p, proof)
-	if e != nil {
-		return nil, e
-	}
-	g, e := v.boundCachedGrant(l, h, old.ID)
-	if e != nil {
-		return nil, e
-	}
-	wire, e := g.Grant.SigningBytes()
-	expiry, e2 := cacheGrantExpiry(g.Grant)
-	if e != nil || e2 != nil || g.Grant.KeyVersion != strconv.FormatUint(old.KeyVersion, 10) || g.Grant.GrantGeneration != strconv.FormatUint(old.GrantGeneration, 10) || previous.GrantCheckpoints[old.ID] != old.GrantGeneration || previous.GrantFingerprints[old.ID] != digest(wire) || old.Role != cacheGrantRole(g.Grant) || !exactExpiry(old.ExpiresAt, expiry) {
-		return nil, errors.New("legacy cached source requires exact same KV/generation/fingerprint/permission")
-	}
-	return &localstate.EnvironmentSource{AuthorityHash: h, Fingerprint: digest(wire), AuthorizationPath: []string{h}}, nil
+	s := *old.Source
+	s.AuthorizationPath = append([]string(nil), old.Source.AuthorizationPath...)
+	return &s, nil
 }
 func (v *PinnedVerifier) retainCachedEnvironment(ctx context.Context, old localstate.Environment, previous localstate.CloudSnapshot, pull Pull, signed SignedGrant, evidence json.RawMessage) (localstate.Environment, error) {
 	if e := ctx.Err(); e != nil {
@@ -327,7 +269,7 @@ func (v *PinnedVerifier) retainCachedEnvironment(ctx context.Context, old locals
 	if e != nil {
 		return old, e
 	}
-	source, e := v.sourceForPrevious(old, previous)
+	source, e := sourceForPrevious(old)
 	if e != nil {
 		return old, e
 	}

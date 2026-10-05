@@ -40,44 +40,8 @@ func (d *VerifiedRecoveryDAG) validateTransitionV2(s RecoveryTransitionSubmissio
 	}
 	seenKeys[v.pin.SigningPublicKey] = true
 	seenKeys[v.pin.ReceivingPublicKey] = true
-	if t.ChainMode == "continuous" {
-		if s.LegacyState != nil || t.OldRecoveryGeneration != v.recoveryGeneration || t.OldRecoverySigningPublicKey != v.signingPublic || t.OldRecoveryReceivingPublicKey != v.receivingPublic {
-			return nil, "", ErrInvalidSignature
-		}
-	} else {
-		if s.LegacyState == nil || s.LegacyState.RecoveryGeneration != t.OldRecoveryGeneration || s.LegacyState.RecoverySigningPublicKey != t.OldRecoverySigningPublicKey || s.LegacyState.RecoveryReceivingPublicKey != t.OldRecoveryReceivingPublicKey || !recoveryRootMatches(v.pin, s.LegacyState.TrustRoot) {
-			return nil, "", ErrInvalidSignature
-		}
-		h, err := s.LegacyState.Hash(t.AccountID, t.AccountGeneration)
-		if err != nil || h != t.LegacyStateHash {
-			return nil, "", ErrInvalidSignature
-		}
-		first := s.LegacyState.Rotations[0]
-		last := s.LegacyState.Rotations[len(s.LegacyState.Rotations)-1]
-		bytes, err := DecodeBase64(first.SigningBytes, 1, 4096)
-		if err != nil {
-			return nil, "", err
-		}
-		var f []string
-		if json.Unmarshal(bytes, &f) != nil || f[4] != v.recoveryGeneration || first.Sequence <= v.sequence || last.Sequence > expected {
-			return nil, "", ErrInvalidSignature
-		}
-		for _, row := range s.LegacyState.Rotations {
-			encoded, err := DecodeBase64(row.SigningBytes, 1, 4096)
-			if err != nil {
-				return nil, "", err
-			}
-			var fields []string
-			if json.Unmarshal(encoded, &fields) != nil || len(fields) != 13 {
-				return nil, "", ErrInvalidWire
-			}
-			for _, pub := range []string{fields[9], fields[10]} {
-				if seenKeys[pub] || d.publicOwners[pub] != "" {
-					return nil, "", ErrInvalidSignature
-				}
-				seenKeys[pub] = true
-			}
-		}
+	if t.OldRecoveryGeneration != v.recoveryGeneration || t.OldRecoverySigningPublicKey != v.signingPublic || t.OldRecoveryReceivingPublicKey != v.receivingPublic {
+		return nil, "", ErrInvalidSignature
 	}
 	r := s.NewTrustRoot
 	if !recoveryRootMatches(v.pin, r) || r.RecoveryGeneration != t.NewRecoveryGeneration || r.RecoverySigningPublicKey != t.NewRecoverySigningPublicKey || r.RecoveryReceivingPublicKey != t.NewRecoveryReceivingPublicKey {
@@ -395,15 +359,7 @@ func verifyAcceptedTransitionV2(d *VerifiedRecoveryDAG, r AcceptedRecoveryTransi
 	}
 	keys[t.OldRecoverySigningPublicKey] = true
 	keys[t.OldRecoveryReceivingPublicKey] = true
-	if s.LegacyState != nil {
-		for _, r := range s.LegacyState.Rotations {
-			b, _ := DecodeBase64(r.SigningBytes, 1, 4096)
-			var f []string
-			_ = json.Unmarshal(b, &f)
-			keys[f[9]] = true
-			keys[f[10]] = true
-		}
-	}
+
 	keys[t.NewRecoverySigningPublicKey] = true
 	keys[t.NewRecoveryReceivingPublicKey] = true
 	return &VerifiedRecoveryAuthority{pin: v.pin, initial: v.InitialAuthorities(), recoveryGeneration: t.NewRecoveryGeneration, signingPublic: t.NewRecoverySigningPublicKey, receivingPublic: t.NewRecoveryReceivingPublicKey, head: h, sequence: r.Sequence, operations: ops, usedRecoveryKeys: keys}, nil

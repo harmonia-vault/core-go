@@ -32,9 +32,7 @@ func sourceRoot(s RecoverySource) (TrustRoot, error) {
 	if _, e := s.CanonicalBytes(); e != nil {
 		return TrustRoot{}, e
 	}
-	if s.Kind == "proof2" {
-		return s.Proof.TrustRoot, nil
-	}
+
 	return s.View.TrustRoot, nil
 }
 func (d *VerifiedRecoveryDAG) addIdentity(id issuerIdentity) error {
@@ -79,9 +77,7 @@ func sourceReferenceHashes(s RecoverySource, initial string) (map[string]bool, e
 		return nil, e
 	}
 	out := map[string]bool{}
-	if s.Kind == "proof2" {
-		return out, nil
-	}
+
 	v := s.View
 	if v.InitializationHash != initial {
 		return nil, ErrInvalidSignature
@@ -162,30 +158,7 @@ func (d *VerifiedRecoveryDAG) sourceGraph(s RecoverySource, cutoff uint64) (*Ver
 	if e != nil {
 		return nil, e
 	}
-	if s.Kind == "proof2" {
-		r := s.Proof.TrustRoot
-		if r.RecoveryGeneration != d.current.recoveryGeneration || r.RecoverySigningPublicKey != d.current.signingPublic || r.RecoveryReceivingPublicKey != d.current.receivingPublic {
-			return nil, ErrInvalidSignature
-		}
-		for _, o := range s.Proof.Origins {
-			n, e := strconv.ParseUint(o.Origin.ExpectedSequence, 10, 64)
-			if e != nil || n >= cutoff {
-				return nil, ErrInvalidWire
-			}
-		}
-		p, e := VerifyIssuerEvidenceV2(d.pin, *s.Proof, d.current.initial...)
-		if e != nil {
-			return nil, e
-		}
-		for _, id := range p.identities {
-			for _, pub := range []string{id.signing, id.receiving} {
-				if owner := d.publicOwners[pub]; owner != "" && owner != "device/"+id.id {
-					return nil, ErrInvalidSignature
-				}
-			}
-		}
-		return p, nil
-	}
+
 	v := s.View
 	if v.AccountID != d.pin.AccountID || v.AccountGeneration != d.pin.AccountGeneration || v.RecoveryHeadHash != d.current.head {
 		return nil, ErrInvalidSignature
@@ -243,10 +216,6 @@ func (d *VerifiedRecoveryDAG) recordDependencies(r RecoveryDAGRecord, cutoff uin
 	var parent string
 	var source *RecoverySource
 	switch r.Kind {
-	case "transition-v1":
-		parent = r.TransitionV1.Submission.Transition.PreviousTransitionHash
-	case "recovered-v1":
-		parent = r.RecoveredV1.Submission.Enrollment.RecoveryTransitionHash
 	case "transition-v2":
 		parent = r.TransitionV2.Submission.Transition.PreviousTransitionHash
 		source = r.TransitionV2.Submission.IssuerEvidence
@@ -258,7 +227,7 @@ func (d *VerifiedRecoveryDAG) recordDependencies(r RecoveryDAGRecord, cutoff uin
 	}
 	if parent != d.initializationHash {
 		node, ok := d.records[parent]
-		if !ok || d.sequences[parent] > cutoff || node.Kind != "transition-v1" && node.Kind != "transition-v2" {
+		if !ok || d.sequences[parent] > cutoff || node.Kind != "transition-v2" {
 			return nil, ErrInvalidWire
 		}
 		need[parent] = RecoveryDependency{node.Kind, parent}
@@ -345,24 +314,6 @@ func VerifyRecoveryDependencyBundle(pin PinnedIssuerRoot, bundle RecoveryDepende
 		var op string
 		var grants []SignedGrantWire
 		switch r.Kind {
-		case "transition-v1":
-			s := r.TransitionV1.Submission
-			op = s.Transition.OperationID
-			if s.IssuerEvidence != nil {
-				graph, e = VerifyIssuerEvidenceV2(pin, *s.IssuerEvidence, initial.initial...)
-				if e != nil {
-					return nil, e
-				}
-			}
-			next, e = VerifyAcceptedRecoveryTransition(d.current, *r.TransitionV1)
-		case "recovered-v1":
-			s := r.RecoveredV1.Submission
-			op = s.Enrollment.OperationID
-			graph, e = d.current.validateRecoveredDevice(s, nil)
-			if e == nil {
-				recovered, e = VerifyAcceptedRecoveredDevice(d.current, *r.RecoveredV1)
-			}
-			grants = s.Grants
 		case "transition-v2":
 			s := r.TransitionV2.Submission
 			op = s.Transition.OperationID
@@ -480,62 +431,6 @@ func VerifyIssuerRecoveryDAG(pin PinnedIssuerRoot, p IssuerRecoveryDAG) (*Verifi
 	return d, nil
 }
 
-// 将已验旧 Proof3 变成新叶与平坦表，不重解释原签包。
-func RecoverySourceFromProof3(pin PinnedIssuerRoot, p IssuerRecoveryProof, cutoff uint64) (RecoverySource, RecoveryDependencyBundle, error) {
-	if _, e := VerifyIssuerRecoveryEvidence(pin, p); e != nil {
-		return RecoverySource{}, RecoveryDependencyBundle{}, e
-	}
-	bundle := RecoveryDependencyBundle{Initialization: p.Initialization, Records: []RecoveryDAGRecord{}}
-	for _, r := range p.Transitions {
-		x := r
-		bundle.Records = append(bundle.Records, RecoveryDAGRecord{Kind: "transition-v1", TransitionV1: &x})
-	}
-	for _, r := range p.RecoveredDevices {
-		x := r
-		bundle.Records = append(bundle.Records, RecoveryDAGRecord{Kind: "recovered-v1", RecoveredV1: &x})
-	}
-	d, e := VerifyRecoveryDependencyBundle(pin, bundle)
-	if e != nil {
-		return RecoverySource{}, bundle, e
-	}
-	view := RecoverySourceView{Profile: RecoverySourceViewProfile, AccountID: p.AccountID, AccountGeneration: p.AccountGeneration, InitializationHash: d.initializationHash, TrustRoot: p.TrustRoot, RecoveryHeadHash: d.current.head, Path: p.Path, Authorities: p.Authorities, Targets: p.Targets, Origins: p.Origins, IdentityPaths: p.IdentityPaths, Dependencies: []RecoveryDependency{}}
-	s := RecoverySource{Kind: "proof3", View: &view}
-	hashes, e := sourceReferenceHashes(s, d.initializationHash)
-	if e != nil {
-		return s, bundle, e
-	}
-	for h := range hashes {
-		r, ok := d.records[h]
-		if !ok {
-			return s, bundle, ErrInvalidWire
-		}
-		view.Dependencies = append(view.Dependencies, RecoveryDependency{r.Kind, h})
-	}
-	sort.Slice(view.Dependencies, func(i, j int) bool {
-		if view.Dependencies[i].Kind != view.Dependencies[j].Kind {
-			return view.Dependencies[i].Kind < view.Dependencies[j].Kind
-		}
-		return view.Dependencies[i].ReferenceHash < view.Dependencies[j].ReferenceHash
-	})
-	if _, e = d.sourceGraph(s, cutoff); e != nil {
-		return s, bundle, e
-	}
-	raw, e := json.Marshal(struct {
-		Source RecoverySource           `json:"source"`
-		Bundle RecoveryDependencyBundle `json:"bundle"`
-	}{s, bundle})
-	if e != nil {
-		return s, bundle, e
-	}
-	var cloned struct {
-		Source RecoverySource           `json:"source"`
-		Bundle RecoveryDependencyBundle `json:"bundle"`
-	}
-	if e = strictDAGDecode(raw, &cloned); e != nil {
-		return s, bundle, e
-	}
-	return cloned.Source, cloned.Bundle, nil
-}
 func (d *VerifiedRecoveryDAG) RecoveryCheckpoint() (IssuerRecoveryCheckpoint, error) {
 	if d == nil {
 		return IssuerRecoveryCheckpoint{}, ErrInvalidWire

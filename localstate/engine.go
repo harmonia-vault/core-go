@@ -343,30 +343,10 @@ func (e *Engine) acceptSnapshot(in CloudSnapshot, now time.Time, epoch *uint64, 
 				if check.Cloud.AuthorizationSequence == 0 {
 					check.Cloud.AuthorizationSequence = check.Cloud.Sequence
 				}
-				// 明确能力升级后，已验证账本可以附到精确相同的旧缓存。
-				// 仅允许从无账本到有账本；所有数据、授权、指纹和检查点
-				// 必须仍相同。已有账本同序号替换仍按原回放规则拒绝。
-				sources, err := stripFirstSources(old, &check.Cloud)
-				if err != nil {
-					return err
-				}
-				firstEvidence := len(old.IssuerEvidence) == 0 && len(check.Cloud.IssuerEvidence) > 0
-				evidence := check.Cloud.IssuerEvidence
-				if firstEvidence {
-					check.Cloud.IssuerEvidence = nil
-				}
 				a, _ := json.Marshal(old)
 				b, _ := json.Marshal(check.Cloud)
 				if string(a) != string(b) {
 					return ErrReplay
-				}
-				if firstEvidence {
-					s.Cloud.IssuerEvidence = append(json.RawMessage(nil), evidence...)
-				}
-				for id, source := range sources {
-					env := s.Cloud.Environments[id]
-					env.Source = source
-					s.Cloud.Environments[id] = env
 				}
 				return nil
 			}
@@ -696,9 +676,6 @@ func (e *Engine) AcceptAuthorizationRefreshAtEpoch(in CloudSnapshot, now time.Ti
 			original := clone(*s)
 			expire(&original, now)
 			original.Cloud.AuthorizationSequence = maxSequence(old.Sequence, old.AuthorizationSequence)
-			if _, err := stripFirstSources(original.Cloud, &check.Cloud); err != nil {
-				return err
-			}
 			if !sameStateJSON(original.Cloud, check.Cloud) {
 				return ErrReplay
 			}
@@ -805,26 +782,6 @@ func (e *Engine) CompleteEnrollmentAtEpoch(epoch uint64) error {
 	})
 }
 
-// 相同序号只允许给精确旧缓存首次附加已验来源，不覆盖已有来源。
-func stripFirstSources(old CloudSnapshot, next *CloudSnapshot) (map[string]*EnvironmentSource, error) {
-	out := map[string]*EnvironmentSource{}
-	for id, env := range next.Environments {
-		prior, ok := old.Environments[id]
-		if !ok || prior.Source != nil || env.Source == nil {
-			continue
-		}
-		source := env.Source
-		if len(source.AuthorizationPath) != 1 || source.AuthorizationPath[0] != source.AuthorityHash || prior.KeyVersion != env.KeyVersion || prior.GrantGeneration != env.GrantGeneration || prior.GrantGeneration != old.GrantCheckpoints[id] || source.Fingerprint != old.GrantFingerprints[id] {
-			return nil, ErrReplay
-		}
-		copied := *source
-		copied.AuthorizationPath = append([]string(nil), source.AuthorizationPath...)
-		out[id] = &copied
-		env.Source = nil
-		next.Environments[id] = env
-	}
-	return out, nil
-}
 func sameStateJSON(a, b any) bool {
 	x, _ := json.Marshal(a)
 	y, _ := json.Marshal(b)

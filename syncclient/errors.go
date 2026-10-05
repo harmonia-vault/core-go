@@ -14,8 +14,9 @@ import (
 var ErrTrustInvalidated = errors.New("current account/device authorization invalidated")
 
 type RequestError struct {
-	Status int
-	Code   string
+	Status            int
+	Code              string
+	RetryAfterSeconds int
 }
 
 func (e *RequestError) Error() string {
@@ -32,20 +33,38 @@ func NewRequestError(status int, code string) *RequestError {
 	return fault
 }
 
+// 邮件限流必须带有界等待秒数；其他错误不允许携带该字段。
+func NewRequestErrorWithRetry(status int, code string, retryAfterSeconds *int) *RequestError {
+	fault := NewRequestError(status, code)
+	limited := fault.Code == "email_request_limited" || fault.Code == "email_ip_blocked"
+	if !limited {
+		if retryAfterSeconds != nil {
+			return NewRequestError(status, "request_rejected")
+		}
+		return fault
+	}
+	if status != http.StatusTooManyRequests || retryAfterSeconds == nil || *retryAfterSeconds < 1 || *retryAfterSeconds > 86400 {
+		return NewRequestError(status, "request_rejected")
+	}
+	fault.RetryAfterSeconds = *retryAfterSeconds
+	return fault
+}
+
 func parseRequestError(response *http.Response) *RequestError {
 	fault := NewRequestError(response.StatusCode, "")
 	// 错误体只读取固定小上限；未知字段、额外 JSON、任意文本不进入日志/错误。
 	data, err := io.ReadAll(io.LimitReader(response.Body, 4097))
 	if err == nil && len(data) <= 4096 {
 		var wire struct {
-			Error string `json:"error"`
+			Error             string `json:"error"`
+			RetryAfterSeconds *int   `json:"retryAfterSeconds,omitempty"`
 		}
 		decoder := json.NewDecoder(bytes.NewReader(data))
 		decoder.DisallowUnknownFields()
 		if decoder.Decode(&wire) == nil {
 			var extra any
 			if decoder.Decode(&extra) == io.EOF && knownFaultCodes[wire.Error] {
-				fault.Code = wire.Error
+				fault = NewRequestErrorWithRetry(response.StatusCode, wire.Error, wire.RetryAfterSeconds)
 			}
 		}
 	}

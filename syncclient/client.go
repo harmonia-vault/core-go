@@ -41,17 +41,15 @@ type Event struct {
 	Authorization *SignedGrant   `json:"authorization,omitempty"`
 }
 type Pull struct {
-	Full                   bool                         `json:"-"`
-	IssuerEvidence         *cryptox.IssuerProofV2       `json:"issuerEvidence,omitempty"`
-	IssuerDAGEvidence      *cryptox.IssuerRecoveryDAG   `json:"-"`
-	IssuerRecoveryEvidence *cryptox.IssuerRecoveryProof `json:"-"`
-	Scope                  string                       `json:"scope,omitempty"`
-	EnvironmentEvents      []EnvironmentEvent           `json:"environmentEvents,omitempty"`
-	AccountID              string                       `json:"accountId"`
-	AccountGeneration      string                       `json:"accountGeneration"`
-	Sequence               uint64                       `json:"sequence"`
-	Grants                 []SignedGrant                `json:"grants"`
-	Events                 []Event                      `json:"events"`
+	Full              bool                       `json:"-"`
+	IssuerDAGEvidence *cryptox.IssuerRecoveryDAG `json:"issuerEvidence,omitempty"`
+	Scope             string                     `json:"scope,omitempty"`
+	EnvironmentEvents []EnvironmentEvent         `json:"environmentEvents,omitempty"`
+	AccountID         string                     `json:"accountId"`
+	AccountGeneration string                     `json:"accountGeneration"`
+	Sequence          uint64                     `json:"sequence"`
+	Grants            []SignedGrant              `json:"grants"`
+	Events            []Event                    `json:"events"`
 }
 type Acceptance struct {
 	Sequence uint64 `json:"sequence"`
@@ -121,15 +119,10 @@ func newClient(config Config, requireToken bool) (*Client, error) {
 	if config.Now == nil {
 		config.Now = time.Now
 	}
-	if config.ProtocolMajor != 0 && config.ProtocolMajor != 1 && config.ProtocolMajor != 2 {
+	if config.ProtocolMajor != 0 && config.ProtocolMajor != 2 {
 		return nil, cryptox.ErrInvalidWire
 	}
-	if v, ok := config.Verifier.(*PinnedVerifier); ok && v.initialDAGEvidence != nil {
-		if config.ProtocolMajor == 1 {
-			return nil, cryptox.ErrInvalidWire
-		}
-		config.ProtocolMajor = 2
-	}
+	config.ProtocolMajor = 2
 	client, err := secureHTTP(config.HTTPClient)
 	if err != nil {
 		return nil, err
@@ -186,14 +179,14 @@ func (c *Client) request(ctx context.Context, method string, u *url.URL, body an
 	if c.config.Engine.State().SessionEpoch != c.epoch {
 		return localstate.ErrLocalSession
 	}
-	if c.config.ProtocolMajor == 2 && response.Header.Get("Harmonia-Protocol-Major") != "2" {
+	if response.Header.Get("Harmonia-Protocol-Major") != "2" {
 		return errors.New("server protocol major mismatch")
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return c.rejection(response, bootRoute)
 	}
 	maximum := 8 << 20
-	if strings.HasSuffix(u.Path, "/pairing-requests-v3") || strings.HasSuffix(u.Path, "/pairing-requests-v4") {
+	if strings.HasSuffix(u.Path, "/pairing-requests-v5") {
 		maximum = maxPendingPairingsJSON
 	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, int64(maximum)+1))

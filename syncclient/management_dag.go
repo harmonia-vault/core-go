@@ -32,10 +32,7 @@ func (c *Client) requestDAGManagementControl(ctx context.Context, environment st
 }
 func (c *Client) verifyManagementEvidence(out ManagementControl, historical bool) (VerifiedControlEvidence, error) {
 	if !c.dagControls() {
-		if out.IssuerDAGEvidence != nil {
-			return nil, cryptox.ErrInvalidWire
-		}
-		return c.verifyControlEvidence(out.IssuerEvidence, out.IssuerRecoveryEvidence, out.Sequence, historical)
+		return nil, cryptox.ErrInvalidWire
 	}
 	// 复用严格初始化、原pin、完整DAG、来源序号、唯一actor target与连续扩展校验。
 	// Subject逐行的历史身份/签权/currentGG检查由verifyManagementControl接着执行。
@@ -45,7 +42,7 @@ func (c *Client) verifyManagementEvidence(out ManagementControl, historical bool
 			actor = append(actor, *s.CurrentGrant)
 		}
 	}
-	return c.verifyEnvironmentControlEvidence(EnvironmentControlView{Sequence: out.Sequence, Grants: actor, IssuerEvidence: out.IssuerEvidence, IssuerRecoveryEvidence: out.IssuerRecoveryEvidence, IssuerDAGEvidence: out.IssuerDAGEvidence}, historical)
+	return c.verifyEnvironmentControlEvidence(EnvironmentControlView{Sequence: out.Sequence, Grants: actor, IssuerDAGEvidence: out.IssuerDAGEvidence}, historical)
 }
 
 // CheckManagementControlLowerBounds 验证密封历史控制的下界，不修改/清空业务Highest。

@@ -6,9 +6,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -37,8 +35,8 @@ type commandRuntime struct {
 	enrollmentEpoch *uint64
 }
 type protectedOptions struct {
-	command, directory, server, email, approver, userID, serviceSID, certificateVersion string
-	passwordStdin                                                                       bool
+	command, directory, server, email, approver, userID, serviceSID string
+	passwordStdin                                                   bool
 }
 
 func protectedStore(o protectedOptions) (*localkeys.StateStore, error) {
@@ -94,28 +92,6 @@ func randomLocalID(prefix string) (string, error) {
 		return "", err
 	}
 	return prefix + cryptox.EncodeBase64(data), nil
-}
-func decodeReceipt(data []byte) (syncclient.EnrollmentReceipt, error) {
-	var receipt syncclient.EnrollmentReceipt
-	decoder := json.NewDecoder(strings.NewReader(string(data)))
-	decoder.DisallowUnknownFields()
-	var extra any
-	if decoder.Decode(&receipt) != nil || decoder.Decode(&extra) != io.EOF {
-		return receipt, errors.New("受保护入网收据格式错误")
-	}
-	return receipt, nil
-}
-func saveReceipt(vault *localkeys.Vault, session localkeys.LoginSession, keys localkeys.DeviceKeys, receipt syncclient.EnrollmentReceipt, accepted bool) error {
-	manager, err := cryptox.DecodeBase64(receipt.Approval.Context.ApproverSigningPublicKey, 32, 32)
-	if err != nil {
-		return err
-	}
-	data, err := json.Marshal(receipt)
-	if err != nil {
-		return err
-	}
-	defer clear(data)
-	return vault.SaveTrustContext(localkeys.TrustContext{Endpoint: session.Endpoint, AccountID: session.AccountID, AccountGeneration: session.AccountGeneration, DeviceID: keys.DeviceID, SigningPublic: keys.SigningPublic, ReceivingPublic: keys.ReceivingPublic, Managers: map[string][]byte{receipt.Approval.Context.ApproverDeviceID: manager}, PairingProfile: pairing.Profile, EnrollmentCertificate: data, EnrollmentKey: receipt.IdempotencyKey, Accepted: accepted})
 }
 func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandRuntime, out, errOut io.Writer) error {
 	if runtime.GOOS == "windows" {
@@ -222,112 +198,12 @@ func protectedAccountOnOwner(ctx context.Context, o protectedOptions, r commandR
 	signing := ed25519.NewKeyFromSeed(keys.SigningSeed)
 	defer clear(signing)
 	config := syncclient.EnrollmentConfig{Endpoint: session.Endpoint, HTTPClient: r.httpClient, AccountID: session.AccountID, AccountGeneration: session.AccountGeneration, DeviceID: keys.DeviceID, LoginToken: session.Token, SigningKey: signing, ReceivingPrivateKey: keys.ReceivingPrivate, Engine: engine, Now: r.now}
-	var enrollment *syncclient.Enrollment
 	trust, trustErr := vault.LoadTrustContext()
-	if o.certificateVersion != "" && o.certificateVersion != "2" && o.certificateVersion != "3" && o.certificateVersion != "4" && o.certificateVersion != "5" {
-		return errors.New("certificate-version 必须为2、3、4或5")
-	}
-	if trustErr == nil && o.certificateVersion != "" && o.certificateVersion != trust.CertificateVersion {
-		return errors.New("已保存的入网收据不能更换证书版本")
-	}
-	if errors.Is(trustErr, os.ErrNotExist) && o.certificateVersion == "5" || trustErr == nil && trust.CertificateVersion == "5" {
-		return protectedPairV5(ctx, o, r, out, vault, engine, session, keys, config, trust, trustErr == nil)
-	}
-	if errors.Is(trustErr, os.ErrNotExist) && o.certificateVersion == "4" || trustErr == nil && trust.CertificateVersion == "4" {
-		return protectedPairV4(ctx, o, r, out, vault, engine, session, keys, config, trust, trustErr == nil)
-	}
-	if errors.Is(trustErr, os.ErrNotExist) && o.certificateVersion == "2" {
-		return protectedPairV2(ctx, o, r, out, vault, engine, session, keys, config, trust, false)
-	}
-	if errors.Is(trustErr, os.ErrNotExist) || trustErr == nil && trust.CertificateVersion == "3" {
-		return protectedPairV3(ctx, o, r, out, vault, engine, session, keys, config, trust, trustErr == nil)
-	}
-	if trustErr == nil && trust.CertificateVersion == "2" {
-		return protectedPairV2(ctx, o, r, out, vault, engine, session, keys, config, trust, trustErr == nil)
-	}
-	if trustErr == nil {
-		if trust.Accepted {
-			return errors.New("本机已经完成受保护入网；不重复生成短码")
-		}
-		receipt, err := decodeReceipt(trust.EnrollmentCertificate)
-		if err != nil {
-			return err
-		}
-		if trust.EnrollmentKey != receipt.IdempotencyKey {
-			return errors.New("待完成收据与受保护上下文不匹配")
-		}
-		enrollment, err = syncclient.ResumeEnrollment(config, receipt)
-		if err != nil {
-			return err
-		}
-		_, _ = io.WriteString(out, "正在查询同一待完成配对结果。\n")
-	} else if errors.Is(trustErr, os.ErrNotExist) {
-		if o.approver == "" {
-			return errors.New("首次 pair 需要 --approver 既有可信管理手机设备ID")
-		}
-		enrollment, err = syncclient.NewEnrollment(config)
-		if err != nil {
-			return err
-		}
-		code, err := pairing.GenerateShortCode()
-		if err != nil {
-			enrollment.Close()
-			return err
-		}
-		defer clear(code)
-		key, err := randomLocalID("pair-")
-		if err != nil {
-			enrollment.Close()
-			return err
-		}
-		if r.pairingProgress != nil {
-			r.pairingProgress(key, code)
-		}
-		if _, err = enrollment.Begin(ctx, o.approver, key, code); err != nil {
-			enrollment.Close()
-			return err
-		}
-		_, _ = fmt.Fprintf(out, "配对申请：%s\n请在管理手机输入本机短码：%s\n由手机确认环境、角色和期限。\n", key, string(code))
-		for {
-			if _, err = enrollment.Advance(ctx); err != nil {
-				enrollment.Close()
-				return err
-			}
-			receipt, receiptErr := enrollment.Receipt()
-			if receiptErr == nil {
-				if err = saveReceipt(vault, session, keys, receipt, false); err != nil {
-					enrollment.Close()
-					return err
-				}
-				break
-			}
-			select {
-			case <-ctx.Done():
-				enrollment.Close()
-				return ctx.Err()
-			case <-time.After(250 * time.Millisecond):
-			}
-		}
-	} else {
+	if trustErr != nil && !errors.Is(trustErr, os.ErrNotExist) {
 		return trustErr
 	}
-	defer enrollment.Close()
-	result, err := enrollment.Complete(ctx)
-	if err != nil {
-		return err
+	if trustErr == nil && trust.CertificateVersion != "5" {
+		return errors.New("配对资料无法使用，请重新配对")
 	}
-	defer result.Verifier.Close()
-	// Complete已确认双方签证与服务器ack；unknown/pending分支不会到此。
-	if err = engine.CompleteEnrollmentAtEpoch(protectedEnrollmentEpoch(engine, r)); err != nil {
-		return err
-	}
-	if err = saveReceipt(vault, session, keys, result.Receipt, true); err != nil {
-		return err
-	}
-	if err = vault.Delete("session-v1"); err != nil {
-		return err
-	}
-	// 尚未应用共享值；启动可信后台后持钥 boot，再走同一验签 pull 下发流。
-	_, err = io.WriteString(out, "设备配对已完成并加密保存；共享配置将经持钥会话与验签拉取下发。\n")
-	return err
+	return protectedPairV5(ctx, o, r, out, vault, engine, session, keys, config, trust, trustErr == nil)
 }

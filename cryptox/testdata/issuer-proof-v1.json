@@ -1,13 +1,28 @@
 {
+  "syntheticNow": 2030000000,
+  "syntheticSigningSeedsHex": {
+    "A": "0101010101010101010101010101010101010101010101010101010101010101",
+    "B": "0202020202020202020202020202020202020202020202020202020202020202",
+    "C": "0303030303030303030303030303030303030303030303030303030303030303"
+  },
+  "syntheticReceivingPrivateKeysHex": {
+    "A": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+    "B": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+    "C": "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d"
+  },
+  "syntheticEnvironmentKeyHex": "0909090909090909090909090909090909090909090909090909090909090909",
   "approval": {
-    "certificateVersion": "2",
+    "certificateVersion": "5",
+    "capabilities": [
+      "issuer-recovery-dag-v1"
+    ],
     "context": {
-      "accountId": "account-chain",
+      "accountId": "account-fixture",
       "accountGeneration": "1",
       "purpose": "enroll-device",
       "sessionId": "pairing-C",
-      "challengeNonce": "FhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhY",
-      "expiresAt": "2030000090",
+      "challengeNonce": "KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio",
+      "expiresAt": "2030000100",
       "initiatorDeviceId": "device-C",
       "initiatorSigningPublicKey": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY_k2NsFGFKyHN9E",
       "initiatorReceivingPublicKey": "sweuhmDvrtTWpl9mQIlokupKHwB1VVxInRMSouFnfCg",
@@ -16,11 +31,11 @@
       "approverReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM"
     },
     "pairingProfile": "boringssl-spake2-edwards25519-draft02-v1",
-    "transcriptHash": "2020202020202020202020202020202020202020202020202020202020202020",
+    "transcriptHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "grants": [
       {
         "grant": {
-          "accountId": "account-chain",
+          "accountId": "account-fixture",
           "accountGeneration": "1",
           "issuerDeviceId": "device-B",
           "subjectDeviceId": "device-C",
@@ -31,50 +46,162 @@
           "grantGeneration": "1",
           "role": "ro",
           "expiresAt": "2030000300",
-          "idempotencyKey": "C-read",
-          "envelope": "BwX6LindekpA2QUulCGsIvq1KcxSOC6WBms-T7QtFD2QodxNJjLn-AsJdS1YHxdGfjacE0SWV5EUodlJNI4JjAH2-_a_K_Oll3bm1hvmfgE"
+          "idempotencyKey": "initial-C",
+          "envelope": "9EXaPvt6dFfB49Uxrh9YhmLbP9i6BpY8K9hskgWYMw4ClBREUWH9Zwrpd7slhAkD1DAQZq9GZq6lQDgfZLne07PtQxAwQn-0K5lbwaXbMTU"
         },
-        "signature": "VmcsGFC028jHR1GsNuXTBLVoj3aATL0csPqVtT9vIU3YeAYS5CW3Bxue5ruvIc7sL49hCwrLmEknVwoQFfX_DQ"
+        "signature": "qtOB6lLYFWXZ53WYGLR5OEXJ8jbkzXJenxLpshMLSAPuwqb1rC04B9icqNLhxu2K4NZS8uMcUOl99CxOMUG5Cg"
       }
     ],
     "issuerProof": {
-      "profile": "harmonia/issuer-proof/v1",
-      "accountId": "account-chain",
+      "profile": "harmonia/issuer-proof/v4",
+      "accountId": "account-fixture",
       "accountGeneration": "1",
-      "trustRoot": {
-        "rootDeviceId": "device-A",
-        "rootSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
-        "rootReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
-        "recoveryGeneration": "1",
-        "recoverySigningPublicKey": "-ghAAaTP0lwiUkNgaqy2LlIJ6Q_6xfsmI2YvgqLgNLA",
-        "recoveryReceivingPublicKey": "M2VQi4_bzhdmQY_Ng4-_Bo0gMPVoKWwA20-nRQuqYmw",
-        "signature": "jZk5Ampu1UT81YMekjofwUuyRe4T0CPSiFq3BdZsdBQFGq0xVsDo6FUwGmSxrnLfqnnmn8m0EXj-Gq4oqt0PAw"
-      },
-      "path": [
-        {
-          "certificateVersion": "1",
-          "issuerProofHash": "",
-          "approval": {
-            "context": {
-              "accountId": "account-chain",
-              "accountGeneration": "1",
-              "purpose": "enroll-device",
-              "sessionId": "pairing-B",
-              "challengeNonce": "FRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRU",
-              "expiresAt": "2029999900",
-              "initiatorDeviceId": "device-B",
-              "initiatorSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
-              "initiatorReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
-              "approverDeviceId": "device-A",
-              "approverSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
-              "approverReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg"
-            },
-            "pairingProfile": "boringssl-spake2-edwards25519-draft02-v1",
-            "transcriptHash": "1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
-            "grants": [
-              {
+      "initialization": {
+        "proposal": {
+          "idempotencyKey": "original-init",
+          "device": {
+            "id": "device-A",
+            "signingPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+            "receivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg"
+          },
+          "recoveryGeneration": "1",
+          "recoverySigningPublicKey": "Mdmxh1eJ4gGGMi14LnR4WNQX2MnrGdPH1OZEfLcTmok",
+          "recoveryReceivingPublicKey": "1oyyxGu98DVsLTO-rHO62_DtP22w1Clmt0NDWEefqB4",
+          "trustRootSignature": "n0EXQZuhs9ReZ61t0cg60Ws2yxRCgf8NYZpgFRr-0bqOrfk1SnRBihjQ48kFOuuseYjN2YhTlclXMxmvsZqhDQ",
+          "environments": [
+            {
+              "environmentId": "env-fixture",
+              "keyVersion": "1",
+              "recoveryEnvelope": "4v0Q6AEJIE2xOqzn1s23byhY2p4QHRe5ULIygcyGGW3DITidYHdwSPrtuu4iStX3vhqnMayrPk9ewU0A0Oa6atyviFw-Ps0-CCWaOZz9zw4",
+              "grant": {
                 "grant": {
-                  "accountId": "account-chain",
+                  "accountId": "account-fixture",
+                  "accountGeneration": "1",
+                  "issuerDeviceId": "device-A",
+                  "subjectDeviceId": "device-A",
+                  "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                  "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+                  "environmentId": "env-fixture",
+                  "keyVersion": "1",
+                  "grantGeneration": "1",
+                  "role": "admin",
+                  "expiresAt": "0",
+                  "idempotencyKey": "initial-A",
+                  "envelope": "feKgwjAfjsCGxY7Ny9HTSr0B7pud8G1UwUJGDInHkCeVP0V3NTDvToWFOVoL26QrBOtbN8SHOC9CxN00Gunykwic8njNM91xkGNL5HjUSM0"
+                },
+                "signature": "O12UGszNZ7uQa-VIIQQpaMLlB0bHwHjnT81bQ192UoqCZrUaWyBvYbWfWUVhK4BwvqsrbHBk1TRuBu7_vgSADw"
+              }
+            }
+          ]
+        },
+        "proof": {
+          "accountId": "account-fixture",
+          "accountGeneration": "1",
+          "loginTokenHash": "bb88dbf49af9952c4ee3e3140989228fd313362691514d24ecdfdb89d42ae5a5",
+          "challengeId": "init-challenge",
+          "nonce": "RkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkY",
+          "expiresAt": "2030000100",
+          "proposalHash": "d6a152ca473c37d02a9f47c2d4049b36bbbf1991cb17f1674fc90c94b39630d2"
+        },
+        "deviceSignature": "3yI-4hU5vog6FK18P02QdugTEbnoaM189ws6wJ5QCRuP4-Ci5acHAKGaRZgnLJcm2I2VoUephHI200x8ow-FBQ",
+        "recoverySignature": "pgkjuefIi6psgCjN2CUb2t-BCiXBNBvUYIqMUkBK7SbR6YVKBX2ijMgDZlOaiJanmu7bupNaweEaYeIG3sryCQ",
+        "sequence": 1
+      },
+      "source": {
+        "kind": "proof3",
+        "view": {
+          "profile": "harmonia/issuer-proof/v3-source/v1",
+          "accountId": "account-fixture",
+          "accountGeneration": "1",
+          "initializationHash": "8fbb904557b0b0650e7e7f596b98228ee264d8b9c02329d0fe6e7f3afc4886ee",
+          "trustRoot": {
+            "rootDeviceId": "device-A",
+            "rootSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+            "rootReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+            "recoveryGeneration": "1",
+            "recoverySigningPublicKey": "Mdmxh1eJ4gGGMi14LnR4WNQX2MnrGdPH1OZEfLcTmok",
+            "recoveryReceivingPublicKey": "1oyyxGu98DVsLTO-rHO62_DtP22w1Clmt0NDWEefqB4",
+            "signature": "n0EXQZuhs9ReZ61t0cg60Ws2yxRCgf8NYZpgFRr-0bqOrfk1SnRBihjQ48kFOuuseYjN2YhTlclXMxmvsZqhDQ"
+          },
+          "recoveryHeadHash": "8fbb904557b0b0650e7e7f596b98228ee264d8b9c02329d0fe6e7f3afc4886ee",
+          "path": [
+            {
+              "kind": "paired",
+              "enrollment": {
+                "certificateVersion": "5",
+                "issuerProofHash": "bf0459ebd94284cf68422569ddfa143eb3a788af8b1739b472697179b4bcd28e",
+                "approval": {
+                  "context": {
+                    "accountId": "account-fixture",
+                    "accountGeneration": "1",
+                    "purpose": "enroll-device",
+                    "sessionId": "pairing-B",
+                    "challengeNonce": "KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio",
+                    "expiresAt": "2030000100",
+                    "initiatorDeviceId": "device-B",
+                    "initiatorSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+                    "initiatorReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+                    "approverDeviceId": "device-A",
+                    "approverSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                    "approverReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg"
+                  },
+                  "pairingProfile": "boringssl-spake2-edwards25519-draft02-v1",
+                  "transcriptHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "grants": [
+                    {
+                      "grant": {
+                        "accountId": "account-fixture",
+                        "accountGeneration": "1",
+                        "issuerDeviceId": "device-A",
+                        "subjectDeviceId": "device-B",
+                        "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
+                        "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+                        "environmentId": "env-fixture",
+                        "keyVersion": "1",
+                        "grantGeneration": "1",
+                        "role": "admin",
+                        "expiresAt": "0",
+                        "idempotencyKey": "initial-B",
+                        "envelope": "_qHNAklsyZxC7yt_O5eTvXZ2ixpuVG9no1as__pSQGpzlR2eYCZb5MnRvr35c2SrVq7ztZne_hNBMY0cKrjywyVK5DvmxHJ8r8DcIuST3y0"
+                      },
+                      "signature": "Ju9CdKiHrY_2I0S9T2XtjM3B1gsIuiCotVu32ONNfXWEP03BxY1tmjP4WBS3l-Rj0k2qVk73oXClBfzLUiVtDQ"
+                    }
+                  ],
+                  "approverSignature": "C6GqgRpiINSEKxMZ8L-jxvBEPjDvxj_ZaS0fi6Lxce3X_ysnS-p0zPAPzJ2827NZkMcdQQ2RU76pTBwSStKgBQ",
+                  "initiatorSignature": "fb7bCniV8NqD-DU7szpFOt_HuXUiarTZrF9yvDTiOqg91D5DZv1J3RE0go9oVPAFxR3EzOWzcJ5qj833MeezCw"
+                }
+              }
+            }
+          ],
+          "authorities": [
+            {
+              "grant": {
+                "grant": {
+                  "accountId": "account-fixture",
+                  "accountGeneration": "1",
+                  "issuerDeviceId": "device-A",
+                  "subjectDeviceId": "device-A",
+                  "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+                  "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
+                  "environmentId": "env-fixture",
+                  "keyVersion": "1",
+                  "grantGeneration": "1",
+                  "role": "admin",
+                  "expiresAt": "0",
+                  "idempotencyKey": "initial-A",
+                  "envelope": "feKgwjAfjsCGxY7Ny9HTSr0B7pud8G1UwUJGDInHkCeVP0V3NTDvToWFOVoL26QrBOtbN8SHOC9CxN00Gunykwic8njNM91xkGNL5HjUSM0"
+                },
+                "signature": "O12UGszNZ7uQa-VIIQQpaMLlB0bHwHjnT81bQ192UoqCZrUaWyBvYbWfWUVhK4BwvqsrbHBk1TRuBu7_vgSADw"
+              },
+              "parentHash": "",
+              "originHash": "",
+              "previousGrantHash": "",
+              "recoveryEnrollmentHash": ""
+            },
+            {
+              "grant": {
+                "grant": {
+                  "accountId": "account-fixture",
                   "accountGeneration": "1",
                   "issuerDeviceId": "device-A",
                   "subjectDeviceId": "device-B",
@@ -85,80 +212,56 @@
                   "grantGeneration": "1",
                   "role": "admin",
                   "expiresAt": "0",
-                  "idempotencyKey": "B-admin",
-                  "envelope": "mfarrVBPUjnK_o28oc-szVqbHIQTsoDkomtssfGdKldfrAFGMZG590pPatszKdVOW5xOaoeunCXJKDQp3hbOT8SCHj25-cLEanI4kHRsNag"
+                  "idempotencyKey": "initial-B",
+                  "envelope": "_qHNAklsyZxC7yt_O5eTvXZ2ixpuVG9no1as__pSQGpzlR2eYCZb5MnRvr35c2SrVq7ztZne_hNBMY0cKrjywyVK5DvmxHJ8r8DcIuST3y0"
                 },
-                "signature": "p0Rck3KE8QOTb-GvHHo1GQCtoWQuvUr7WbXMz90JjzyEhsiMDllZo8GiwdOtgCltNlCK5CCOIePceAms3QPsDg"
-              }
-            ],
-            "approverSignature": "abt7Gf_RzfoWqHeODHg8z_IGvdHlg9jiqu4YzbdGwrh4wyqHGMyFbleP7M527mmQKNnubqVpujvbcVVPWxuUDQ",
-            "initiatorSignature": "LD7kkzqCrYJl9GhxyofL5tGqDY60vSZg4TNfl8MSD1dm_dTGl0GaYYgtiu_A4oBMP2KoNB2r5oqOjiaBOdS7CQ"
-          }
-        }
-      ],
-      "authorities": [
-        {
-          "grant": {
-            "grant": {
-              "accountId": "account-chain",
-              "accountGeneration": "1",
-              "issuerDeviceId": "device-A",
-              "subjectDeviceId": "device-B",
-              "subjectSigningPublicKey": "gTl3Dqh9F19Wo1Rmw0x-zMuNipG07jeiXfYPW4_Js5Q",
-              "subjectReceivingPublicKey": "l8OxC01sEzp46l3MHPZCHT-Brjex9ijOFMpvzncw8zM",
+                "signature": "Ju9CdKiHrY_2I0S9T2XtjM3B1gsIuiCotVu32ONNfXWEP03BxY1tmjP4WBS3l-Rj0k2qVk73oXClBfzLUiVtDQ"
+              },
+              "parentHash": "82d59e07f2089d3889df96c6c118d3540bbe418565d3f21654b26ba4a97e8d60",
+              "originHash": "",
+              "previousGrantHash": "",
+              "recoveryEnrollmentHash": ""
+            }
+          ],
+          "targets": [
+            {
               "environmentId": "env-fixture",
-              "keyVersion": "1",
-              "grantGeneration": "1",
-              "role": "admin",
-              "expiresAt": "0",
-              "idempotencyKey": "B-admin",
-              "envelope": "mfarrVBPUjnK_o28oc-szVqbHIQTsoDkomtssfGdKldfrAFGMZG590pPatszKdVOW5xOaoeunCXJKDQp3hbOT8SCHj25-cLEanI4kHRsNag"
-            },
-            "signature": "p0Rck3KE8QOTb-GvHHo1GQCtoWQuvUr7WbXMz90JjzyEhsiMDllZo8GiwdOtgCltNlCK5CCOIePceAms3QPsDg"
-          },
-          "parentHash": "d7747be64dd5d8398e8a7b0f7216fb65845b48059b6c99fb22ca8a07d2e78586"
-        },
-        {
-          "grant": {
-            "grant": {
-              "accountId": "account-chain",
-              "accountGeneration": "1",
-              "issuerDeviceId": "device-A",
-              "subjectDeviceId": "device-A",
-              "subjectSigningPublicKey": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
-              "subjectReceivingPublicKey": "c7LYt2qptTZgAyvI9di-46OuTjs6f9Sa3oH3NHo0qmg",
-              "environmentId": "env-fixture",
-              "keyVersion": "1",
-              "grantGeneration": "1",
-              "role": "admin",
-              "expiresAt": "0",
-              "idempotencyKey": "root-admin",
-              "envelope": "aXgvtzIEnY1bPHKFsB5Cf_yeMfD-OJzcen6BFyMUkUEa7hWTcDbVhp4D47UxTztSvuIN19B17Mo5dmkKOLHaRqK7bh6FI1y8UnSHFK_WgcY"
-            },
-            "signature": "ifcqDJEukFISlOjiz4NH9ofB_boGOokKPz-wtI8E0qmKYXMPZ-fT39bCKwH17GqHsC5OA618HyhaGsQcX4RUCg"
-          },
-          "parentHash": ""
+              "authorityHash": "3bbe261ec1d9433d85c4b1a778761ed569465ba7ce3bb73f79b1226038ccc80a"
+            }
+          ],
+          "origins": [],
+          "identityPaths": [],
+          "dependencies": []
         }
-      ],
-      "targets": [
-        {
-          "environmentId": "env-fixture",
-          "authorityHash": "0c7e51d9daf2ce9d63dd1e4544f40f5dd3aeb2fc09ec55394b32db6fad29ee33"
-        }
-      ]
+      },
+      "records": []
     },
-    "approverSignature": "6Gpn_Bn6PYky80wyS6CgWtGq8zOljMdzdSB5R0VJkDfIBgirLoihghdhvFuryArSEl17PR2IjxdUeI5fcOoQDw",
-    "initiatorSignature": "MP1rZaKgJZZc-MzRR_ZYNsTgpeLWGeZQ3Z-9J6mOmzb9HpqOdeMZeh9xnmpE_e43sp9_OQR1luP5rcM9AOsTDA"
+    "approverSignature": "YvcizGJNeF31Rw8RRU1281x07wyKo_I2NGR6x1xkfUr5Foe4BiLp3kW9mdO7-O2urEnHkeXMxmRgWddBSagODA",
+    "initiatorSignature": "5oWzS9WRUcQMV_guJR19oVMm5BZur5l5CjY6g5Xz0rkspsNDc86T56CqnvYLNd4v5ITGMfC9ww1dZ3lE4O1GDw"
   },
+  "proofCanonicalHex": "5b226861726d6f6e69612f6973737565722d70726f6f662f7634222c226163636f756e742d66697874757265222c2231222c5b2238666262393034353537623062303635306537653766353936623938323238656532363464386239633032333239643066653665376633616663343838366565222c2257794a6f59584a7462323570595339325958567364433170626d6c30615746736158706864476c7662693177636d397762334e68624339324d534973496d397961576470626d46734c576c75615851694c434a6b5a585a705932557451534973496d6c76616d6f7a5746464b4f4670594f565630633352515448426b59334e77626b4e694f475273516b6c694f444e5453554669555642694d5863694c434a6a4e30785a64444a7863485255576d644265585a4a4f5752704c54513254335655616e4d325a6a6c5459544e7653444e4f534738776357316e496977694d534973496b316b6258686f4d57564b4e476448523031704d54524d626c49305630355257444a4e626e4a485a4642494d55396152575a4d59315274623273694c43497862336c35654564314f546845566e4e4d56453874636b68504e6a4a66524852514d6a4a334d554e7362585177546b52585257566d6355493049697769626a4246574646616457687a4f564a6c576a59786444426a5a7a597756334d79655868535132646d4f45355a576e426e526c4a794c544269635539795a6d737855323553516d6c6f616c45304f477447543356316332565a616b34795757685562474e735745313462585a7a576e466f524645694c467462496d56756469316d6158683064584a6c496977694d534973496a52324d4645325155564b5355557965453978656d3478637a497a596e6c6f57544a774e464649556d55315655784a6557646a65556448567a4e45535652705a466c495a48645455484a306458553061564e3057444e326148467554574635636c42724f575633565442424d4539684e6d463065585a70526e637455484d774c554e4456324650576e6f35656e63304969776956336c4b62316c59536e52694d6a567757564d35626d4e74526e566b517a6b7954564e4a63306c74526d705a4d6a6b78596d3552644670746244526b53465a35576c4e4a63306c7152576c4d51307072576c686163466b795658525255306c7a535731536247527462477061557a464353576c33615746584f584668616b355a565656764e4664735a7a565757464a365a455a4354574e48556d706a4d304a3155544a4a4e46704865454e5456306b305454464f536c4658536c4a5652306c345a486c4a63306c7454544e55526d77775457354764325247556d46614d4559315a4774724e5670486133524f524670515a465a5363574e36576d3150566b356f54544935535530774e556c69656b4a34596c646a61557844536d7869626c6c30576d31734e475249566e6c6155306c7a53577046615578445358684a6158647057566453644746584e476c4d51306c3353576c33615746584e58426b5232786f596b4d78516b6c7064326c6162565a4d576a4e6b63564658576e466a4d4535495a555a724d315275617a5654526c4a55593270435130347a516a46615247684954565a574d315a5663456853525778315530643052467057576c464e526c6c365647785352575273556e5a574d467051566d303554553171576c4a6a613070515a45644b54303947546b6c554d45303155544e6f54303145516b686b567a553159544e6b63466c3661485668617a564f543152474e4745775a45395552465a4a595778575646525551576c5955534973496b38784d6c56486333704f576a643155574574566b6c4a555646775955314d62454977596b68335347707556446778596c45784f544a5662334644576e4a5659566435516e5a5a596c646d5631565761457330516e643263584e79596b6843617a4655556e564364546466646d645451555233496c31645851222c2257794a6f59584a7462323570595339325958567364433170626d6c30615746736158706c4c3359784969776959574e6a623356756443316d6158683064584a6c496977694d534973496d4a694f44686b596d59304f57466d4f546b314d6d4d305a57557a5a544d784e4441354f446b794d6a686d5a444d784d7a4d324d6a59354d5455784e4751794e47566a5a475a6b596a67355a44517959575531595455694c434a70626d6c304c574e6f595778735a57356e5a534973496c4a72576b645361317048556d746152314a72576b645361317048556d746152314a72576b645361317048556d746152314a72576b645361316b694c4349794d444d774d4441774d544177496977695a445a684d545579593245304e7a4e6a4d7a646b4d444a684f5759304e324d795a4451774e446c694d7a5a69596d4a6d4d546b354d574e694d54646d4d5459334e475a6a4f54426a4f5452694d7a6b324d7a426b4d694a64222c223379492d34685535766f6736464b3138503032516475675445626e6f614d313839777336774a355143527550342d436935616348414b4761525a676e4c4a636d324932566f55657068484932303078386f772d464251222c2270676b6a756566496936707367436a4e3243556232742d42436958424e4276555949714d556b424b375362523659564b425832696a4d67445a6c4f61694a616e6d75376275704e617765456159654947337372794351222c2231225d2c2263303865393937313339373935393262633334386131316235616132323736623631366461373762666339613365356539653863376465383737336437366537222c5b5d5d",
+  "proofHash": "f176df6263f6ec13d6e42a9208917b54f2933f24bff2bd44074e4cff2cdfd6c3",
+  "certificateSigningHex": "5b226861726d6f6e69612f6465766963652d656e726f6c6c6d656e742f7635222c22626f72696e6773736c2d7370616b65322d6564776172647332353531392d647261667430322d7631222c226163636f756e742d66697874757265222c2231222c2270616972696e672d43222c224b696f714b696f714b696f714b696f714b696f714b696f714b696f714b696f714b696f714b696f714b696f222c2232303330303030313030222c226465766963652d43222c2237556b6f78696a527773627136514d346b466d5659536c5a4a7a7063595f6b324e734647464b79484e3945222c2273776575686d447672745457706c396d51496c6f6b75704b48774231565678496e524d536f75466e664367222c226465766963652d42222c2267546c3344716839463139576f31526d7730782d7a4d754e69704730376a65695866595057345f4a733551222c226c384f7843303173457a7034366c334d48505a4348542d42726a657839696a4f464d70767a6e6377387a4d222c2261616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161222c2262303363616166316536643634613362366363346539376533663666323762626663353233653761346565383166396232333062616461343163393339636433222c2266313736646636323633663665633133643665343261393230383931376235346632393333663234626666326264343430373465346366663263646664366333225d",
   "authorityHashes": {
-    "A": "d7747be64dd5d8398e8a7b0f7216fb65845b48059b6c99fb22ca8a07d2e78586",
-    "B": "0c7e51d9daf2ce9d63dd1e4544f40f5dd3aeb2fc09ec55394b32db6fad29ee33"
+    "A": "82d59e07f2089d3889df96c6c118d3540bbe418565d3f21654b26ba4a97e8d60",
+    "B": "3bbe261ec1d9433d85c4b1a778761ed569465ba7ce3bb73f79b1226038ccc80a"
   },
-  "certificateSigningHex": "5b226861726d6f6e69612f6465766963652d656e726f6c6c6d656e742f7632222c22626f72696e6773736c2d7370616b65322d6564776172647332353531392d647261667430322d7631222c226163636f756e742d636861696e222c2231222c2270616972696e672d43222c2246685957466859574668595746685957466859574668595746685957466859574668595746685957466859222c2232303330303030303930222c226465766963652d43222c2237556b6f78696a527773627136514d346b466d5659536c5a4a7a7063595f6b324e734647464b79484e3945222c2273776575686d447672745457706c396d51496c6f6b75704b48774231565678496e524d536f75466e664367222c226465766963652d42222c2267546c3344716839463139576f31526d7730782d7a4d754e69704730376a65695866595057345f4a733551222c226c384f7843303173457a7034366c334d48505a4348542d42726a657839696a4f464d70767a6e6377387a4d222c2232303230323032303230323032303230323032303230323032303230323032303230323032303230323032303230323032303230323032303230323032303230222c2266343763316163326465356434336366363933386462643239326363633634623962376236306437373563363964303661666536623962373530653030376563222c2261623833383331393237343564666231323535343564306335633361336638336361346235343335653834333931386562303234393637373166376630623738225d",
-  "description": "公开合成 A→B→C 签发者证明；不是 PAKE 原语向量或当前权限证明。HPKE/AEAD 为真实原语生成。",
+  "historicalMutation": {
+    "accountId": "account-fixture",
+    "accountGeneration": "1",
+    "deviceId": "device-A",
+    "environmentId": "env-fixture",
+    "keyVersion": "1",
+    "grantGeneration": "1",
+    "operation": "put",
+    "idempotencyKey": "root-write",
+    "name": "SYNTHETIC_VALUE",
+    "payload": "b779ej99Rlh1BBPDmq-WOZyEKMW-bpV7eqefovRsoSN0G_ZgP0jA81xBLdw7ct0CE2_umTzX",
+    "signature": "xWgr93V7yzJWWDzedhevi7vejdVOGXRROriAQ2IiFQ8HKqgKnA-22rUxBuYezbybx8jdHw84eG5A6CD2M8Q9Ag"
+  },
   "historicalAuthorization": {
     "grant": {
-      "accountId": "account-chain",
+      "accountId": "account-fixture",
       "accountGeneration": "1",
       "issuerDeviceId": "device-A",
       "subjectDeviceId": "device-A",
@@ -169,37 +272,9 @@
       "grantGeneration": "1",
       "role": "admin",
       "expiresAt": "0",
-      "idempotencyKey": "root-admin",
-      "envelope": "aXgvtzIEnY1bPHKFsB5Cf_yeMfD-OJzcen6BFyMUkUEa7hWTcDbVhp4D47UxTztSvuIN19B17Mo5dmkKOLHaRqK7bh6FI1y8UnSHFK_WgcY"
+      "idempotencyKey": "initial-A",
+      "envelope": "feKgwjAfjsCGxY7Ny9HTSr0B7pud8G1UwUJGDInHkCeVP0V3NTDvToWFOVoL26QrBOtbN8SHOC9CxN00Gunykwic8njNM91xkGNL5HjUSM0"
     },
-    "signature": "ifcqDJEukFISlOjiz4NH9ofB_boGOokKPz-wtI8E0qmKYXMPZ-fT39bCKwH17GqHsC5OA618HyhaGsQcX4RUCg"
-  },
-  "historicalMutation": {
-    "accountId": "account-chain",
-    "accountGeneration": "1",
-    "deviceId": "device-A",
-    "environmentId": "env-fixture",
-    "keyVersion": "1",
-    "grantGeneration": "1",
-    "operation": "put",
-    "idempotencyKey": "historical-write",
-    "name": "FIXTURE_KEY",
-    "payload": "tqKraCUklzeEoRD3BBGe81JYrsYji6eI1lmnRz14QftfOEUQOHJ7AC-nrbH3e421xrOsMSXB",
-    "signature": "u8mhTb5A6Du-riXVrXhkvEzAuRlPHUAtuSA1AAaEIfchsbq-sbdtnWBojgjgxv9cJ3z-wxMe9039wzIpPgRbDg"
-  },
-  "proofCanonicalHex": "5b226861726d6f6e69612f6973737565722d70726f6f662f7631222c226163636f756e742d636861696e222c2231222c5b2257794a6f59584a746232357059533930636e567a64433179623239304c3359784969776959574e6a623356756443316a6147467062694973496a45694c434a6b5a585a705932557451534973496d6c76616d6f7a5746464b4f4670594f565630633352515448426b59334e77626b4e694f475273516b6c694f444e5453554669555642694d5863694c434a6a4e30785a64444a7863485255576d644265585a4a4f5752704c54513254335655616e4d325a6a6c5459544e7653444e4f534738776357316e496977694d5349734969316e61454642595652514d47783361565672546d646863586b795447784a536a5a52587a5a345a6e4e7453544a5a646d64785447644f544545694c434a4e4d6c5a5261545266596e706f5a4731525756394f5a7a517458304a764d47644e55465a7653316433515449774c5735535558567857573133496c30222c226a5a6b35416d70753155543831594d656b6a6f667755757952653454304350536946713342645a7364425146477130785673446f36465577476d5378726e4c66716e6e6d6e386d3045586a2d4771346f717430504177225d2c5b5b2231222c2257794a6f59584a74623235705953396b5a585a70593255745a5735796232787362575675644339324d534973496d4a76636d6c755a334e7a6243317a634746725a5449745a57523359584a6b637a49314e5445354c57527959575a304d444974646a45694c434a6859324e76645735304c574e6f59576c75496977694d534973496e426861584a70626d637451694973496b5a5356565a47556c5657526c4a56566b5a5356565a47556c5657526c4a56566b5a5356565a47556c5657526c4a56566b5a5356565a47556c55694c4349794d4449354f546b354f544177496977695a47563261574e6c4c5549694c434a6e5647777a5248466f4f5559784f5664764d564a74647a42344c58704e64553570634563774e32706c6156686d575642584e46394b637a5652496977696244685065454d774d584e46656e41304e6d777a54556851576b4e4956433143636d706c65446c70616b394754584232656d356a647a683654534973496d526c646d6c6a5a5331424969776961573971616a4e5955556f34576c67355658527a6446424d6347526a63334275513249345a477843535749344d314e4a51574a525547497864794973496d4d3354466c304d6e4677644652615a304635646b6b355a476b744e445a5064565271637a5a6d4f564e684d3239494d303549627a4278625763694c4349785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d4d5759785a6a466d496977694e6a5a6a4d546b355a5467794d575a6a4f445a694e474934596a51314d7a5a6a4f4455325a474579593245334e4451784e4756694e6a55304e325578596d517a4d44426d4e6a4d7a4f5752684d5467354e5745774d534a64222c226162743747665f527a666f577148654f444867387a5f49477664486c67396a69717534597a6264477772683477797148474d7946626c6550374d3532376d6d514b4e6e7562715670756a766263565650577875554451222c224c44376b6b7a714372594a6c39476878796f664c357447714459363076535a6734544e666c384d534431646d5f6454476c3047615959677469755f41346f424d50324b6f4e423272356f714f6a6961424f6453374351225d5d2c5b5b22656e762d66697874757265222c226465766963652d41222c2231222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5545694c434a6b5a585a705932557451534973496d6c76616d6f7a5746464b4f4670594f565630633352515448426b59334e77626b4e694f475273516b6c694f444e5453554669555642694d5863694c434a6a4e30785a64444a7863485255576d644265585a4a4f5752704c54513254335655616e4d325a6a6c5459544e7653444e4f534738776357316e496977695a5735324c575a7065485231636d55694c434978496977694d534973496d466b62576c75496977694d434973496e4a766233517459575274615734694c434a68574764326448704a5257355a4d574a51534574476330493151325a666557564e5a6b517454307036593256754e6b4a4765553156613156465954646f5631526a52474a57614841305244513356586855656e5254646e564a546a4535516a4533545738315a4731725330394d5347465363557333596d6732526b6b7865546856626c4e49526b74665632646a57534a64222c2269666371444a45756b4649536c4f6a697a344e48396f66425f626f474f6f6b4b507a2d777449384530716d4b59584d505a2d6654333962434b774831374771487343354f413631384879686147735163583452554367222c22225d2c5b22656e762d66697874757265222c226465766963652d42222c2231222c2257794a6f59584a74623235705953396e636d4675644339324d534973496d466a59323931626e517459326868615734694c434978496977695a47563261574e6c4c5545694c434a6b5a585a705932557451694973496d645562444e4563576735526a453556323878556d31334d486774656b3131546d6c77527a4133616d567057475a5a554663305830707a4e5645694c434a734f453934517a4178633056366344513262444e4e53464261513068554c554a79616d56344f576c7154305a4e63485a36626d4e334f48704e496977695a5735324c575a7065485231636d55694c434978496977694d534973496d466b62576c75496977694d434973496b497459575274615734694c434a745a6d4679636c5a4355465671626b7466627a493462324d746333705763574a4953564655633239456132397464484e7a5a6b646b5332786b5a6e4a42526b644e576b63314f544277554746306333704c5a465a50567a5634543246765a5856755131684b5330525263444e6f596b39554f464e4453476f794e53316a54455668626b6b3061306853633035685a794a64222c22703052636b334b4538514f54622d477648486f31475143746f575175765572375762584d7a39304a6a7a79456873694d446c6c5a6f38476977644f7467436c744e6c434b3543434f4965506365416d73335150734467222c2264373734376265363464643564383339386538613762306637323136666236353834356234383035396236633939666232326361386130376432653738353836225d5d2c5b5b22656e762d66697874757265222c2230633765353164396461663263653964363364643165343534346634306635646433616562326663303965633535333934623332646236666164323965653333225d5d5d",
-  "proofHash": "ab8383192745dfb125545d0c5c3a3f83ca4b5435e843918eb02496771f7f0b78",
-  "syntheticEnvironmentKeyHex": "0909090909090909090909090909090909090909090909090909090909090909",
-  "syntheticNow": 2030000000,
-  "syntheticReceivingPrivateKeysHex": {
-    "A": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
-    "B": "0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
-    "C": "0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d"
-  },
-  "syntheticRecoverySeedHex": "0404040404040404040404040404040404040404040404040404040404040404",
-  "syntheticSigningSeedsHex": {
-    "A": "0101010101010101010101010101010101010101010101010101010101010101",
-    "B": "0202020202020202020202020202020202020202020202020202020202020202",
-    "C": "0303030303030303030303030303030303030303030303030303030303030303"
+    "signature": "O12UGszNZ7uQa-VIIQQpaMLlB0bHwHjnT81bQ192UoqCZrUaWyBvYbWfWUVhK4BwvqsrbHBk1TRuBu7_vgSADw"
   }
 }

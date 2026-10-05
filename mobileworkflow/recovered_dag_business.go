@@ -326,6 +326,10 @@ func (w *Workflow) runDAGWrite(ctx context.Context, in syncclient.WriteRequest) 
 		w.mu.Unlock()
 		return out, syncclient.ErrPaused
 	}
+	if w.approvalV5Pending() {
+		w.mu.Unlock()
+		return out, ErrApprovalPending
+	}
 	if w.dagManagementPending() {
 		w.mu.Unlock()
 		return out, ErrManagementPending

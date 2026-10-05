@@ -27,6 +27,8 @@ func TestMobileDAGPreparationLegacyGatesWithLiveLogin(t *testing.T) {
 			var requests, saves, cas atomic.Int32
 			login := syncclient.LoginResult{AccountID: original.AccountID, AccountGeneration: original.Pin.AccountGeneration, Token: cryptox.EncodeBase64(bytes.Repeat([]byte{23}, 32)), ExpiresAt: time.Now().Unix() + 300}
 			server := httptest.NewTLSServer(http.HandlerFunc(func(out http.ResponseWriter, in *http.Request) {
+				out.Header().Set("Harmonia-Protocol-Major", "2")
+
 				requests.Add(1)
 				out.Header().Set("Content-Type", "application/json")
 				if in.Method == "POST" && in.URL.Path == "/v1/login" {
@@ -86,23 +88,10 @@ func TestMobileDAGPreparationLegacyGatesWithLiveLogin(t *testing.T) {
 			before := slot.read()
 			beforeRequests, beforeSaves, beforeCAS := requests.Load(), saves.Load(), cas.Load()
 			calls := map[string]func() error{
-				"recovery-info":          func() error { _, e := w.RecoveryInfo(); return e },
-				"enrollment-info":        func() error { _, e := w.EnrollmentInfo(); return e },
-				"resume-enrollment":      func() error { _, e := w.ResumeEnrollment(context.Background(), "synthetic-original-pairing"); return e },
-				"begin-recovery":         func() error { _, e := w.BeginRecovery(context.Background(), code); return e },
-				"begin-recovery-origins": func() error { _, e := w.BeginRecoveryWithOrigins(context.Background(), code); return e },
-				"begin-recovery-origins-session": func() error {
-					s, _, e := w.BeginRecoveryWithOriginsSession(context.Background(), code)
-					if s != nil {
-						s.Close()
-					}
-					return e
-				},
-				"begin-recovery-authority": func() error {
-					s, _, e := w.BeginRecoveryAuthoritySession(context.Background(), code)
-					if s != nil {
-						s.Close()
-					}
+				"enrollment-info":   func() error { _, e := w.EnrollmentInfo(); return e },
+				"resume-enrollment": func() error { _, e := w.ResumeEnrollment(context.Background(), "synthetic-original-pairing"); return e },
+				"initialize": func() error {
+					_, e := w.BeginInitialization(context.Background(), "new-vault", "new-operation")
 					return e
 				},
 			}
@@ -135,7 +124,7 @@ func TestMobileDAGPreparationLegacyGatesWithLiveLogin(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer cold.Close()
-			for name, call := range map[string]func() error{"cold-recovery-info": func() error { _, e := cold.RecoveryInfo(); return e }, "cold-enrollment-info": func() error { _, e := cold.EnrollmentInfo(); return e }} {
+			for name, call := range map[string]func() error{"cold-enrollment-info": func() error { _, e := cold.EnrollmentInfo(); return e }} {
 				t.Run(name, func(t *testing.T) {
 					start := requests.Load()
 					if err := call(); !errors.Is(err, ErrRecoveryRestricted) {

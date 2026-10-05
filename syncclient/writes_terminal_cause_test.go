@@ -46,6 +46,9 @@ func TestWriterJournalFailureRetainsReceivedTerminalCause(t *testing.T) {
 			var posted atomic.Bool
 			var posts atomic.Int32
 			srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Harmonia-Protocol-Major", "2")
+
+				w.Header().Set("Harmonia-Protocol-Major", "2")
 				if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/mutations") {
 					posts.Add(1)
 					var packet SignedMutation

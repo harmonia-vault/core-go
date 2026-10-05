@@ -31,7 +31,7 @@ import (
 	"github.com/harmonia-vault/core-go/syncclient"
 )
 
-const stateHeader = "HARMST01"
+const stateHeader = "HARMST02"
 const maxState = 8 << 20
 const maxWorkflowCommand = 32768
 
@@ -64,27 +64,27 @@ type stateBinding struct {
 // VaultWorkflow 每次系统强认证后创建，一次业务操作后关闭。软件 AES 状态钥只在本对象存活。
 // namespace 是原生包名和文件域，附加 CA 来自原生系统证书/明确测试 CA，均禁止 Dart 提供。
 type VaultWorkflow struct {
-	mu               sync.Mutex
-	workflow         *mobileworkflow.Workflow
-	key              []byte
-	binding          stateBinding
-	store            SealedStateStore
-	deleteDevice     bool
-	saveFailed       atomic.Bool
-	lastSealed       []byte
-	protectedSHA256  string
-	recoveryRegistry *RecoveryRegistry
-	dagRegistry      *NativeDAGRegistry
-	cancelMu         sync.Mutex
-	cancel           context.CancelFunc
+	mu              sync.Mutex
+	workflow        *mobileworkflow.Workflow
+	key             []byte
+	binding         stateBinding
+	store           SealedStateStore
+	deleteDevice    bool
+	saveFailed      atomic.Bool
+	lastSealed      []byte
+	protectedSHA256 string
+	dagRegistry     *NativeDAGRegistry
+	cancelMu        sync.Mutex
+	cancel          context.CancelFunc
 }
 
 func WorkflowProfile() (string, error) {
 	return encode(map[string]any{"version": 1, "realVaultReady": false, "experimental": true,
 		"profile": "origin-aware-native-v1", "systemAuthenticationPerOperation": true,
-		"approvalProfile": "explicit-certificate-version", "legacyApprovalProfile": "first-root-issuer-proof-v1",
-		"approvalV3Profile": "certificate3-issuer-origin-v1", "approvalV4Profile": "certificate4-continuous-recovery-v1", "enrollmentV3Profile": "certificate3-issuer-origin-v1", "environmentKeyRotation": true, "managementProfile": "authenticated-original-transaction-v1", "recoveryAuthorityProfile": "continuous-issuer-recovery-v1-process-owner",
-		"operations":  []string{"loginAccount", "restoreSession", "businessPendingInfo", "retryBusinessOperation", "register", "verifyEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "approvePairing", "retryApproval", "approvalInfo", "cancelApproval", "approvePairingV3", "retryApprovalV3", "approvalInfoV3", "cancelApprovalV3", "approvePairingV4", "retryApprovalV4", "approvalInfoV4", "cancelApprovalV4", "enrollDeviceV3", "resumeEnrollmentV3", "enrollmentInfoV3", "rotateEnvironmentKey", "managementDevices", "prepareDeviceGrant", "prepareOtherDeviceRevocation", "managementInfo", "retryManagement", "cancelManagement", "beginRecoveryAuthority", "resumeRecoveryAuthority", "recoveryInfo", "recoveryView", "beginRecoveryTransition", "completeRecoveryTransition", "queryRecoveryTransition", "registerRecoveredDevice", "retryRecoveredDevice", "recoveredDeviceInfo", "logout"},
+		"approvalProfile": cryptox.RecoveryDAGCapability, "enrollmentProfile": cryptox.RecoveryDAGCapability,
+		"environmentKeyRotation": true, "managementProfile": "authenticated-original-transaction-v1",
+
+		"operations":  []string{"loginAccount", "restoreSession", "businessPendingInfo", "retryBusinessOperation", "register", "verifyEmail", "requestVerificationEmail", "beginInitialization", "queryInitialization", "completeInitialization", "view", "pull", "createEnvironment", "renameEnvironment", "deleteEnvironment", "setVariable", "deleteVariable", "revokeSelf", "selfRevocationInfo", "approvePairingV5", "retryApprovalV5", "approvalInfoV5", "cancelApprovalV5", "enrollDeviceV5", "resumeEnrollmentV5", "enrollmentInfoV5", "rotateEnvironmentKey", "managementDevices", "prepareDeviceGrant", "prepareOtherDeviceRevocation", "managementInfo", "retryManagement", "cancelManagement", "logout"},
 		"unsupported": []string{"approveDevice", "recover", "rotateRecovery", "accountReset"}})
 }
 
@@ -104,7 +104,7 @@ func (d *Device) OpenWorkflow(endpoint, namespace string, sealed, additionalCA [
 	}
 	sign := d.signing.Public().(ed25519.PublicKey)
 	id := sha256.Sum256(sign)
-	binding := stateBinding{Namespace: namespace, Version: 1, Endpoint: endpoint, DeviceID: hex.EncodeToString(id[:]), SigningPublicKey: cryptox.EncodeBase64(sign), ReceivingPublicKey: cryptox.EncodeBase64(receive.PublicKey().Bytes())}
+	binding := stateBinding{Namespace: namespace, Version: 2, Endpoint: endpoint, DeviceID: hex.EncodeToString(id[:]), SigningPublicKey: cryptox.EncodeBase64(sign), ReceivingPublicKey: cryptox.EncodeBase64(receive.PublicKey().Bytes())}
 	// 独立用途域派生状态 AES 钥；设备签名/接收钥仍独立生成。此钥不是硬件内钥。
 	// namespace+完整 endpoint+双公钥固定 KDF，跨文件/包/端点/设备替换失败。
 	info, _ := json.Marshal([]string{"harmonia/native-workflow-aes/v1", namespace, endpoint, binding.SigningPublicKey, binding.ReceivingPublicKey})
@@ -184,7 +184,7 @@ func projectedBinding(plain []byte) (stateBinding, error) {
 	return stateBinding{Version: p.Version, Endpoint: p.Endpoint, DeviceID: p.DeviceID, SigningPublicKey: p.SigningPublicKey, ReceivingPublicKey: p.ReceivingPublicKey, AccountID: p.AccountID, AccountGeneration: p.AccountGeneration, Checkpoint: p.Cloud.Cloud.Sequence, AccountClosed: p.Cloud.AccountClosed}, nil
 }
 func (v *VaultWorkflow) matches(b stateBinding) bool {
-	return b.Namespace == v.binding.Namespace && b.Version == 1 && b.Endpoint == v.binding.Endpoint && b.DeviceID == v.binding.DeviceID && b.SigningPublicKey == v.binding.SigningPublicKey && b.ReceivingPublicKey == v.binding.ReceivingPublicKey
+	return b.Namespace == v.binding.Namespace && b.Version == 2 && b.Endpoint == v.binding.Endpoint && b.DeviceID == v.binding.DeviceID && b.SigningPublicKey == v.binding.SigningPublicKey && b.ReceivingPublicKey == v.binding.ReceivingPublicKey
 }
 func (v *VaultWorkflow) aead() (cipher.AEAD, error) {
 	b, e := aes.NewCipher(v.key)
@@ -206,7 +206,7 @@ func (v *VaultWorkflow) checkProtected(expected string) (err error) {
 	defer func() {
 		if err != nil {
 			v.saveFailed.Store(true)
-			v.invalidateRecoveryOwner()
+			v.invalidateNativeDAGRegistry()
 			v.cancelOperation()
 		}
 	}()
@@ -226,7 +226,7 @@ func (v *VaultWorkflow) saveProtected(plain []byte, expected *string) (err error
 	defer func() {
 		if err != nil {
 			v.saveFailed.Store(true)
-			v.invalidateRecoveryOwner()
+			v.invalidateNativeDAGRegistry()
 			v.cancelOperation()
 		}
 	}()
@@ -317,7 +317,6 @@ func (v *VaultWorkflow) open(packet []byte) ([]byte, error) {
 
 func (v *VaultWorkflow) Cancel() {
 	v.invalidateNativeDAGRegistry()
-	v.clearRecoveryOwner()
 	v.cancelOperation()
 }
 func (v *VaultWorkflow) cancelOperation() {
@@ -334,9 +333,6 @@ func (v *VaultWorkflow) Close() {
 	defer func() {
 		v.mu.Unlock()
 		v.detachNativeDAGRegistry()
-		if v.saveFailed.Load() {
-			v.clearRecoveryOwner()
-		}
 	}()
 	// OpenWorkflow 错误路径没有锁；外部调用在原生串行 worker 中运行。
 	if v.workflow != nil {
@@ -363,14 +359,15 @@ type workflowCommand struct {
 }
 
 var operationFields = map[string][]string{
-	"register": {"email", "password"}, "verifyEmail": {"accountId", "accountGeneration", "challengeId", "token"},
+	"requestVerificationEmail": {"email"},
+	"register":                 {"email", "password"}, "verifyEmail": {"accountId", "accountGeneration", "code"},
 	"beginInitialization": {"email", "password", "name", "id"}, "completeInitialization": {"recoveryCode"},
 	"revokeSelf":         {"id"},
 	"selfRevocationInfo": {},
-	"approvePairing":     {"pairingId", "selections"}, "retryApproval": {"pairingId"}, "approvalInfo": {}, "cancelApproval": {"pairingId"},
-	"approvePairingV3": {"pairingId", "selections"}, "retryApprovalV3": {"pairingId"}, "approvalInfoV3": {}, "cancelApprovalV3": {"pairingId"},
-	"approvePairingV4": {"pairingId", "selections"}, "retryApprovalV4": {"pairingId"}, "approvalInfoV4": {}, "cancelApprovalV4": {"pairingId"},
-	"enrollDeviceV3": {"email", "password", "pairingId", "approverDeviceId"}, "resumeEnrollmentV3": {"pairingId"}, "enrollmentInfoV3": {},
+	"approvePairing":     {"pairingId", "selections"},
+
+	"approvePairingV5": {"pairingId", "selections"}, "retryApprovalV5": {"pairingId"}, "approvalInfoV5": {}, "cancelApprovalV5": {"pairingId"},
+	"enrollDeviceV5": {"email", "password", "pairingId", "approverDeviceId"}, "resumeEnrollmentV5": {"pairingId"}, "enrollmentInfoV5": {},
 	"rotateEnvironmentKey": {"environmentId", "id"},
 	"queryInitialization":  {}, "pull": {}, "view": {}, "logout": {},
 	"setVariable": {"environmentId", "name", "value", "id"}, "deleteVariable": {"environmentId", "name", "id"},
@@ -434,10 +431,7 @@ func parseWorkflowCommand(raw string) (workflowCommand, error) {
 	if !ok {
 		fields, ok = managementFields[c.operation]
 		if !ok {
-			fields, ok = recoveryFields[c.operation]
-			if !ok {
-				fields, ok = businessIntentFields[c.operation]
-			}
+			fields, ok = businessIntentFields[c.operation]
 		}
 	}
 	if !ok || len(fields) != len(c.fields) {
@@ -475,8 +469,8 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 	if err != nil {
 		return "", err
 	}
-	approval := c.operation == "approvePairing" || c.operation == "approvePairingV3" || c.operation == "approvePairingV4"
-	enrollment := c.operation == "enrollDeviceV3"
+	approval := c.operation == "approvePairing" || c.operation == "approvePairingV5"
+	enrollment := c.operation == "enrollDeviceV5"
 	if mode == "approval" && !approval || mode == "enrollment" && !enrollment || mode == "" && (approval || enrollment) {
 		return "", errInput
 	}
@@ -500,9 +494,6 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 	v.mu.Lock()
 	defer func() {
 		v.mu.Unlock()
-		if v.saveFailed.Load() {
-			v.clearRecoveryOwner()
-		}
 	}()
 	if v.saveFailed.Load() {
 		return "", errClosed
@@ -528,8 +519,11 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 	switch c.operation {
 	case "register":
 		data, err = v.workflow.Register(ctx, f["email"], f["password"])
+	case "requestVerificationEmail":
+		err = v.workflow.RequestVerificationEmail(ctx, f["email"])
+		data = map[string]bool{"accepted": err == nil}
 	case "verifyEmail":
-		err = v.workflow.VerifyEmail(ctx, mobileworkflow.EmailProof{AccountID: f["accountId"], AccountGeneration: f["accountGeneration"], ChallengeID: f["challengeId"], Token: f["token"]})
+		err = v.workflow.VerifyEmail(ctx, mobileworkflow.EmailVerification{AccountID: f["accountId"], AccountGeneration: f["accountGeneration"], Code: f["code"]})
 	case "beginInitialization":
 		err = v.workflow.Login(ctx, f["email"], f["password"])
 		if err == nil {
@@ -555,38 +549,22 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 		data, err = v.workflow.RenameEnvironment(ctx, f["environmentId"], f["name"], f["id"])
 	case "deleteEnvironment":
 		data, err = v.workflow.DeleteEnvironment(ctx, f["environmentId"], f["id"])
-	case "approvePairing":
-		data, err = v.workflow.ApprovePairing(ctx, mobileworkflow.ApprovalInput{PairingID: f["pairingId"], ShortCode: shortCode, Selections: choices})
-	case "retryApproval":
-		data, err = v.workflow.RetryApproval(ctx, f["pairingId"])
-	case "approvalInfo":
-		data, err = v.workflow.ApprovalInfo()
-	case "cancelApproval":
-		err = v.workflow.CancelApproval(f["pairingId"])
-	case "approvePairingV3":
-		data, err = v.workflow.ApprovePairingV3(ctx, mobileworkflow.ApprovalInput{PairingID: f["pairingId"], ShortCode: shortCode, Selections: choices})
-	case "retryApprovalV3":
-		data, err = v.workflow.RetryApprovalV3(ctx, f["pairingId"])
-	case "approvalInfoV3":
-		data, err = v.workflow.ApprovalInfoV3()
-	case "cancelApprovalV3":
-		err = v.workflow.CancelApprovalV3(f["pairingId"])
-	case "approvePairingV4":
-		data, err = v.workflow.ApprovePairingV4(ctx, mobileworkflow.ApprovalInput{PairingID: f["pairingId"], ShortCode: shortCode, Selections: choices})
-	case "retryApprovalV4":
-		data, err = v.workflow.RetryApprovalV4(ctx, f["pairingId"])
-	case "approvalInfoV4":
-		data, err = v.workflow.ApprovalInfoV4()
-	case "cancelApprovalV4":
-		err = v.workflow.CancelApprovalV4(f["pairingId"])
-	case "enrollDeviceV3":
+	case "approvePairingV5":
+		data, err = v.workflow.ApprovePairingV5(ctx, mobileworkflow.ApprovalInput{PairingID: f["pairingId"], ShortCode: shortCode, Selections: choices})
+	case "retryApprovalV5":
+		data, err = v.workflow.RetryApprovalV5(ctx, f["pairingId"])
+	case "approvalInfoV5":
+		data, err = v.workflow.ApprovalInfoV5()
+	case "cancelApprovalV5":
+		err = v.workflow.CancelApprovalV5(f["pairingId"])
+	case "enrollDeviceV5":
 		err = v.workflow.Login(ctx, f["email"], f["password"])
 		if err == nil {
 			data, err = v.workflow.EnrollDevice(ctx, mobileworkflow.EnrollmentInput{PairingID: f["pairingId"], ApproverDeviceID: f["approverDeviceId"], ShortCode: shortCode})
 		}
-	case "resumeEnrollmentV3":
+	case "resumeEnrollmentV5":
 		data, err = v.workflow.ResumeEnrollment(ctx, f["pairingId"])
-	case "enrollmentInfoV3":
+	case "enrollmentInfoV5":
 		data, err = v.workflow.EnrollmentInfo()
 	case "rotateEnvironmentKey":
 		data, err = v.workflow.RotateEnvironment(ctx, f["environmentId"], f["id"])
@@ -600,23 +578,23 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 			v.deleteDevice = true
 		}
 	case "logout":
-		v.clearRecoveryOwner()
 		v.deleteDevice = true
 		err = v.workflow.Logout()
 	default:
-		if recoveryOperation(c.operation) {
-			data, code, err = v.executeRecovery(ctx, c)
-		} else if businessIntentOperation(c.operation) {
+		if businessIntentOperation(c.operation) {
 			data, err = v.executeBusinessIntent(ctx, c)
 		} else {
 			data, err = v.executeManagement(ctx, c)
 		}
 	}
 	out := map[string]any{"version": 1, "ok": err == nil, "experimental": true}
+	if limited := emailLimitFailure(err); limited != nil {
+		return encode(limited)
+	}
 	if code != "" {
 		out["recoveryCode"] = code
 	}
-	if (c.operation == "retryBusinessOperation" || c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "approvePairingV4" || c.operation == "retryApprovalV4" || c.operation == "retryManagement" || recoveryOperation(c.operation) && c.operation != "recoveryView") && data != nil {
+	if (c.operation == "retryBusinessOperation" || c.operation == "revokeSelf" || c.operation == "approvePairingV5" || c.operation == "retryApprovalV5" || c.operation == "retryManagement") && data != nil {
 		out["data"] = data
 	}
 	if err == nil {
@@ -625,13 +603,15 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 		}
 	} else {
 		status := "REJECTED"
+		if c.operation == "verifyEmail" || c.operation == "requestVerificationEmail" {
+			if code := emailCodeFailure(err); code != "" {
+				status = code
+			}
+		}
 		switch {
 		case errors.Is(err, syncclient.ErrTrustInvalidated):
 			status = "TRUST_INVALIDATED"
 			v.deleteDevice = true
-			v.clearRecoveryOwner()
-		case errors.Is(err, mobileworkflow.ErrRecoverySession):
-			status = "RECOVERY_RESTART_REQUIRED"
 			out["requiresRecoveryRestart"] = true
 		case errors.Is(err, mobileworkflow.ErrRecoveryExpired):
 			status = "RECOVERY_EXPIRED_PENDING"
@@ -662,7 +642,7 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 		case errors.Is(err, syncclient.ErrWriteConflict), errors.Is(err, mobileworkflow.ErrManagementConflict), errors.Is(err, syncclient.ErrGrantUpdateConflict):
 			status = "ID_CONFLICT"
 		}
-		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" || c.operation == "approvePairing" || c.operation == "retryApproval" || c.operation == "approvePairingV3" || c.operation == "retryApprovalV3" || c.operation == "approvePairingV4" || c.operation == "retryApprovalV4" || c.operation == "enrollDeviceV3" || c.operation == "resumeEnrollmentV3" || c.operation == "rotateEnvironmentKey" || c.operation == "prepareDeviceGrant" || c.operation == "prepareOtherDeviceRevocation" || c.operation == "retryManagement" || c.operation == "retryBusinessOperation" {
+		if c.operation == "createEnvironment" || c.operation == "renameEnvironment" || c.operation == "deleteEnvironment" || c.operation == "setVariable" || c.operation == "deleteVariable" || c.operation == "beginInitialization" || c.operation == "revokeSelf" || c.operation == "approvePairingV5" || c.operation == "retryApprovalV5" || c.operation == "enrollDeviceV5" || c.operation == "resumeEnrollmentV5" || c.operation == "rotateEnvironmentKey" || c.operation == "prepareDeviceGrant" || c.operation == "prepareOtherDeviceRevocation" || c.operation == "retryManagement" || c.operation == "retryBusinessOperation" {
 			out["retrySameId"] = true
 		}
 		out["code"] = status

@@ -80,7 +80,11 @@ func TestNativeDAGResolutionDiscoveryStrictProjectionAndZeroCode(t *testing.T) {
 
 func TestNativeDAGResolutionDiscoveryFreshZeroNetworkNoCAS(t *testing.T) {
 	var hits atomic.Int32
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hits.Add(1); w.WriteHeader(500) }))
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+		hits.Add(1)
+		w.WriteHeader(500)
+	}))
 	defer server.Close()
 	d, e := NewDevice()
 	if e != nil {

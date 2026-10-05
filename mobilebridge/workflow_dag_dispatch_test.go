@@ -201,6 +201,8 @@ func TestNativeDAGCancelOnlyRecordedReservation(t *testing.T) {
 func TestNativeDAGLoginScopeCASUpdatesBothHashesAndColdWorkflow(t *testing.T) {
 	var logins, dagHits atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
 		if r.URL.Path != "/v1/login" {
 			dagHits.Add(1)
 			w.WriteHeader(400)
@@ -263,6 +265,8 @@ func TestNativeDAGLoginScopeCASUpdatesBothHashesAndColdWorkflow(t *testing.T) {
 func TestNativeDAGLoginCASFailureHasZeroRecoveryTrafficAndRetiresRegistry(t *testing.T) {
 	var logins, dagHits atomic.Int32
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
 		if r.URL.Path != "/v1/login" {
 			dagHits.Add(1)
 			w.WriteHeader(500)

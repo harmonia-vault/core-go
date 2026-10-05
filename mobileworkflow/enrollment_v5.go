@@ -38,13 +38,13 @@ type mobileEnrollmentRecord struct {
 	LastObservedAt int64                          `json:"lastObservedAt"`
 	SessionClosed  bool                           `json:"sessionClosed,omitempty"`
 	Login          *syncclient.LoginResult        `json:"login,omitempty"`
-	Receipt        syncclient.EnrollmentReceiptV3 `json:"receipt"`
+	Receipt        syncclient.EnrollmentReceiptV5 `json:"receipt"`
 	Sequence       uint64                         `json:"sequence,omitempty"`
 	Applied        bool                           `json:"applied,omitempty"`
 }
 
 func (w *Workflow) enrollmentPending() bool {
-	return w.state.EnrollmentV3 != nil && !w.state.EnrollmentV3.Applied
+	return w.state.EnrollmentV5 != nil && !w.state.EnrollmentV5.Applied
 }
 func (w *Workflow) mobileEnrollmentGate() error {
 	if w.dagPersistenceFailed {
@@ -59,34 +59,31 @@ func (w *Workflow) mobileEnrollmentGate() error {
 	if len(w.state.SelfRevocation) > 0 {
 		return ErrSelfRevocationPending
 	}
-	if w.state.Recovery != nil {
-		return ErrRecoveryRestricted
-	}
-	if w.approvalV4Pending() || w.state.PendingApproval != nil && w.state.PendingApproval.Sequence == 0 || w.state.PendingApprovalV3 != nil && w.state.PendingApprovalV3.Sequence == 0 {
+	if w.approvalV5Pending() || w.state.PendingApprovalV5 != nil && w.state.PendingApprovalV5.Sequence == 0 {
 		return ErrApprovalPending
 	}
 	return nil
 }
 func (w *Workflow) validateMobileEnrollment() error {
-	r := w.state.EnrollmentV3
+	r := w.state.EnrollmentV5
 	if r == nil {
 		return nil
 	}
-	if r.Version != 1 || r.SessionEpoch != w.engine.State().SessionEpoch || r.CreatedAt <= 0 || r.CreatedAt > w.now().Unix()+5 || r.LastObservedAt < r.CreatedAt || w.state.Pending != nil || w.state.Recovery != nil || w.state.Cloud.AccountClosed {
+	if r.Version != 1 || r.SessionEpoch != w.engine.State().SessionEpoch || r.CreatedAt <= 0 || r.CreatedAt > w.now().Unix()+5 || r.LastObservedAt < r.CreatedAt || w.state.Pending != nil || w.state.Cloud.AccountClosed {
 		return errors.New("protected mobile enrollment epoch/context invalid")
 	}
 	raw, err := json.Marshal(r.Receipt)
 	if err != nil {
 		return err
 	}
-	if _, err = syncclient.DecodeEnrollmentReceiptV3(raw); err != nil {
+	if _, err = syncclient.DecodeEnrollmentReceiptV5(raw); err != nil {
 		return err
 	}
 	gen, err := strconv.ParseUint(w.state.AccountGeneration, 10, 64)
 	if err != nil || gen == 0 {
 		return ErrNotTrusted
 	}
-	verifier, err := syncclient.NewPinnedVerifierV3(syncclient.IssuerOriginPinnedTrust{AccountID: w.state.AccountID, AccountGeneration: gen, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.signing.Public().(ed25519.PublicKey), ReceivingPrivateKey: w.receiving, Receipt: r.Receipt, Now: w.now})
+	verifier, err := syncclient.NewPinnedVerifierV5(syncclient.IssuerDAGPinnedTrust{AccountID: w.state.AccountID, AccountGeneration: gen, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.signing.Public().(ed25519.PublicKey), ReceivingPrivateKey: w.receiving, Receipt: r.Receipt, Now: w.now})
 	if err != nil {
 		return err
 	}
@@ -106,7 +103,7 @@ func (w *Workflow) validateMobileEnrollment() error {
 			return err
 		}
 	} else {
-		if r.Sequence > 9007199254740991 || r.Login != nil || w.state.Root == nil || *w.state.Root != r.Receipt.Approval.IssuerProof.TrustRoot {
+		if r.Sequence > 9007199254740991 || r.Login != nil || w.state.Root == nil || *w.state.Root != r.Receipt.Approval.IssuerProof.Source.View.TrustRoot {
 			return errors.New("accepted mobile enrollment root/receipt invalid")
 		}
 		if err = verifier.ValidateStoredIssuerEvidence(w.engine.State().Cloud); err != nil {
@@ -119,7 +116,7 @@ func (w *Workflow) validateMobileEnrollment() error {
 	return nil
 }
 func (w *Workflow) observeEnrollmentClock() error {
-	r := w.state.EnrollmentV3
+	r := w.state.EnrollmentV5
 	if r == nil || r.Sequence != 0 {
 		return nil
 	}
@@ -151,7 +148,7 @@ func (w *Workflow) EnrollmentInfo() (MobileEnrollmentInfo, error) {
 	if err := w.observeEnrollmentClock(); err != nil {
 		return MobileEnrollmentInfo{}, err
 	}
-	r := w.state.EnrollmentV3
+	r := w.state.EnrollmentV5
 	if r == nil {
 		return MobileEnrollmentInfo{State: "none"}, nil
 	}
@@ -192,14 +189,14 @@ func (w *Workflow) EnrollDevice(ctx context.Context, input EnrollmentInput) (Vie
 	if err := w.check(); err != nil {
 		return View{}, err
 	}
-	if w.state.Root != nil || w.state.Pending != nil || w.state.EnrollmentV3 != nil || w.login == nil || w.login.ExpiresAt <= w.now().Unix() {
+	if w.state.Root != nil || w.state.Pending != nil || w.state.EnrollmentV5 != nil || w.login == nil || w.login.ExpiresAt <= w.now().Unix() {
 		return View{}, ErrNotTrusted
 	}
 	config, err := w.enrollmentConfig(nil)
 	if err != nil {
 		return View{}, err
 	}
-	enrollment, err := syncclient.NewEnrollmentV3(config)
+	enrollment, err := syncclient.NewEnrollmentV5(config)
 	if err != nil {
 		return View{}, err
 	}
@@ -215,7 +212,7 @@ func (w *Workflow) EnrollDevice(ctx context.Context, input EnrollmentInput) (Vie
 		if e == nil {
 			now := w.now().Unix()
 			r := &mobileEnrollmentRecord{Version: 1, SessionEpoch: w.engine.State().SessionEpoch, CreatedAt: now, LastObservedAt: now, Login: w.login, Receipt: receipt}
-			w.state.EnrollmentV3 = r
+			w.state.EnrollmentV5 = r
 			w.login = nil
 			if err = w.persist(); err != nil {
 				return View{}, errors.Join(ErrMobileEnrollmentPending, err)
@@ -232,7 +229,7 @@ func (w *Workflow) EnrollDevice(ctx context.Context, input EnrollmentInput) (Vie
 		}
 	}
 }
-func (w *Workflow) completeMobileEnrollment(ctx context.Context, e *syncclient.EnrollmentV3, r *mobileEnrollmentRecord) (View, error) {
+func (w *Workflow) completeMobileEnrollment(ctx context.Context, e *syncclient.EnrollmentV5, r *mobileEnrollmentRecord) (View, error) {
 	result, err := e.Complete(ctx)
 	if err != nil {
 		return View{}, errors.Join(ErrMobileEnrollmentPending, err)
@@ -248,11 +245,11 @@ func (w *Workflow) completeMobileEnrollment(ctx context.Context, e *syncclient.E
 	r.Sequence = result.Sequence
 	r.Applied = false
 	r.Login = nil
-	root := r.Receipt.Approval.IssuerProof.TrustRoot
+	root := r.Receipt.Approval.IssuerProof.Source.View.TrustRoot
 	w.state.Root = &root
 	if err = w.persist(); err != nil {
 		w.state.Root = nil
-		w.state.EnrollmentV3 = previous
+		w.state.EnrollmentV5 = previous
 		return View{}, errors.Join(syncclient.ErrAcceptedNotApplied, err)
 	}
 	return w.applyAcceptedMobileEnrollment(ctx, r)
@@ -290,7 +287,7 @@ func (w *Workflow) ResumeEnrollment(ctx context.Context, id string) (View, error
 	if err := w.observeEnrollmentClock(); err != nil {
 		return View{}, err
 	}
-	r := w.state.EnrollmentV3
+	r := w.state.EnrollmentV5
 	if r == nil || r.Receipt.IdempotencyKey != id {
 		return View{}, syncclient.ErrWriteConflict
 	}
@@ -304,7 +301,7 @@ func (w *Workflow) ResumeEnrollment(ctx context.Context, id string) (View, error
 	if err != nil {
 		return View{}, err
 	}
-	e, err := syncclient.ResumeEnrollmentV3(config, r.Receipt)
+	e, err := syncclient.ResumeEnrollmentV5(config, r.Receipt)
 	if err != nil {
 		return View{}, err
 	}
@@ -327,35 +324,16 @@ func (w *Workflow) originVerifier() (*syncclient.PinnedVerifier, error) {
 	if w.state.RecoveredDAGDevice != nil {
 		return w.recoveredDAGVerifierLocked()
 	}
-	if w.state.RecoveredDevice != nil {
-		return w.recoveredVerifier()
-	}
-	if r := w.state.EnrollmentV3; r != nil {
+	if r := w.state.EnrollmentV5; r != nil {
 		if r.Sequence == 0 {
 			return nil, ErrMobileEnrollmentPending
 		}
-		return syncclient.NewPinnedVerifierV3(syncclient.IssuerOriginPinnedTrust{AccountID: w.state.AccountID, AccountGeneration: generation, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.signing.Public().(ed25519.PublicKey), ReceivingPrivateKey: w.receiving, Receipt: r.Receipt, Now: w.now})
+		return syncclient.NewPinnedVerifierV5(syncclient.IssuerDAGPinnedTrust{AccountID: w.state.AccountID, AccountGeneration: generation, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.signing.Public().(ed25519.PublicKey), ReceivingPrivateKey: w.receiving, Receipt: r.Receipt, Now: w.now})
 	}
-	return syncclient.NewRootPinnedVerifierWithOrigins(syncclient.OriginRootPinnedTrust{Trust: syncclient.PinnedTrust{AccountID: w.state.AccountID, AccountGeneration: generation, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.signing.Public().(ed25519.PublicKey), ReceivingPrivateKey: w.receiving, Now: w.now}, Root: *w.state.Root, InitialAuthorities: w.state.InitialAuthorities})
-}
-func (w *Workflow) originPinAndInitial() (cryptox.PinnedIssuerRoot, []cryptox.SignedGrantWire, error) {
-	if w.state.Root == nil {
-		return cryptox.PinnedIssuerRoot{}, nil, ErrNotTrusted
+	if w.state.Initialization == nil {
+		return nil, ErrNotTrusted
 	}
-	root := w.state.Root
-	pin := cryptox.PinnedIssuerRoot{AccountID: w.state.AccountID, AccountGeneration: w.state.AccountGeneration, DeviceID: root.RootDeviceID, SigningPublicKey: root.RootSigningPublicKey, ReceivingPublicKey: root.RootReceivingPublicKey}
-	initial := w.state.InitialAuthorities
-	if r := w.state.EnrollmentV3; r != nil && r.Sequence > 0 {
-		proof, err := cryptox.VerifyCompletedEnrollmentV3(cryptox.ConfirmedEnrollmentAnchor{Context: r.Receipt.Approval.Context, TranscriptHash: r.Receipt.Approval.TranscriptHash}, r.Receipt.Approval)
-		if err != nil {
-			return pin, nil, err
-		}
-		initial = proof.InitialAuthorities()
-	}
-	if len(initial) == 0 {
-		return pin, nil, ErrApprovalEvidence
-	}
-	return pin, initial, nil
+	return syncclient.NewRootDAGPinnedVerifier(syncclient.PinnedTrust{AccountID: w.state.AccountID, AccountGeneration: generation, DeviceID: w.state.DeviceID, DeviceSigningPublicKey: w.signing.Public().(ed25519.PublicKey), ReceivingPrivateKey: w.receiving, Now: w.now}, *w.state.Initialization)
 }
 func (w *Workflow) validateOriginCache() error {
 	if w.state.Root == nil {

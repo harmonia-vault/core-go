@@ -53,10 +53,6 @@ func (c *Client) DeviceRevocationReceipt(ctx context.Context, id string) (GrantS
 	return status, nil
 }
 func (c *Client) PrepareOtherRevocation(ctx context.Context, id, subject, environment string, key ed25519.PrivateKey) (*OtherRevocationTransaction, error) {
-	// P4全局撤销尚待独立全环境权源接线，不因管理DTO可用而自动开放。
-	if c.dagControls() {
-		return nil, ErrWritePermission
-	}
 	if c.config.Engine.State().Paused {
 		return nil, ErrPaused
 	}
@@ -96,9 +92,6 @@ func (c *Client) PrepareOtherRevocation(ctx context.Context, id, subject, enviro
 	return t, nil
 }
 func (c *Client) RestoreOtherRevocation(data []byte) (*OtherRevocationTransaction, error) {
-	if c.dagControls() {
-		return nil, ErrWritePermission
-	}
 	if len(data) == 0 || len(data) > 2<<20 || cryptox.ValidateStrictJSON(data, 2<<20) != nil {
 		return nil, cryptox.ErrInvalidWire
 	}

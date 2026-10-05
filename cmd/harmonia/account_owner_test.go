@@ -32,7 +32,7 @@ func TestAccountOwnerPairSurvivesCLIAndDrainsBeforeLogout(t *testing.T) {
 		}, Accepted: func() error { activated.Store(true); return nil },
 	})
 	cli, closeCLI := context.WithCancel(context.Background())
-	state, err := o.Handle(cli, localipc.AccountRequest{Action: "pair", ApproverDeviceID: "manager", CertificateVersion: "4"})
+	state, err := o.Handle(cli, localipc.AccountRequest{Action: "pair", ApproverDeviceID: "manager", CertificateVersion: "5"})
 	if err != nil || state.ShortCode != "12345678" {
 		t.Fatal("未返回合成短码")
 	}
@@ -74,7 +74,7 @@ func TestAccountOwnerPendingOriginalReceiptCannotCancelOrChangeID(t *testing.T) 
 		}, Accepted: func() error { return nil },
 	})
 	defer o.Close()
-	state, err := o.Handle(context.Background(), localipc.AccountRequest{Action: "pair", ApproverDeviceID: "manager", CertificateVersion: "4"})
+	state, err := o.Handle(context.Background(), localipc.AccountRequest{Action: "pair", ApproverDeviceID: "manager", CertificateVersion: "5"})
 	if err != nil || state.PairingID != "pair-original" || state.ShortCode != "" {
 		t.Fatal("未知提交未恢复原ID")
 	}

@@ -55,7 +55,7 @@ func DecodeRecoveryTransitionCommandV2(data []byte) (RecoveryTransitionCommandV2
 	if e != nil {
 		return c, e
 	}
-	if validateRecoveryJSONShape(m["submission"], reflect.TypeOf(c.Submission), map[string]bool{"$.issuerEvidence": true, "$.legacyState": true}) != nil || strictDAGDecode(m["submission"], &c.Submission) != nil {
+	if validateRecoveryJSONShape(m["submission"], reflect.TypeOf(c.Submission), map[string]bool{"$.issuerEvidence": true}) != nil || strictDAGDecode(m["submission"], &c.Submission) != nil {
 		return c, ErrInvalidWire
 	}
 	c.DependencyBundle = b

@@ -326,3 +326,14 @@ func TestNativeAccountResetLogoutUsesAEADBindingAndFullState(t *testing.T) {
 		})
 	}
 }
+
+func TestNativeAccountResetRejectsInternalProofAsUserInput(t *testing.T) {
+	input := []byte(`{"accountId":"synthetic-account","accountGeneration":"1","challengeId":"old-challenge","token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}`)
+	owner, err := NewNativeAccountReset("https://synthetic.example.invalid", "synthetic-slot", input, nil)
+	if err == nil || owner != nil {
+		t.Fatal("old proof bypassed email/code exchange")
+	}
+	if !bytes.Equal(input, make([]byte, len(input))) {
+		t.Fatal("rejected input was not cleared")
+	}
+}

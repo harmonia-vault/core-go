@@ -3,7 +3,6 @@ package syncclient
 import (
 	"bytes"
 	"context"
-	"crypto/ed25519"
 	"encoding/json"
 	"errors"
 	"github.com/harmonia-vault/core-go/cryptox"
@@ -79,12 +78,6 @@ type dagEnvelopeEvidence struct {
 		Origin        *cryptox.SignedEnvironmentOrigin `json:"origin"`
 		Authorization cryptox.SignedGrantWire          `json:"authorization"`
 	} `json:"environmentChanges"`
-	RecoveryRotations []struct {
-		Sequence  uint64                           `json:"sequence"`
-		Proposal  cryptox.RecoveryRotationProposal `json:"proposal"`
-		Proof     cryptox.RecoveryRotationProof    `json:"proof"`
-		Signature string                           `json:"signature"`
-	} `json:"recoveryRotations"`
 }
 type DAGTransitionChallenge struct {
 	OperationID                   string                               `json:"operationId"`
@@ -94,7 +87,6 @@ type DAGTransitionChallenge struct {
 	SessionHash                   string                               `json:"sessionHash"`
 	AccountGeneration             string                               `json:"accountGeneration"`
 	AuthorizationKind             string                               `json:"authorizationKind"`
-	ChainMode                     string                               `json:"chainMode"`
 	AuthorizerDeviceID            string                               `json:"authorizerDeviceId"`
 	ExpectedSequence              string                               `json:"expectedSequence"`
 	PreviousTransitionHash        string                               `json:"previousTransitionHash"`
@@ -487,10 +479,6 @@ func verifyDAGEnvelopeCommitments(v DAGVault, proof *cryptox.VerifiedRecoveryDAG
 		var envs []cryptox.RecoveryEnvelope
 		var seq uint64
 		switch record.Kind {
-		case "transition-v1":
-			root = record.TransitionV1.Submission.NewTrustRoot
-			envs = record.TransitionV1.Submission.Envelopes
-			seq = record.TransitionV1.Sequence
 		case "transition-v2":
 			root = record.TransitionV2.Submission.NewTrustRoot
 			envs = record.TransitionV2.Submission.Envelopes
@@ -505,7 +493,7 @@ func verifyDAGEnvelopeCommitments(v DAGVault, proof *cryptox.VerifiedRecoveryDAG
 		}
 	}
 	ev := v.EnvelopeEvidence
-	if ev.Profile != "harmonia/recovery-envelope-evidence/v1" || ev.EnvironmentChanges == nil || ev.RecoveryRotations == nil || len(ev.EnvironmentChanges) > 256 || len(ev.RecoveryRotations) > 128 {
+	if ev.Profile != "harmonia/recovery-envelope-evidence/v1" || ev.EnvironmentChanges == nil || len(ev.EnvironmentChanges) > 256 {
 		return cryptox.ErrInvalidWire
 	}
 	seen := map[string]bool{}
@@ -519,23 +507,6 @@ func verifyDAGEnvelopeCommitments(v DAGVault, proof *cryptox.VerifiedRecoveryDAG
 		seen[c.EnvironmentID] = true
 		if c.RecoveryGeneration == v.RecoveryGeneration && c.RecoveryEnvelope == target.Envelope {
 			proven[c.EnvironmentID] = true
-		}
-	}
-	for _, e := range ev.RecoveryRotations {
-		p, q := e.Proposal, e.Proof
-		if e.Sequence == 0 || e.Sequence > v.Sequence || p.NewTrustRoot != v.TrustRoot || p.NewRecoveryGeneration != v.RecoveryGeneration || q.AccountID != v.AccountID || q.AccountGeneration != v.AccountGeneration {
-			return cryptox.ErrInvalidWire
-		}
-		pub, err := cryptox.DecodeBase64(v.RecoverySigningPublicKey, 32, 32)
-		hash, e1 := cryptox.RecoveryEnvelopesHash(p.Envelopes)
-		rh, e2 := p.NewTrustRoot.Hash(v.AccountID, v.AccountGeneration)
-		if err != nil || e1 != nil || e2 != nil || hash != q.EnvelopesHash || rh != q.TrustRootHash || cryptox.VerifyRecoveryRotationProof(q, e.Signature, ed25519.PublicKey(pub)) != nil {
-			return cryptox.ErrInvalidWire
-		}
-		for _, e := range p.Envelopes {
-			if target, ok := current[e.EnvironmentID]; ok && target == e {
-				proven[e.EnvironmentID] = true
-			}
 		}
 	}
 	if len(current) == 0 || len(current) > 256 {

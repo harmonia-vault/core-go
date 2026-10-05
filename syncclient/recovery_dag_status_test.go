@@ -56,6 +56,9 @@ func TestDAGGETQueryRejectsOriginalMismatch(t *testing.T) {
 	p := checkedOriginal(t)
 	var body atomic.Value
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Harmonia-Protocol-Major", "2")
+
+		w.Header().Set("Harmonia-Protocol-Major", "2")
 		if r.Method != "GET" || !strings.HasSuffix(r.URL.Path, "/"+p.OperationID) {
 			t.Error("query changed method or original ID")
 		}
