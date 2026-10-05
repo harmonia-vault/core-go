@@ -68,7 +68,21 @@ func listenNative(endpoint Endpoint) (nativeListener, error) {
 	if err != nil {
 		return nativeListener{}, err
 	}
-	if !currentIdentity(endpoint.ServiceSID, true) {
+	var pinCleanup func() error
+	if endpoint.WindowsConfigFile != "" {
+		locked, err := loadWindowsEndpoint(endpoint)
+		if err != nil {
+			return nativeListener{}, err
+		}
+		pinCleanup = locked.Close
+	}
+	good := false
+	defer func() {
+		if !good && pinCleanup != nil {
+			_ = pinCleanup()
+		}
+	}()
+	if !currentIdentity(endpoint.ServiceSID, endpoint.WindowsConfigFile == "") {
 		return nativeListener{}, ErrIdentity
 	}
 	descriptor := "D:P(A;;0x00120083;;;" + endpoint.UserID + ")(A;;GA;;;" + endpoint.ServiceSID + ")"
@@ -76,7 +90,8 @@ func listenNative(endpoint Endpoint) (nativeListener, error) {
 	if err != nil {
 		return nativeListener{}, ErrUnavailable
 	}
-	return nativeListener{Listener: listener}, nil
+	good = true
+	return nativeListener{Listener: listener, cleanup: pinCleanup}, nil
 }
 func dialNative(ctx context.Context, endpoint Endpoint) (net.Conn, error) {
 	name, err := windowsEndpoint(endpoint)
@@ -121,7 +136,7 @@ func authorizeNative(connection net.Conn, endpoint Endpoint, server bool) error 
 		if server {
 			expected = endpoint.ServiceSID
 		}
-		if !tokenHasSID(token, expected, server) {
+		if !tokenHasSID(token, expected, server && endpoint.WindowsConfigFile == "") {
 			return ErrIdentity
 		}
 		return nil

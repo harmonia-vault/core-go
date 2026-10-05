@@ -83,6 +83,14 @@ func (s *ProfileEnvironmentStore) open() error {
 	}
 	return nil
 }
+
+// EnsureReady 只完成 profile 与固定 Environment 子 key 的验证，不读取任何变量值。
+func (s *ProfileEnvironmentStore) EnsureReady() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.open()
+}
+
 func (s *ProfileEnvironmentStore) Read(name string) (RegistryValue, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

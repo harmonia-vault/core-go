@@ -12,3 +12,5 @@ require github.com/Microsoft/go-winio v0.6.2
 require golang.org/x/term v0.46.0
 
 require github.com/coder/websocket v1.8.15
+
+require github.com/go-ole/go-ole v1.3.0

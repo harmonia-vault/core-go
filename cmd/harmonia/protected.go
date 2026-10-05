@@ -27,11 +27,14 @@ import (
 )
 
 type commandRuntime struct {
-	input       io.Reader
-	httpClient  *http.Client
-	now         func() time.Time
-	provider    localstate.Provider
-	environment importEnvironment
+	input           io.Reader
+	httpClient      *http.Client
+	now             func() time.Time
+	provider        localstate.Provider
+	environment     importEnvironment
+	loginCredential []byte
+	pairingProgress func(string, []byte)
+	enrollmentEpoch *uint64
 }
 type protectedOptions struct {
 	command, directory, server, email, approver, userID, serviceSID, certificateVersion string
@@ -130,6 +133,14 @@ func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandR
 	if err != nil {
 		return err
 	}
+	return protectedAccountOnOwner(ctx, o, r, out, errOut, store, engine)
+}
+
+// owner只借用已经独占打开的Store/Engine；不再打开第二份Vault。
+func protectedAccountOnOwner(ctx context.Context, o protectedOptions, r commandRuntime, out, errOut io.Writer, store *localkeys.StateStore, engine *localstate.Engine) error {
+	if o.command == "pair" && !pairing.NativeAvailable() {
+		return pairing.ErrUnavailable
+	}
 	vault := store.Vault()
 	if o.command == "login" {
 		if o.server == "" || o.email == "" {
@@ -143,12 +154,20 @@ func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandR
 		if engine.State().Cloud.AccountID != "" || len(engine.State().Originals) != 0 {
 			return errors.New("旧托管配置尚未恢复，不能切换账号")
 		}
-		password, err := readLoginPassword(r.input, o.passwordStdin, errOut)
-		if err != nil {
-			return err
+		var hash [32]byte
+		if r.loginCredential != nil {
+			if len(r.loginCredential) != len(hash) {
+				return errors.New("无效本机登录凭据")
+			}
+			copy(hash[:], r.loginCredential)
+		} else {
+			password, err := readLoginPassword(r.input, o.passwordStdin, errOut)
+			if err != nil {
+				return err
+			}
+			defer clear(password)
+			hash = cryptox.PasswordCredential(string(password))
 		}
-		defer clear(password)
-		hash := cryptox.PasswordCredential(string(password))
 		result, err := syncclient.Login(ctx, syncclient.LoginConfig{Endpoint: o.server, HTTPClient: r.httpClient, Email: o.email, Credential: hex.EncodeToString(hash[:]), Now: r.now})
 		clear(hash[:])
 		if err != nil {
@@ -261,6 +280,9 @@ func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandR
 			enrollment.Close()
 			return err
 		}
+		if r.pairingProgress != nil {
+			r.pairingProgress(key, code)
+		}
 		if _, err = enrollment.Begin(ctx, o.approver, key, code); err != nil {
 			enrollment.Close()
 			return err
@@ -296,7 +318,7 @@ func protectedAccountCommand(ctx context.Context, o protectedOptions, r commandR
 	}
 	defer result.Verifier.Close()
 	// Complete已确认双方签证与服务器ack；unknown/pending分支不会到此。
-	if err = engine.CompleteEnrollmentAtEpoch(engine.State().SessionEpoch); err != nil {
+	if err = engine.CompleteEnrollmentAtEpoch(protectedEnrollmentEpoch(engine, r)); err != nil {
 		return err
 	}
 	if err = saveReceipt(vault, session, keys, result.Receipt, true); err != nil {

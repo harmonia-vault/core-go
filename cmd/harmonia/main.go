@@ -41,6 +41,8 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 	flags.SetOutput(errOut)
 	statePath := flags.String("state", "", "当前用户的私有 fixture 状态文件")
 	localDirectory := flags.String("local-directory", "", "受保护机器状态目录；与明文fixture互斥")
+	windowsConfig := flags.String("windows-config", "", "Windows管理员保护固定服务配置；当前用户仅通过认证IPC操作")
+	pairingID := flags.String("pairing-id", "", "pair-status/pair-cancel的原配对申请ID")
 	serverAddress := flags.String("server", "", "用户明确指定的自托管 HTTPS 地址")
 	email := flags.String("email", "", "邮箱登录账号")
 	approver := flags.String("approver", "", "既有可信管理手机的设备 ID")
@@ -125,6 +127,30 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 		runtimeOptions.httpClient = client
 	}
 	protectedIPC := false
+	var fixedWindowsEndpoint *localipc.Endpoint
+	if *windowsConfig != "" {
+		if *fixture || *statePath != "" || *localDirectory != "" || *providerPath != "" || *input != "" || *localUser != "" || *ipcServiceSID != "" || *ipcDirectory != "" || *fragment != "" {
+			return errors.New("Windows固定配置不能混用目录、SID、fixture或provider路径参数")
+		}
+		options := protectedOptions{command: command, server: *serverAddress, email: *email, approver: *approver, certificateVersion: *certificateVersion, passwordStdin: *passwordStdin}
+		switch command {
+		case "login", "pair", "pair-status", "pair-cancel":
+			return protectedWindowsAccount(ctx, *windowsConfig, options, *pairingID, runtimeOptions, out, errOut)
+		case "daemon":
+			return protectedWindowsDaemon(ctx, *windowsConfig, daemonOptions{windowsService: *windowsService, interval: *interval, syncInterval: *syncInterval, once: *once}, runtimeOptions, out, errOut)
+		default:
+			if *windowsService != "" {
+				return errors.New("只有daemon接受windows-service")
+			}
+			endpoint, e := windowsClientEndpoint(*windowsConfig)
+			if e != nil {
+				return e
+			}
+			fixedWindowsEndpoint = &endpoint
+			*ipcDirectory = endpoint.Directory
+			protectedIPC = true
+		}
+	}
 	if *localDirectory != "" {
 		if *fixture || *statePath != "" || *providerPath != "" || *input != "" {
 			return errors.New("受保护目录不能混用明文 fixture/state/provider-file 输入")
@@ -174,9 +200,15 @@ func runWithRuntime(ctx context.Context, args []string, out, errOut io.Writer, r
 		if !*fixture && !protectedIPC {
 			return errors.New("IPC CLI 需要明确 --local-directory 或隔离 --fixture")
 		}
-		endpoint, err := ipcEndpoint(*ipcDirectory, *localUser, *ipcServiceSID)
-		if err != nil {
-			return err
+		var endpoint localipc.Endpoint
+		var err error
+		if fixedWindowsEndpoint != nil {
+			endpoint = *fixedWindowsEndpoint
+		} else {
+			endpoint, err = ipcEndpoint(*ipcDirectory, *localUser, *ipcServiceSID)
+			if err != nil {
+				return err
+			}
 		}
 		request := localipc.Request{Command: command}
 		switch command {
