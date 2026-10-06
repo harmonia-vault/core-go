@@ -61,18 +61,21 @@ func Login(ctx context.Context, config LoginConfig) (LoginResult, error) {
 	request.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(request)
 	if err != nil {
-		return LoginResult{}, errors.New("HTTPS login failed")
+		return LoginResult{}, ErrRequestFailed
 	}
 	defer response.Body.Close()
 	if response.Header.Get("Harmonia-Protocol-Major") != "2" {
-		return LoginResult{}, cryptox.ErrInvalidWire
+		return LoginResult{}, errors.Join(ErrResponseInvalid, cryptox.ErrInvalidWire)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return LoginResult{}, parseRequestError(response)
 	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, 65537))
-	if err != nil || len(data) > 65536 {
-		return LoginResult{}, errors.New("invalid login response size")
+	if err != nil {
+		return LoginResult{}, ErrRequestFailed
+	}
+	if len(data) > 65536 {
+		return LoginResult{}, ErrResponseInvalid
 	}
 	defer clear(data)
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -80,7 +83,7 @@ func Login(ctx context.Context, config LoginConfig) (LoginResult, error) {
 	var result LoginResult
 	var extra any
 	if decoder.Decode(&result) != nil || decoder.Decode(&extra) != io.EOF {
-		return LoginResult{}, errors.New("login response does not match protocol")
+		return LoginResult{}, ErrResponseInvalid
 	}
 	now := time.Now()
 	if config.Now != nil {
@@ -88,10 +91,10 @@ func Login(ctx context.Context, config LoginConfig) (LoginResult, error) {
 	}
 	generation, err := strconv.ParseUint(result.AccountGeneration, 10, 64)
 	if !enrollmentID.MatchString(result.AccountID) || err != nil || generation == 0 || strconv.FormatUint(generation, 10) != result.AccountGeneration || result.ExpiresAt <= now.Unix() {
-		return LoginResult{}, errors.New("invalid login account/session metadata")
+		return LoginResult{}, ErrResponseInvalid
 	}
 	if _, err := cryptox.DecodeBase64(result.Token, 32, 32); err != nil {
-		return LoginResult{}, errors.New("invalid random login session")
+		return LoginResult{}, ErrResponseInvalid
 	}
 	return result, nil
 }

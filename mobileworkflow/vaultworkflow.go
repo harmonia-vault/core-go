@@ -816,8 +816,6 @@ func (w *Workflow) accountPath(suffix string) string {
 	return "/v1/accounts/" + w.state.AccountID + suffix
 }
 
-var errMobileResponseMalformed = errors.New("mobile HTTPS response malformed")
-
 func (w *Workflow) request(ctx context.Context, path, token string, body any, out any) error {
 	headers := make(http.Header)
 	if token != "" {
@@ -867,18 +865,18 @@ func requestJSON(ctx context.Context, client *http.Client, baseURL, path string,
 	}
 	response, err := client.Do(req)
 	if err != nil {
-		return errors.New("mobile HTTPS request failed")
+		return syncclient.ErrRequestFailed
 	}
 	defer response.Body.Close()
 	if response.Header.Get("Harmonia-Protocol-Major") != "2" {
-		return errMobileResponseMalformed
+		return syncclient.ErrResponseInvalid
 	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, (8<<20)+1))
 	if err != nil {
-		return errors.New("mobile HTTPS response read failed")
+		return syncclient.ErrRequestFailed
 	}
 	if len(data) > 8<<20 {
-		return errors.Join(errMobileResponseMalformed, errors.New("mobile HTTPS response exceeds limit"))
+		return syncclient.ErrResponseInvalid
 	}
 	defer clear(data)
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
@@ -893,7 +891,7 @@ func requestJSON(ctx context.Context, client *http.Client, baseURL, path string,
 		return syncclient.NewRequestErrorWithRetry(response.StatusCode, code, wire.RetryAfterSeconds)
 	}
 	if err := decode(data, out); err != nil {
-		return errors.Join(errMobileResponseMalformed, err)
+		return syncclient.ErrResponseInvalid
 	}
 	return nil
 }

@@ -3,6 +3,8 @@ package mobilebridge
 import (
 	"context"
 	"encoding/hex"
+	"errors"
+	"net/http"
 	"time"
 
 	"github.com/harmonia-vault/core-go/cryptox"
@@ -59,12 +61,56 @@ func ExecuteAccount(raw string, additionalCA []byte) (string, error) {
 		return encode(limited)
 	}
 	if err != nil {
-		out["code"] = "REJECTED"
-		if code := emailCodeFailure(err); code != "" {
-			out["code"] = code
-		}
+		out["code"] = accountFailure(c.operation, err)
 	} else if data != nil {
 		out["data"] = data
 	}
 	return encode(out)
+}
+
+// 账号入口只公开固定类别；登录的 unauthorized 不区分账号不存在、密码错误或未验证。
+func accountFailure(operation string, err error) string {
+	if code := emailCodeFailure(err); code != "" {
+		return code
+	}
+	if errors.Is(err, syncclient.ErrRequestFailed) {
+		return "NETWORK_ERROR"
+	}
+	if errors.Is(err, syncclient.ErrResponseInvalid) {
+		return "SERVER_RESPONSE_INVALID"
+	}
+	var fault *syncclient.RequestError
+	if !errors.As(err, &fault) {
+		return "ACCOUNT_REQUEST_FAILED"
+	}
+	switch fault.Code {
+	case "account_exists":
+		return "ACCOUNT_EXISTS"
+	case "registration_disabled":
+		return "REGISTRATION_DISABLED"
+	case "email_invalid":
+		return "EMAIL_INVALID"
+	case "email_delivery_failed":
+		return "EMAIL_DELIVERY_FAILED"
+	case "email_verification_unavailable":
+		return "EMAIL_UNAVAILABLE"
+	case "email_verification_required":
+		return "EMAIL_VERIFICATION_REQUIRED"
+	case "account_changed", "generation_stale":
+		return "ACCOUNT_CHANGED"
+	case "unauthorized":
+		if operation == "loginAccount" {
+			return "LOGIN_FAILED"
+		}
+	}
+	switch {
+	case fault.Status == http.StatusUpgradeRequired:
+		return "SERVER_RESPONSE_INVALID"
+	case fault.Status == http.StatusTooManyRequests:
+		return "REQUEST_RATE_LIMITED"
+	case fault.Status >= 500:
+		return "SERVER_UNAVAILABLE"
+	default:
+		return "ACCOUNT_REQUEST_FAILED"
+	}
 }

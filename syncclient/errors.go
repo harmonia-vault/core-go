@@ -13,6 +13,10 @@ import (
 // device/session/trust slots 并恢复 provider。普通 token 到期不触发这种清理。
 var ErrTrustInvalidated = errors.New("current account/device authorization invalidated")
 
+// 只保留可供界面分类的失败类型，不携带 URL、请求内容或底层错误文本。
+var ErrRequestFailed = errors.New("HTTPS request failed")
+var ErrResponseInvalid = errors.New("HTTPS response invalid")
+
 type RequestError struct {
 	Status            int
 	Code              string

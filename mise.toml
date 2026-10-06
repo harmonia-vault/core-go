@@ -1,6 +1,13 @@
 [tools]
 go = "1.26.4"
 
+[tasks.format-account-errors]
+run = "gofmt -w syncclient/errors.go syncclient/login.go mobileworkflow/vaultworkflow.go mobilebridge/account.go mobilebridge/account_test.go mobilebridge/workflow.go"
+
+[tasks.test-account-errors]
+description = "验证账号 HTTPS 错误、隐私边界、原生桥接和账号状态的并发回归"
+run = ["go test -race ./mobilebridge -count=1 -timeout=90s", "go test -race ./syncclient ./mobileworkflow -run 'Test(Account|Email|Login|MobileHTTPS|ServerFault|RejectedBody|OldRejectedEpoch|NativeWorkflow|ProtectedContext|UntrustedAndClosedWorkflow|NativeLogout)' -count=1 -timeout=90s"]
+
 [tasks.format-mobile-account]
 description = "格式化手机公开账号通道"
 run = "gofmt -w mobilebridge/account.go mobileworkflow/vaultworkflow.go"

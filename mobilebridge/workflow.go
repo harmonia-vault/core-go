@@ -603,10 +603,9 @@ func (v *VaultWorkflow) execute(raw string, shortCode []byte, mode string) (stri
 		}
 	} else {
 		status := "REJECTED"
-		if c.operation == "verifyEmail" || c.operation == "requestVerificationEmail" {
-			if code := emailCodeFailure(err); code != "" {
-				status = code
-			}
+		switch c.operation {
+		case "register", "loginAccount", "verifyEmail", "requestVerificationEmail":
+			status = accountFailure(c.operation, err)
 		}
 		switch {
 		case errors.Is(err, syncclient.ErrTrustInvalidated):
