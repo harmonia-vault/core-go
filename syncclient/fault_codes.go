@@ -8,6 +8,7 @@ var knownFaultCodes = map[string]bool{
 	"account_capacity_reached":                     true,
 	"account_changed":                              true,
 	"account_exists":                               true,
+	"account_format_unsupported":                   true,
 	"admin_required":                               true,
 	"all_environment_admin_required":               true,
 	"approval_already_consumed":                    true,

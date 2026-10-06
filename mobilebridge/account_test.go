@@ -64,6 +64,8 @@ func TestAccountFailuresReachNativeBoundary(t *testing.T) {
 		body, want      string
 	}{
 		{"existing-account", "register", 409, `{"error":"account_exists"}`, "ACCOUNT_EXISTS"},
+		{"old-account-register", "register", 409, `{"error":"account_format_unsupported"}`, "ACCOUNT_FORMAT_UNSUPPORTED"},
+		{"old-account-login", "loginAccount", 409, `{"error":"account_format_unsupported"}`, "ACCOUNT_FORMAT_UNSUPPORTED"},
 		{"registration-closed", "register", 403, `{"error":"registration_disabled"}`, "REGISTRATION_DISABLED"},
 		{"invalid-email", "register", 400, `{"error":"email_invalid"}`, "EMAIL_INVALID"},
 		{"mail-not-configured", "register", 503, `{"error":"email_verification_unavailable"}`, "EMAIL_UNAVAILABLE"},

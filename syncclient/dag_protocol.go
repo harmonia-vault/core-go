@@ -45,7 +45,7 @@ func checkDAGCapabilities(ctx context.Context, endpoint string, source *http.Cli
 		return errors.New("protocol major2 required")
 	}
 	if response.StatusCode != 200 {
-		return parseRequestError(response)
+		return ParseRequestError(response)
 	}
 	raw, e := io.ReadAll(io.LimitReader(response.Body, 16385))
 	if e != nil || len(raw) > 16384 {

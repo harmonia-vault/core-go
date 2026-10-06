@@ -871,6 +871,9 @@ func requestJSON(ctx context.Context, client *http.Client, baseURL, path string,
 	if response.Header.Get("Harmonia-Protocol-Major") != "2" {
 		return syncclient.ErrResponseInvalid
 	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return syncclient.ParseRequestError(response)
+	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, (8<<20)+1))
 	if err != nil {
 		return syncclient.ErrRequestFailed
@@ -879,17 +882,6 @@ func requestJSON(ctx context.Context, client *http.Client, baseURL, path string,
 		return syncclient.ErrResponseInvalid
 	}
 	defer clear(data)
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		var wire struct {
-			Error             string `json:"error"`
-			RetryAfterSeconds *int   `json:"retryAfterSeconds,omitempty"`
-		}
-		code := "request_rejected"
-		if len(data) <= 4096 && decode(data, &wire) == nil {
-			code = wire.Error
-		}
-		return syncclient.NewRequestErrorWithRetry(response.StatusCode, code, wire.RetryAfterSeconds)
-	}
 	if err := decode(data, out); err != nil {
 		return syncclient.ErrResponseInvalid
 	}

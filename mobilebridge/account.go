@@ -86,6 +86,8 @@ func accountFailure(operation string, err error) string {
 	switch fault.Code {
 	case "account_exists":
 		return "ACCOUNT_EXISTS"
+	case "account_format_unsupported":
+		return "ACCOUNT_FORMAT_UNSUPPORTED"
 	case "registration_disabled":
 		return "REGISTRATION_DISABLED"
 	case "email_invalid":

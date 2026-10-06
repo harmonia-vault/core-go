@@ -65,7 +65,7 @@ func boolInt(value bool) int64 {
 	return 0
 }
 func TestRejectedBodyCannotLeakValuesOrInjectIdentity(t *testing.T) {
-	for _, body := range []string{`{"error":"SYNTHETIC_SECRET"}`, `{"error":"synthetic_secret_lowercase"}`, `{"error":"` + strings.Repeat("a", 64) + `"}`, `{"error":"device_untrusted","accountId":"attacker"}`, `{"error":"device_untrusted"} {}`, strings.Repeat("SYNTHETIC_SECRET", 500)} {
+	for _, body := range []string{`{"error":"SYNTHETIC_SECRET"}`, `{"error":"synthetic_secret_lowercase"}`, `{"error":"` + strings.Repeat("a", 64) + `"}`, `{"error":"device_untrusted","accountId":"attacker"}`, `{"error":"unauthorized","error":"device_untrusted"}`, `{"error":"device_untrusted","retryAfterSeconds":null}`, "{\"error\":\"device_\xffuntrusted\"}", `{"error":"device_untrusted"} {}`, strings.Repeat("SYNTHETIC_SECRET", 500)} {
 		engine := testEngine(t)
 		cloud, err := (acceptVerifier{}).VerifyPull(context.Background(), Pull{Sequence: 1}, localstate.CloudSnapshot{})
 		check(t, err)

@@ -437,28 +437,13 @@ func (c *Client) post(ctx context.Context, suffix string, payload []byte) ([]byt
 	if response.Header.Get("Harmonia-Protocol-Major") != "2" {
 		return nil, ErrResponse
 	}
+	if response.StatusCode != http.StatusOK {
+		return nil, syncclient.ParseRequestError(response)
+	}
 	data, e := io.ReadAll(io.LimitReader(response.Body, maximumWire+1))
 	if e != nil || len(data) > maximumWire {
 		clear(data)
 		return nil, ErrResponse
-	}
-	if response.StatusCode != http.StatusOK {
-		defer clear(data)
-		var wire struct {
-			Error             string `json:"error"`
-			RetryAfterSeconds *int   `json:"retryAfterSeconds,omitempty"`
-		}
-		code := ""
-		if json.Unmarshal(data, &wire) == nil {
-			fields := []string{"error"}
-			if wire.Error == "email_request_limited" || wire.Error == "email_ip_blocked" {
-				fields = append(fields, "retryAfterSeconds")
-			}
-			if exactJSON(data, &wire, fields...) == nil {
-				code = wire.Error
-			}
-		}
-		return nil, syncclient.NewRequestErrorWithRetry(response.StatusCode, code, wire.RetryAfterSeconds)
 	}
 	return data, nil
 }

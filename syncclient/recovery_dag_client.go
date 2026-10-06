@@ -226,7 +226,7 @@ func (s *DAGRecoverySession) request(ctx context.Context, method, path string, t
 		return errors.New("protocol major2 mismatch")
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return parseRequestError(response)
+		return ParseRequestError(response)
 	}
 	raw, e := io.ReadAll(io.LimitReader(response.Body, (8<<20)+1))
 	if e != nil || len(raw) > 8<<20 {

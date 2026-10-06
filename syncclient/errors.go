@@ -1,7 +1,6 @@
 package syncclient
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -54,28 +53,30 @@ func NewRequestErrorWithRetry(status int, code string, retryAfterSeconds *int) *
 	return fault
 }
 
-func parseRequestError(response *http.Response) *RequestError {
-	fault := NewRequestError(response.StatusCode, "")
+// ParseRequestError 是账号、重置及同步请求共用的严格错误边界。
+func ParseRequestError(response *http.Response) *RequestError {
 	// 错误体只读取固定小上限；未知字段、额外 JSON、任意文本不进入日志/错误。
 	data, err := io.ReadAll(io.LimitReader(response.Body, 4097))
-	if err == nil && len(data) <= 4096 {
-		var wire struct {
-			Error             string `json:"error"`
-			RetryAfterSeconds *int   `json:"retryAfterSeconds,omitempty"`
-		}
-		decoder := json.NewDecoder(bytes.NewReader(data))
-		decoder.DisallowUnknownFields()
-		if decoder.Decode(&wire) == nil {
-			var extra any
-			if decoder.Decode(&extra) == io.EOF && knownFaultCodes[wire.Error] {
-				fault = NewRequestErrorWithRetry(response.StatusCode, wire.Error, wire.RetryAfterSeconds)
-			}
-		}
+	defer clear(data)
+	var wire struct {
+		Error             string          `json:"error"`
+		RetryAfterSeconds json.RawMessage `json:"retryAfterSeconds,omitempty"`
 	}
-	return fault
+	if err != nil || len(data) > 4096 || strictJSONBytes(data, &wire) != nil {
+		return NewRequestError(response.StatusCode, "")
+	}
+	var retry *int
+	if len(wire.RetryAfterSeconds) != 0 {
+		var seconds int
+		if json.Unmarshal(wire.RetryAfterSeconds, &seconds) != nil {
+			return NewRequestError(response.StatusCode, "")
+		}
+		retry = &seconds
+	}
+	return NewRequestErrorWithRetry(response.StatusCode, wire.Error, retry)
 }
 func (c *Client) rejection(response *http.Response, bootRoute bool) error {
-	fault := parseRequestError(response)
+	fault := ParseRequestError(response)
 	invalid := fault.Status == 401 && fault.Code == "generation_stale" ||
 		fault.Status == 403 && (fault.Code == "device_untrusted" || bootRoute && fault.Code == "no_current_grant")
 	if !invalid {

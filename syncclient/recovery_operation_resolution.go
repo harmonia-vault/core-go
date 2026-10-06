@@ -113,7 +113,7 @@ func (s *RecoveryOperationResolutionSession) Resolve(ctx context.Context, target
 		return out, cryptox.ErrInvalidWire
 	}
 	if response.StatusCode != 200 {
-		return out, parseRequestError(response)
+		return out, ParseRequestError(response)
 	}
 	raw, e := io.ReadAll(io.LimitReader(response.Body, 4097))
 	if e != nil || len(raw) > 4096 {

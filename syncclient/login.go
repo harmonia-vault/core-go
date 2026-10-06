@@ -68,7 +68,7 @@ func Login(ctx context.Context, config LoginConfig) (LoginResult, error) {
 		return LoginResult{}, errors.Join(ErrResponseInvalid, cryptox.ErrInvalidWire)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return LoginResult{}, parseRequestError(response)
+		return LoginResult{}, ParseRequestError(response)
 	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, 65537))
 	if err != nil {

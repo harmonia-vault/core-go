@@ -2,7 +2,7 @@
 go = "1.26.4"
 
 [tasks.format-account-errors]
-run = "gofmt -w syncclient/errors.go syncclient/login.go mobileworkflow/vaultworkflow.go mobilebridge/account.go mobilebridge/account_test.go mobilebridge/workflow.go"
+run = "gofmt -w syncclient/errors.go syncclient/errors_test.go syncclient/fault_codes.go syncclient/login.go syncclient/dag_protocol.go syncclient/recovery_dag_client.go syncclient/recovery_operation_resolution.go accountreset/client.go mobileworkflow/vaultworkflow.go mobilebridge/account.go mobilebridge/account_test.go mobilebridge/workflow.go"
 
 [tasks.test-account-errors]
 description = "验证账号 HTTPS 错误、隐私边界、原生桥接和账号状态的并发回归"
