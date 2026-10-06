@@ -1,3 +1,6 @@
+> [!WARNING]
+> 项目正处于开发阶段，仅供测试使用。
+
 # Harmonia CLI
 
 Harmonia（和弦）是一个自托管的环境变量同步工具：在手机上集中管理环境变量，按设备授权，同步到电脑和运行环境中使用。
@@ -126,7 +129,6 @@ harmonia pair --windows-config "C:\Harmonia\config.json" --approver "手机设�
 ## 注意事项
 
 - `export` 以明文输出变量，请勿写入日志或公开分享。
-- 项目处于实验阶段，请勿用于生产环境的凭据。
 
 ## 许可证
 
